@@ -1,7 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (Phase 1)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.4)
 
+[![Release](https://img.shields.io/badge/Release-v1.0.4-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -9,6 +10,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
+
+📦 **[Download Latest Release v1.0.4](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)**
 
 ---
 
@@ -20,7 +23,7 @@ PromptHound is built with a bespoke **Dark Forest Glassmorphism** design system 
 
 ```text
 PromptHound/
-├── .github/                     # GitHub workflows and issue templates
+├── .github/                     # GitHub workflows and release automation
 ├── core/                        # Framework-agnostic parsing & resolution engine
 │   ├── formatDetector.ts        # Heuristic detection for A1111, ComfyUI, Civitai, SeaArt
 │   ├── parser.ts                # Metadata normalization and regex chunk extraction
@@ -41,6 +44,10 @@ PromptHound/
 ├── src/                         # React UI (Vite + TypeScript)
 │   ├── components/
 │   │   ├── icons/Icons.tsx      # Inline vector icons (Hound mark, window controls, etc.)
+│   │   ├── home/                # Batch extraction queue & recent extractions strip
+│   │   ├── setup/               # 4-step setup & install wizard
+│   │   ├── recipe/              # Prompt format selector & interactive LoRA mixer
+│   │   ├── library/             # Side-by-side prompt difference modal
 │   │   ├── primitives/          # Atomic UI components
 │   │   │   ├── GlassPanel.tsx
 │   │   │   ├── GlassCard.tsx
@@ -58,9 +65,9 @@ PromptHound/
 │   │   ├── NavigationContext.tsx# Route management and state sharing
 │   │   └── RouteView.tsx        # View switcher
 │   ├── pages/
-│   │   ├── HomePage.tsx         # Paste URL, Drag & Drop, Check Library hero cards
-│   │   ├── ExtractionResultPage.tsx # 3-zone metadata inspection & copy workspace
-│   │   ├── PromptLibraryPage.tsx    # 3-column folder rail, prompt card grid, detail pane
+│   │   ├── HomePage.tsx         # Batch queue, Paste URL, Drag & Drop, Library hero
+│   │   ├── ExtractionResultPage.tsx # 3-zone metadata inspection, LoRA mixer, format converter
+│   │   ├── PromptLibraryPage.tsx    # Folder rail, grid/table view, diff modal, detail pane
 │   │   ├── VisualArchivePage.tsx    # Canvas visual archive compiler
 │   │   ├── FavoritesPage.tsx        # Starred prompt bookmarker
 │   │   ├── SettingsPage.tsx         # Automation, API key & storage configurations
@@ -82,22 +89,28 @@ PromptHound/
 
 ---
 
-## ⚡ Features Implemented in Phase 1
+## ⚡ Features in Version 1.0.4
 
-1. **Format Detection & Parsing (`/core`)**:
-   - Supports Automatic1111 (PNG `tEXt` parameter blocks).
-   - Supports ComfyUI prompt graphs and nodes.
-   - Supports Civitai and SeaArt page link resolution.
-   - LoRA weight extractor (`<lora:name:weight>` regex and ComfyUI node parsing).
+1. **Batch Extraction Queue (10-File Limit)**:
+   - Drag & drop or browse up to 10 images concurrently.
+   - Individual status cards showing progress spinner, success checkmarks, extracted model, and LoRA counts.
+   - 1-click **"Save All Extracted to Library"** and click-to-inspect.
 
-2. **Custom Frameless Electron Shell (`/electron`)**:
-   - Frameless Windows desktop app window with custom draggable titlebar.
-   - Custom minimize, maximize, and close window controls via IPC `contextBridge`.
-   - Native file dialog hooks for image loading and JSON/TXT/PNG exports.
+2. **First-Run Install & Configuration Wizard**:
+   - 4-step wizard for configuring workflow profile (A1111/Forge, ComfyUI, SD.Next, Fooocus), model directories, Civitai API key, and shell context menu integration.
 
-3. **Pixel-Perfect React Desktop Frontend (`/src`)**:
-   - **Home Screen**: 3 primary action cards (Paste URL with modal, Drag & Drop with dropzone, Check Library) and 4-item capability strip.
-   - **Extraction Result Screen**: 3-zone workspace (Original image preview with aspect ratio preservation, Center tabs for Prompt, Negative Prompt, 4-metric Generation Grid, and Attached LoRAs, Right side panels for Source Platform, Resolved Civitai LoRAs, and Quick Actions).
+3. **LoRA Mixer & Trigger Words Copier**:
+   - Live weight sliders ($0.00$ – $2.00$), trigger word toggles, and instant stack copying.
+
+4. **Prompt Syntax Transformer**:
+   - Instant 1-click conversion between Automatic1111/Forge syntax (`<lora:name:0.8>`), ComfyUI node clip text, and Clean Plaintext.
+
+5. **Prompt Library with Diffing & Dual View**:
+   - Visual card grid and compact table view.
+   - Side-by-side prompt diffing with parameter comparison.
+
+6. **Visual Archive Compiler**:
+   - Dynamic HTML5 Canvas rendering composite recipe sheet for export and archival.
    - **Prompt Library**: 3-column layout (Folder Rail with count badges, Fluid Prompt Cards Grid with favorite toggles, and Selected Prompt Detail Pane).
    - **Visual Archive Compiler**: Dynamic HTML5 Canvas generator rendering high-resolution composite record sheets embedding prompt, parameters, seed, and LoRAs into an exportable PNG.
    - **Favorites & Preferences**: Starred prompts organizer, settings panel with Civitai API key entry and storage directories, and About screen.
