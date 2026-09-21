@@ -1,0 +1,69 @@
+:root {
+  /* Color palette — UI_SPEC.md §1 */
+  --color-bg-app: #071006;
+  --color-bg-app-rgba: rgba(7, 16, 6, 0.96);
+  --color-bg-deep-forest: #10200d;
+  --color-bg-deep-forest-rgba: rgba(16, 32, 13, 0.88);
+  --color-bg-forest-glass: #182713;
+  --color-bg-forest-glass-rgba: rgba(24, 39, 19, 0.62);
+  --color-olive-surface: #4f5928;
+  --color-olive-highlight: #69743a;
+  --color-amber-primary: #f59a22;
+  --color-amber-deep: #b95405;
+  --color-gold-warm: #d7923a;
+  --color-text-primary: #f3f4ee;
+  --color-text-secondary: #c5c9bc;
+  --color-text-muted: #858c7d;
+  --color-border: rgba(225, 235, 210, 0.18);
+  --color-border-accent: rgba(245, 154, 34, 0.48);
+  --color-glass-highlight: rgba(255, 255, 255, 0.08);
+  --color-success-a: #a6d86a;
+  --color-success-b: #74d99a;
+  --color-error: #e46b5d;
+  --color-link-accent: #70c8d1;
+
+  /* Gradients */
+  --gradient-primary-cta: linear-gradient(135deg, #d8780e, #f6a52b);
+  --gradient-primary-cta-border: rgba(255, 190, 80, 0.42);
+
+  /* Corner radii — UI_SPEC.md §1, §2.1 */
+  --radius-window: 20px;
+  --radius-panel: 18px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  /* Blur amounts — UI_SPEC.md §1 */
+  --blur-major: 26px;
+  --blur-minor: 14px;
+
+  /* 8px spacing system — UI_SPEC.md §2.2 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 44px;
+
+  /* Typography — UI_SPEC.md §2.3 */
+  --font-family-base: 'Inter', 'Segoe UI', system-ui, sans-serif;
+
+  --font-size-display: 32px;
+  --font-size-h1: 27px;
+  --font-size-h2: 21px;
+  --font-size-h3: 17px;
+  --font-size-body: 14.5px;
+  --font-size-small: 12.5px;
+  --font-size-micro: 10.5px;
+  --font-size-button: 13.5px;
+
+  --line-height-heading: 1.2;
+  --line-height-body: 1.5;
+  --line-height-micro: 1.3;
+
+  /* Layout constants — UI_SPEC.md §2.1 */
+  --sidebar-width: 240px;
+  --detail-pane-width: 396px;
+  --folder-rail-width: 220px;
+}

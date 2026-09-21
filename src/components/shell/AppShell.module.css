@@ -1,0 +1,25 @@
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  position: relative;
+  background: radial-gradient(
+      circle at 60% 40%,
+      rgba(40, 60, 25, 0.25) 0%,
+      rgba(10, 20, 10, 0.5) 70%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      rgba(216, 120, 14, 0.08) 0%,
+      transparent 50%
+    );
+}
+
+
