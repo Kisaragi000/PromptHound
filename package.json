@@ -18,6 +18,11 @@
   "build": {
     "appId": "com.prompthound.app",
     "productName": "PromptHound",
+    "publish": {
+      "provider": "github",
+      "owner": "Kisaragi000",
+      "repo": "PromptHound"
+    },
     "directories": {
       "output": "release",
       "buildResources": "build"
