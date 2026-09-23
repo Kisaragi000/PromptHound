@@ -1,0 +1,53 @@
+import type { ExtractionResult, ExtractionError } from '../../core/types.js';
+
+export interface PromptHoundAPI {
+  appInfo: {
+    name?: string;
+    version: string;
+  };
+  windowControls: {
+    minimize: () => Promise<void> | void;
+    toggleMaximize?: () => Promise<void> | void;
+    maximize: () => void;
+    close: () => Promise<void> | void;
+    isMaximized: () => Promise<boolean>;
+    onMaximizedChange?: (callback: (isMaximized: boolean) => void) => () => void;
+  };
+  openExternal?: (url: string) => void;
+  extraction: {
+    fromFilePath: (filePath: string) => Promise<ExtractionResult | ExtractionError>;
+    fromClipboard: () => Promise<ExtractionResult | ExtractionError>;
+    fromUrl: (url: string) => Promise<ExtractionResult | ExtractionError>;
+    getPathForFile: (file: File) => string;
+    openFileDialog: () => Promise<string | null>;
+  };
+  loraDb?: {
+    getByHash: (hash: string) => Promise<any>;
+    getByAlias: (alias: string) => Promise<any>;
+    upsert: (record: any) => Promise<void>;
+    remove: (hashOrAlias: string) => Promise<void>;
+    clearUserCache: () => Promise<void>;
+    getStats: () => Promise<{ count: number; userCount: number; lastUpdated?: number }>;
+  };
+  settings?: {
+    saveCivitaiKey: (key: string) => Promise<void>;
+    getCivitaiKey: () => Promise<string | null>;
+  };
+  library?: {
+    savePrompt: (item: any) => Promise<void>;
+    getAll: () => Promise<any[]>;
+    deletePrompt: (uuid: string) => Promise<void>;
+    searchFts: (query: string) => Promise<any[]>;
+    toggleFavorite: (uuid: string, isFav: boolean) => Promise<void>;
+  };
+  safetensors?: {
+    readFile: (filePath: string) => Promise<any>;
+    openFileDialog: () => Promise<string | null>;
+  };
+}
+
+declare global {
+  interface Window {
+    promptHound?: PromptHoundAPI;
+  }
+}

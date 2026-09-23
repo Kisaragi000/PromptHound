@@ -1,0 +1,18 @@
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  position: relative;
+  background-color: var(--color-bg-app);
+  background-image: 
+    radial-gradient(circle at 60% 25%, rgba(26, 38, 58, 0.45) 0%, rgba(11, 14, 21, 0) 70%),
+    radial-gradient(circle at 85% 85%, rgba(245, 154, 36, 0.04) 0%, transparent 45%);
+}
+
+

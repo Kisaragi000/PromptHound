@@ -1,0 +1,262 @@
+.sessionContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(18, 22, 32, 0.75);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-control);
+  width: 100%;
+}
+
+.sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sessionTitleWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sessionBadge {
+  font-size: 11px;
+  background: rgba(245, 154, 34, 0.15);
+  color: #F59A22;
+  padding: 1px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(245, 154, 34, 0.3);
+}
+
+.sessionActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navArrowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navArrowBtn:hover:not(:disabled) {
+  background: rgba(245, 154, 34, 0.2);
+  border-color: #F59A22;
+  color: #F59A22;
+}
+
+.navArrowBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.addBtnSmall {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 154, 34, 0.12);
+  border: 1px solid rgba(245, 154, 34, 0.3);
+  color: #F59A22;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addBtnSmall:hover {
+  background: #F59A22;
+  color: #071006;
+}
+
+/* Thumbnail Grid: 5 columns per row, up to 10 items (2 rows) */
+.thumbnailGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.thumbCard {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  display: block;
+  width: 100%;
+}
+
+.thumbCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 154, 34, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.thumbCardActive {
+  border-color: #F59A22 !important;
+  box-shadow: 0 0 0 1px #F59A22, 0 4px 16px rgba(245, 154, 34, 0.45) !important;
+  transform: scale(1.04);
+  z-index: 2;
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.indexPill {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  background: rgba(11, 14, 21, 0.88);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  line-height: 1.1;
+  pointer-events: none;
+}
+
+.thumbCardActive .indexPill {
+  background: #F59A24;
+  color: #0B0E15;
+  border-color: #F59A24;
+}
+
+.statusOverlay {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  pointer-events: none;
+}
+
+.loadingSpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(245, 154, 34, 0.3);
+  border-top-color: #F59A22;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.errorDot {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1px solid #fff;
+}
+
+.deleteBtn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  z-index: 5;
+}
+
+.thumbCard:hover .deleteBtn {
+  display: flex;
+}
+
+.deleteBtn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.addSlotCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(245, 154, 34, 0.35);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 10px;
+  gap: 2px;
+}
+
+.addSlotCard:hover {
+  background: rgba(245, 154, 34, 0.08);
+  border-color: #F59A22;
+  color: #F59A22;
+}
+
+.saveAllRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.saveAllBtn {
+  background: transparent;
+  border: none;
+  color: #F59A22;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.saveAllBtn:hover {
+  background: rgba(245, 154, 34, 0.15);
+}
+
+.hintText {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

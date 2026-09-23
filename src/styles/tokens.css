@@ -1,0 +1,85 @@
+:root {
+  /* Smoked Blue-Black Glass Environment — PROMPTHOUND_PALETTE.md */
+  --color-bg-app: #0B0E15;
+  --color-bg-app-rgba: rgba(11, 14, 21, 0.96);
+  --color-bg-deep-forest: #141822;
+  --color-bg-deep-forest-rgba: rgba(20, 24, 34, 0.92);
+  --color-bg-forest-glass: #141822;
+  --color-bg-forest-glass-rgba: rgba(255, 255, 255, 0.05);
+  --color-bg-elevated: #181E2C;
+  --color-olive-surface: rgba(45, 55, 75, 0.35);
+  --color-olive-highlight: #6F8FB8;
+  
+  /* Brand Orange & Action Accents */
+  --color-amber-primary: #F59A24;
+  --color-amber-deep: #D8780E;
+  --color-gold-warm: #FFAA2E;
+  
+  /* Restrained Blue Accent System (Desaturated / Slate-Blue) */
+  --color-blue-primary: #6F8FB8;
+  --color-blue-bright: #89A9D0;
+  --color-blue-surface: rgba(45, 55, 75, 0.35);
+  --color-blue-surface-hover: rgba(50, 60, 80, 0.75);
+  
+  /* Content & Typography */
+  --color-text-primary: #F2F3F5;
+  --color-text-secondary: #8F9DB2;
+  --color-text-muted: #687386;
+  
+  /* Glass Borders & Refined Highlights */
+  --color-border: rgba(160, 175, 200, 0.14);
+  --color-border-strong: rgba(160, 175, 200, 0.18);
+  --color-border-accent: rgba(245, 154, 36, 0.45);
+  --color-glass-highlight: rgba(255, 255, 255, 0.06);
+  
+  /* Functional Status Indicators */
+  --color-success-a: #10b981;
+  --color-success-b: #34d399;
+  --color-error: #ef4444;
+  --color-link-accent: #6F8FB8;
+
+  /* Button Gradients */
+  --gradient-primary-cta: linear-gradient(135deg, #F59A24, #FFAA2E);
+  --gradient-primary-cta-border: rgba(255, 190, 80, 0.42);
+
+  /* Corner radii — UI_SPEC.md §1, §2.1 */
+  --radius-window: 20px;
+  --radius-panel: 18px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  /* Blur amounts — UI_SPEC.md §1 */
+  --blur-major: 26px;
+  --blur-minor: 14px;
+
+  /* 8px spacing system — UI_SPEC.md §2.2 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 44px;
+
+  /* Typography — UI_SPEC.md §2.3 */
+  --font-family-base: 'Inter', 'Segoe UI', system-ui, sans-serif;
+
+  --font-size-display: 32px;
+  --font-size-h1: 27px;
+  --font-size-h2: 21px;
+  --font-size-h3: 17px;
+  --font-size-body: 14.5px;
+  --font-size-small: 12.5px;
+  --font-size-micro: 10.5px;
+  --font-size-button: 13.5px;
+
+  --line-height-heading: 1.2;
+  --line-height-body: 1.5;
+  --line-height-micro: 1.3;
+
+  /* Layout constants — UI_SPEC.md §2.1 */
+  --sidebar-width: 240px;
+  --detail-pane-width: 396px;
+  --folder-rail-width: 220px;
+}
