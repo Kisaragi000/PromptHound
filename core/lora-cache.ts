@@ -7,8 +7,28 @@ const hashIndex = new Map<string, ModelCatalogRecord>();
 const aliasIndex = new Map<string, ModelCatalogRecord>();
 
 /**
- * Loads pre-bundled seed data (cachedAt: 0)
+ * Scans a text block (e.g. prompt or tags) for known LoRAs based on alias and trigger words
  */
+export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  const matched: ModelCatalogRecord[] = [];
+
+  for (const record of aliasIndex.values()) {
+    const aliasHit = record.normalizedAlias && lower.includes(record.normalizedAlias.toLowerCase());
+    const triggerHit = record.triggerWords?.some(
+      (tw) => tw.length > 3 && lower.includes(tw.toLowerCase())
+    );
+
+    if (aliasHit || triggerHit) {
+      if (!matched.some((m) => m.civitaiModelId === record.civitaiModelId || m.name === record.name)) {
+        matched.push(record);
+      }
+    }
+  }
+
+  return matched;
+}
 function loadSeedCache(): void {
   hashIndex.clear();
   aliasIndex.clear();

@@ -85,7 +85,18 @@ function LoraItemRow({ lora }: { lora: LoraReference }): React.ReactElement {
 }
 
 export const ExtractionResultPage: React.FC = () => {
-  const { navigate, activeMetadata, activePreviewUrl, saveToLibrary } = useNavigation();
+  const {
+    navigate,
+    previousRoute,
+    goBack,
+    activeMetadata,
+    setActiveMetadata,
+    activePreviewUrl,
+    setActivePreviewUrl,
+    selectedLibraryItem,
+    setSelectedLibraryItem,
+    saveToLibrary,
+  } = useNavigation();
   const {
     status,
     result,
@@ -106,9 +117,12 @@ export const ExtractionResultPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
 
-  // Fallback to activeMetadata/activePreviewUrl if navigation provided one (e.g. from Library or Favorites)
-  const metadata: ExtractedMetadata | null =
-    result?.metadata ?? (activeMetadata as ExtractedMetadata | null);
+  // If navigating to inspect a saved library/favorite recipe, prioritize activeMetadata/activePreviewUrl
+  const isFromLibraryOrFavorites = Boolean(selectedLibraryItem || previousRoute === 'library' || previousRoute === 'favorites');
+
+  const metadata: ExtractedMetadata | null = isFromLibraryOrFavorites && activeMetadata
+    ? (activeMetadata as ExtractedMetadata)
+    : (result?.metadata ?? (activeMetadata as ExtractedMetadata | null));
 
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
 
@@ -118,13 +132,20 @@ export const ExtractionResultPage: React.FC = () => {
     );
     setCustomLoras(list);
   };
-  const previewUrl = result?.previewUrl ?? activePreviewUrl ?? (activeMetadata as any)?.image?.url;
-  const sourceLabel =
-    result?.source.label ?? (activeMetadata as any)?.source?.url ?? 'Imported source';
+  const previewUrl = isFromLibraryOrFavorites && (activePreviewUrl || selectedLibraryItem?.thumbnailUrl)
+    ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || null)
+    : (result?.previewUrl ?? activePreviewUrl ?? (activeMetadata as any)?.image?.url ?? null);
+
+  const sourceLabel = isFromLibraryOrFavorites && selectedLibraryItem
+    ? `${selectedLibraryItem.source || 'Saved'} · ${selectedLibraryItem.folder || 'Library'}`
+    : (result?.source.label ?? (activeMetadata as any)?.source?.url ?? 'Imported source');
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      setSelectedLibraryItem(null);
+      setActiveMetadata(null);
+      setActivePreviewUrl(null);
       if (files.length === 1) {
         await extractFromFile(files[0]);
       } else {
@@ -138,6 +159,9 @@ export const ExtractionResultPage: React.FC = () => {
     if (window.promptHound?.extraction?.openFileDialog) {
       const selected = await window.promptHound.extraction.openFileDialog();
       if (selected) {
+        setSelectedLibraryItem(null);
+        setActiveMetadata(null);
+        setActivePreviewUrl(null);
         // Electron IPC extraction
         return;
       }
@@ -149,6 +173,9 @@ export const ExtractionResultPage: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setSelectedLibraryItem(null);
+      setActiveMetadata(null);
+      setActivePreviewUrl(null);
       const files = Array.from(e.dataTransfer.files);
       if (sessionImages.length > 0) {
         await addSessionImages(files);
@@ -399,18 +426,31 @@ export const ExtractionResultPage: React.FC = () => {
           <button
             className={styles.backBtn}
             onClick={() => {
-              reset();
-              navigate('home');
+              if (previousRoute) {
+                goBack();
+              } else {
+                reset();
+                navigate('home');
+              }
             }}
           >
-            <ChevronLeftIcon size={16} /> Back to Home
+            <ChevronLeftIcon size={16} />{' '}
+            {previousRoute === 'library'
+              ? 'Back to Library'
+              : previousRoute === 'favorites'
+              ? 'Back to Favorites'
+              : 'Back to Home'}
           </button>
           <div className={styles.headerTitleRow}>
-            <h1 className={styles.headerTitle}>Extraction Result</h1>
+            <h1 className={styles.headerTitle}>
+              {selectedLibraryItem ? selectedLibraryItem.title : 'Extraction Result'}
+            </h1>
             <StatusBadge status="success" label={metadata.detectedFormat || 'Extracted'} />
           </div>
           <p className={styles.headerSubtitle}>
-            Parameters and checkpoint models parsed from image metadata
+            {selectedLibraryItem
+              ? `${selectedLibraryItem.folder} · ${selectedLibraryItem.model} · Parameters & LoRAs`
+              : 'Parameters and checkpoint models parsed from image metadata'}
           </p>
         </div>
 
@@ -486,7 +526,7 @@ export const ExtractionResultPage: React.FC = () => {
           </div>
 
           {/* Multi-Image Session Carousel & Switcher Strip */}
-          <MultiImageSessionStrip />
+          {!isFromLibraryOrFavorites && <MultiImageSessionStrip />}
         </div>
 
         {/* Center: Metadata Fields & Tabs */}

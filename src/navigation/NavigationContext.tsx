@@ -10,7 +10,7 @@ export type RouteKey =
   | 'settings'
   | 'about';
 
-const STORAGE_KEY_PROMPTS = 'prompthound_library_items_v2';
+const STORAGE_KEY_PROMPTS = 'prompthound_library_items_v9';
 const STORAGE_KEY_FOLDERS = 'prompthound_folders_v2';
 const STORAGE_KEY_FAVORITES = 'prompthound_favorites_v2';
 
@@ -21,7 +21,7 @@ const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
     folder: 'Portraits',
     source: 'Civitai',
     date: 'Apr 28, 2025',
-    model: 'SDXL Base 1.0',
+    model: 'Anything v5.0',
     dimensions: '1024 × 1536',
     isFavorite: true,
     thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
@@ -47,19 +47,6 @@ const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             triggerWords: ['cyberpunk', 'neon lights', 'night city'],
             baseModel: 'SDXL 1.0',
             versionName: 'v1.2',
-          },
-        },
-        {
-          rawName: 'Detail_Tweaker',
-          strength: 0.4,
-          resolved: {
-            name: 'Detail Tweaker / Enhancer',
-            source: 'civitai',
-            modelUrl: 'https://civitai.com/models/67890',
-            coverImageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80',
-            triggerWords: ['high detail', 'sharp focus'],
-            baseModel: 'SDXL 1.0',
-            versionName: 'v1.0',
           },
         },
       ],
@@ -116,11 +103,13 @@ const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
   },
 ];
 
-const INITIAL_FOLDERS = ['All Prompts', 'Portraits', 'Landscapes', 'Characters', 'Anime Style', 'My Creations'];
+const INITIAL_FOLDERS = ['All Prompts', 'Portraits', 'Landscapes', 'Architecture', 'Illustrations', 'Anime', 'My Creations'];
 
 interface NavigationContextType {
   currentRoute: RouteKey;
+  previousRoute: RouteKey | null;
   navigate: (route: RouteKey) => void;
+  goBack: () => void;
   activeMetadata: ExtractedMetadata | null;
   setActiveMetadata: (metadata: ExtractedMetadata | null) => void;
   activePreviewUrl: string | null;
@@ -144,6 +133,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 
 export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentRoute, setCurrentRoute] = useState<RouteKey>('home');
+  const [previousRoute, setPreviousRoute] = useState<RouteKey | null>(null);
   const [activeMetadata, setActiveMetadata] = useState<ExtractedMetadata | null>(null);
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
   const [selectedLibraryItem, setSelectedLibraryItem] = useState<SavedPromptItem | null>(null);
@@ -154,7 +144,9 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
       const stored = localStorage.getItem(STORAGE_KEY_PROMPTS);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     } catch {
       // ignore
@@ -234,7 +226,16 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [favorites]);
 
   const navigate = (route: RouteKey) => {
+    setPreviousRoute(currentRoute);
     setCurrentRoute(route);
+  };
+
+  const goBack = () => {
+    if (previousRoute) {
+      setCurrentRoute(previousRoute);
+    } else {
+      setCurrentRoute('home');
+    }
   };
 
   const toggleFavorite = (id: string) => {
@@ -320,31 +321,45 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const openRecipeInResult = (item: SavedPromptItem) => {
+    let width = item.metadata?.width || (item.metadata as any)?.image?.width;
+    let height = item.metadata?.height || (item.metadata as any)?.image?.height;
+    if ((!width || !height) && item.dimensions) {
+      const parts = item.dimensions.split(/[\s×xX]+/);
+      if (parts.length >= 2) {
+        width = parseInt(parts[0], 10) || 1024;
+        height = parseInt(parts[1], 10) || 1024;
+      }
+    }
+
     const meta: ExtractedMetadata = {
       prompt: item.metadata?.prompt || '',
       negativePrompt: item.metadata?.negativePrompt,
-      sampler: item.metadata?.sampler || item.metadata?.generation?.sampler,
-      steps: item.metadata?.steps || item.metadata?.generation?.steps,
-      cfgScale: item.metadata?.cfgScale || item.metadata?.generation?.cfgScale,
-      seed: item.metadata?.seed || item.metadata?.generation?.seed,
-      model: item.metadata?.model || item.metadata?.generation?.model || item.model,
-      width: item.metadata?.width || item.metadata?.image?.width,
-      height: item.metadata?.height || item.metadata?.image?.height,
+      sampler: item.metadata?.sampler || (item.metadata as any)?.generation?.sampler || 'Euler a',
+      steps: item.metadata?.steps || (item.metadata as any)?.generation?.steps || 30,
+      cfgScale: item.metadata?.cfgScale || (item.metadata as any)?.generation?.cfgScale || 7.0,
+      seed: item.metadata?.seed || (item.metadata as any)?.generation?.seed,
+      model: item.metadata?.model || (item.metadata as any)?.generation?.model || item.model || 'SDXL Base 1.0',
+      width: width || 1024,
+      height: height || 1024,
       loras: item.metadata?.loras || [],
       detectedFormat: item.metadata?.detectedFormat || 'a1111',
-      extraFields: item.metadata?.extraFields || item.metadata?.generation,
+      extraFields: item.metadata?.extraFields || (item.metadata as any)?.generation,
     };
 
+    setSelectedLibraryItem(item);
     setActiveMetadata(meta);
-    setActivePreviewUrl(item.thumbnailUrl || item.metadata?.image?.url || null);
-    navigate('result');
+    setActivePreviewUrl(item.thumbnailUrl || (item.metadata as any)?.image?.url || null);
+    setPreviousRoute(currentRoute);
+    setCurrentRoute('result');
   };
 
   return (
     <NavigationContext.Provider
       value={{
         currentRoute,
+        previousRoute,
         navigate,
+        goBack,
         activeMetadata,
         setActiveMetadata,
         activePreviewUrl,

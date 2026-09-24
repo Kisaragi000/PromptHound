@@ -130,5 +130,93 @@
     "triggerWords": ["masterpiece", "highres", "aesthetic illustration"],
     "baseModel": "Illustrious",
     "modelUrl": "https://civitai.com/models/789123?modelVersionId=881290"
+  },
+  {
+    "civitaiModelId": 2625400,
+    "civitaiVersionId": 2947634,
+    "name": "【Anima】Landscape specialization lora",
+    "normalizedAlias": "anima landscape specialization",
+    "hashSha256": "2947634f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "2947634",
+    "triggerWords": ["landscape", "fog-drenched", "fjord", "scenery", "mist"],
+    "baseModel": "Anima",
+    "modelUrl": "https://civitai.com/models/2625400/animalandscape-specialization-lora?modelVersionId=2947634"
+  },
+  {
+    "civitaiModelId": 2628200,
+    "civitaiVersionId": 3082260,
+    "name": "Anima Lighting Atmosphere Enhancer",
+    "normalizedAlias": "anima lighting atmosphere enhancer",
+    "hashSha256": "3082260f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "3082260",
+    "triggerWords": ["atmospheric lighting", "warm glow", "natural depth of field", "cinematic"],
+    "baseModel": "Anima",
+    "modelUrl": "https://civitai.com/models/2628200/anima-lighting-atmosphere-enhancer?modelVersionId=3082260"
+  },
+  {
+    "civitaiModelId": 2695493,
+    "civitaiVersionId": 3301424,
+    "name": "One obsession_Anima (v4.0)",
+    "normalizedAlias": "one obsession anima",
+    "hashSha256": "3301424f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "3301424",
+    "triggerWords": ["score_9", "score_8", "score_7", "highres", "very aesthetic"],
+    "baseModel": "Anima",
+    "modelUrl": "https://civitai.com/models/2695493/one-obsessionanima?modelVersionId=3301424"
+  },
+  {
+    "civitaiModelId": 2881657,
+    "civitaiVersionId": 3257037,
+    "name": "Wulver (Krea - 2) v0.1 Alpha (v0.1)",
+    "normalizedAlias": "wulver krea 2",
+    "hashSha256": "3257037f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "3257037",
+    "triggerWords": ["coastal research station", "brutalist", "weathered concrete"],
+    "baseModel": "Krea-2",
+    "modelUrl": "https://civitai.com/models/2881657/wulver-krea-2-v01-alpha?modelVersionId=3257037"
+  },
+  {
+    "civitaiModelId": 2863043,
+    "civitaiVersionId": 3234278,
+    "name": "Cyberpunk Interior (Architecture) (Buildings) (Krea2) (AD)",
+    "normalizedAlias": "cyberpunk interior",
+    "hashSha256": "3234278f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "3234278",
+    "triggerWords": ["CyberpunkInterior", "YFG-Aarchy", "interior", "architecture", "brutalist"],
+    "baseModel": "Krea-2",
+    "modelUrl": "https://civitai.com/models/2863043/cyberpunk-interior-architecture-buildings-krea2-ad?modelVersionId=3234278"
+  },
+  {
+    "civitaiModelId": 929497,
+    "civitaiVersionId": 3077110,
+    "name": "Aesthetic Quality Modifiers - Masterpiece",
+    "normalizedAlias": "aesthetic quality modifiers masterpiece",
+    "hashSha256": "3077110f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "3077110",
+    "triggerWords": ["masterpiece", "very aesthetic", "aesthetic quality"],
+    "baseModel": "SDXL",
+    "modelUrl": "https://civitai.com/models/929497/aesthetic-quality-modifiers-masterpiece?modelVersionId=3077110"
+  },
+  {
+    "civitaiModelId": 849201,
+    "civitaiVersionId": 951042,
+    "name": "Chainsaw Man Movie Style (CSM Movie Style) [Illustrious]",
+    "normalizedAlias": "csm movie style",
+    "hashSha256": "951042f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "951042",
+    "triggerWords": ["chainsaw man movie style", "CSMMovieStyleIL", "chainsaw man", "reze (chainsaw man)"],
+    "baseModel": "Illustrious",
+    "modelUrl": "https://civitai.com/models/849201/chainsaw-man-movie-style?modelVersionId=951042"
+  },
+  {
+    "civitaiModelId": 642019,
+    "civitaiVersionId": 718304,
+    "name": "Chalk Pastel & Traditional Watercolor Media [b3Jp]",
+    "normalizedAlias": "b3Jp traditional watercolor",
+    "hashSha256": "718304f10928491029384910293849102938491029384910293849102938491",
+    "coverImageId": "718304",
+    "triggerWords": ["b3Jp", "chalk pastel", "watercolor", "traditional media", "soft pastel texture", "grainy paper surface"],
+    "baseModel": "SDXL",
+    "modelUrl": "https://civitai.com/models/642019/chalk-pastel-and-traditional-watercolor-media?modelVersionId=718304"
   }
 ]

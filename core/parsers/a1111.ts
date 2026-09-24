@@ -1,4 +1,5 @@
 import type { ExtractedMetadata, LoraReference } from '../types.js';
+import { findMatchingSeedLorasInText } from '../lora-cache.js';
 
 /**
  * Parses settings string into key-value pairs while respecting quotes.
@@ -263,6 +264,30 @@ export function parseA1111(
 
   // Parse Civitai Resources JSON
   parseCivitaiResources(settings, loras);
+
+  // Also check prompt for known LoRA tags / trigger words (e.g. CyberpunkInterior, YFG-Aarchy)
+  try {
+    const matchedRecords = findMatchingSeedLorasInText(rawPrompt);
+    for (const record of matchedRecords) {
+      if (!loras.some((l) => l.rawName.toLowerCase() === record.name.toLowerCase() || l.resolved?.modelUrl === record.modelUrl)) {
+        loras.push({
+          rawName: record.name,
+          strength: 1.0,
+          resolved: {
+            name: record.name,
+            source: 'civitai',
+            modelUrl: record.modelUrl,
+            coverImageUrl: record.coverImageUrl,
+            triggerWords: record.triggerWords,
+            baseModel: record.baseModel,
+            versionName: 'v1.0',
+          },
+        });
+      }
+    }
+  } catch {
+    // ignore
+  }
 
   // Parse Dimensions from Size: WxH
   let width = imageDimensions?.width;

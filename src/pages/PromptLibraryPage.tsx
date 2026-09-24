@@ -41,8 +41,12 @@ export const PromptLibraryPage: React.FC = () => {
 
   const [selectedFolder, setSelectedFolder] = useState('All Prompts');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(() => libraryItems[0] || null);
+  const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Edit Library mode for deletion management
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedForDeletion, setSelectedForDeletion] = useState<string[]>([]);
 
   // View Layout mode: 'grid' or 'table'
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -88,8 +92,8 @@ export const PromptLibraryPage: React.FC = () => {
   });
 
   const activeItem =
-    selectedItem && libraryItems.some((i) => i.id === selectedItem.id)
-      ? libraryItems.find((i) => i.id === selectedItem.id)!
+    selectedItem && filteredItems.some((i) => i.id === selectedItem.id)
+      ? filteredItems.find((i) => i.id === selectedItem.id)!
       : filteredItems[0] || null;
 
   const copyText = (text: string, field: string) => {
@@ -109,6 +113,29 @@ export const PromptLibraryPage: React.FC = () => {
       }
       return [...prev, id];
     });
+  };
+
+  const toggleSelectForDeletion = (id: string) => {
+    setSelectedForDeletion((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllForDeletion = () => {
+    if (selectedForDeletion.length === filteredItems.length) {
+      setSelectedForDeletion([]);
+    } else {
+      setSelectedForDeletion(filteredItems.map((i) => i.id));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedForDeletion.length === 0) return;
+    selectedForDeletion.forEach((id) => {
+      deleteFromLibrary(id);
+    });
+    setCompareSelection((prev) => prev.filter((id) => !selectedForDeletion.includes(id)));
+    setSelectedForDeletion([]);
   };
 
   const handleCreateFolder = (e: React.FormEvent) => {
@@ -161,6 +188,7 @@ export const PromptLibraryPage: React.FC = () => {
   const handleDeleteItem = (id: string) => {
     deleteFromLibrary(id);
     setCompareSelection((prev) => prev.filter((i) => i !== id));
+    setSelectedForDeletion((prev) => prev.filter((i) => i !== id));
     if (selectedItem?.id === id) {
       setSelectedItem(null);
     }
@@ -175,6 +203,20 @@ export const PromptLibraryPage: React.FC = () => {
       <header className={styles.topBar}>
         <div className={styles.topBarLeft}>
           <h2 className={styles.pageTitle}>Prompt Library</h2>
+
+          {/* Edit Library Toggle in top left */}
+          <button
+            className={`${styles.editLibraryBtn} ${isEditMode ? styles.editLibraryBtnActive : ''}`}
+            onClick={() => {
+              setIsEditMode(!isEditMode);
+              if (isEditMode) setSelectedForDeletion([]);
+            }}
+            title={isEditMode ? 'Finish editing library' : 'Edit and delete library images'}
+          >
+            <EditIcon size={14} />
+            <span>{isEditMode ? 'Done Editing' : 'Edit Library'}</span>
+          </button>
+
           <div className={styles.searchWrap}>
             <GlassInput
               value={searchQuery}
@@ -205,7 +247,7 @@ export const PromptLibraryPage: React.FC = () => {
           </div>
 
           {/* Compare Button */}
-          {compareSelection.length > 0 && (
+          {compareSelection.length > 0 && !isEditMode && (
             <SecondaryButton
               onClick={() => setIsDiffModalOpen(true)}
               disabled={compareSelection.length < 2}
@@ -223,6 +265,36 @@ export const PromptLibraryPage: React.FC = () => {
           </PrimaryButton>
         </div>
       </header>
+
+      {/* Edit Mode Deletion Toolbar */}
+      {isEditMode && (
+        <div className={styles.editModeToolbar}>
+          <div className={styles.editModeToolbarLeft}>
+            <span className={styles.editModeBadge}>Edit Mode Active</span>
+            <span className={styles.editModeHelp}>
+              Click items or trash icons to delete images from your library.
+            </span>
+          </div>
+          <div className={styles.editModeToolbarRight}>
+            <button
+              className={styles.toolbarSecondaryBtn}
+              onClick={handleSelectAllForDeletion}
+            >
+              {selectedForDeletion.length === filteredItems.length && filteredItems.length > 0
+                ? 'Deselect All'
+                : `Select All (${filteredItems.length})`}
+            </button>
+            <button
+              className={styles.toolbarDeleteBtn}
+              disabled={selectedForDeletion.length === 0}
+              onClick={handleDeleteSelected}
+            >
+              <TrashIcon size={14} />
+              <span>Delete Selected ({selectedForDeletion.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main 3-Column Layout */}
       <div className={styles.mainLayout}>
@@ -254,7 +326,11 @@ export const PromptLibraryPage: React.FC = () => {
               <table className={styles.compactTable}>
                 <thead>
                   <tr>
-                    <th style={{ width: '40px' }}>Diff</th>
+                    {isEditMode ? (
+                      <th style={{ width: '40px' }}>Select</th>
+                    ) : (
+                      <th style={{ width: '40px' }}>Diff</th>
+                    )}
                     <th style={{ width: '60px' }}>Thumb</th>
                     <th>Title &amp; Prompt</th>
                     <th>Model</th>
@@ -266,19 +342,51 @@ export const PromptLibraryPage: React.FC = () => {
                   {filteredItems.map((item) => {
                     const isSelected = activeItem?.id === item.id;
                     const isCompared = compareSelection.includes(item.id);
+                    const isMarkedDelete = selectedForDeletion.includes(item.id);
+
                     return (
                       <tr
                         key={item.id}
-                        className={`${styles.tableRow} ${isSelected ? styles.tableRowSelected : ''}`}
-                        onClick={() => setSelectedItem(item)}
+                        className={`${styles.tableRow} ${isSelected ? styles.tableRowSelected : ''} ${isMarkedDelete ? styles.tableRowMarkedDelete : ''}`}
+                        onClick={() => {
+                          if (isEditMode) {
+                            toggleSelectForDeletion(item.id);
+                          } else if (selectedItem?.id === item.id) {
+                            openRecipeInResult(item);
+                          } else {
+                            setSelectedItem(item);
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (!isEditMode) {
+                            openRecipeInResult(item);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title={
+                          isEditMode
+                            ? 'Click to select for deletion'
+                            : selectedItem?.id === item.id
+                            ? 'Click again to open full scan results'
+                            : 'Click to select (orange border), click again to open full'
+                        }
                       >
                         <td onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isCompared}
-                            onChange={() => toggleCompareItem(item.id)}
-                            title="Select for Diff Comparison"
-                          />
+                          {isEditMode ? (
+                            <input
+                              type="checkbox"
+                              checked={isMarkedDelete}
+                              onChange={() => toggleSelectForDeletion(item.id)}
+                              title="Select to delete"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={isCompared}
+                              onChange={() => toggleCompareItem(item.id)}
+                              title="Select for Diff Comparison"
+                            />
+                          )}
                         </td>
                         <td>
                           <img src={item.thumbnailUrl} alt={item.title} className={styles.tableThumb} />
@@ -295,28 +403,40 @@ export const PromptLibraryPage: React.FC = () => {
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className={styles.tableActions}>
-                            <IconButton
-                              title="Copy prompt"
-                              onClick={() => copyText(item.metadata?.prompt || '', `table-${item.id}`)}
-                            >
-                              {copiedField === `table-${item.id}` ? (
-                                <CheckIcon size={13} color="#4ade80" />
-                              ) : (
-                                <CopyIcon size={13} />
-                              )}
-                            </IconButton>
-                            <IconButton
-                              title="Inspect full extraction"
-                              onClick={() => openRecipeInResult(item)}
-                            >
-                              <EyeIcon size={13} />
-                            </IconButton>
-                            <IconButton
-                              title="Delete"
-                              onClick={() => handleDeleteItem(item.id)}
-                            >
-                              <TrashIcon size={13} />
-                            </IconButton>
+                            {isEditMode ? (
+                              <button
+                                className={styles.deleteQuickBtn}
+                                onClick={() => handleDeleteItem(item.id)}
+                                title="Delete image from library"
+                              >
+                                <TrashIcon size={14} />
+                              </button>
+                            ) : (
+                              <>
+                                <IconButton
+                                  title="Copy prompt"
+                                  onClick={() => copyText(item.metadata?.prompt || '', `table-${item.id}`)}
+                                >
+                                  {copiedField === `table-${item.id}` ? (
+                                    <CheckIcon size={13} color="#4ade80" />
+                                  ) : (
+                                    <CopyIcon size={13} />
+                                  )}
+                                </IconButton>
+                                <IconButton
+                                  title="Inspect full extraction"
+                                  onClick={() => openRecipeInResult(item)}
+                                >
+                                  <EyeIcon size={13} />
+                                </IconButton>
+                                <IconButton
+                                  title="Delete"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                >
+                                  <TrashIcon size={13} />
+                                </IconButton>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -330,35 +450,91 @@ export const PromptLibraryPage: React.FC = () => {
               const isFav = favorites.includes(item.id);
               const isSelected = activeItem?.id === item.id;
               const isCompared = compareSelection.includes(item.id);
+              const isMarkedDelete = selectedForDeletion.includes(item.id);
 
               return (
                 <div
                   key={item.id}
-                  className={`${styles.promptCard} ${isSelected ? styles.selectedCard : ''}`}
-                  onClick={() => setSelectedItem(item)}
+                  className={`${styles.promptCard} ${isSelected ? styles.selectedCard : ''} ${isEditMode ? styles.cardEditMode : ''} ${isMarkedDelete ? styles.cardMarkedDelete : ''}`}
+                  onClick={() => {
+                    if (isEditMode) {
+                      toggleSelectForDeletion(item.id);
+                    } else if (selectedItem?.id === item.id) {
+                      openRecipeInResult(item);
+                    } else {
+                      setSelectedItem(item);
+                    }
+                  }}
+                  onDoubleClick={() => {
+                    if (!isEditMode) {
+                      openRecipeInResult(item);
+                    }
+                  }}
+                  title={
+                    isEditMode
+                      ? 'Click to select for deletion'
+                      : selectedItem?.id === item.id
+                      ? `Click again to open full scan results for ${item.title}`
+                      : `Click to select ${item.title} (orange border), click again to open full`
+                  }
                 >
                   <div className={styles.cardThumbWrap}>
                     <img src={item.thumbnailUrl} alt={item.title} className={styles.cardThumb} />
-                    <button
-                      className={styles.cardFavStar}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(item.id);
-                      }}
-                    >
-                      <StarIcon size={16} filled={isFav} />
-                    </button>
-                    {/* Compare checkbox badge */}
-                    <button
-                      className={`${styles.compareBadge} ${isCompared ? styles.compareBadgeActive : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleCompareItem(item.id);
-                      }}
-                      title="Select for Diff comparison"
-                    >
-                      {isCompared ? '✓ Diff' : '+ Diff'}
-                    </button>
+
+                    {isEditMode ? (
+                      <>
+                        {/* Edit Mode Checkbox */}
+                        <div
+                          className={styles.cardDeleteCheckboxWrap}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelectForDeletion(item.id);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isMarkedDelete}
+                            onChange={() => toggleSelectForDeletion(item.id)}
+                          />
+                        </div>
+
+                        {/* Direct Delete Badge */}
+                        <button
+                          className={styles.cardDirectDeleteBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteItem(item.id);
+                          }}
+                          title="Delete this image"
+                        >
+                          <TrashIcon size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className={styles.cardFavStar}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(item.id);
+                          }}
+                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <StarIcon size={16} filled={isFav} />
+                        </button>
+                        {/* Compare checkbox badge */}
+                        <button
+                          className={`${styles.compareBadge} ${isCompared ? styles.compareBadgeActive : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCompareItem(item.id);
+                          }}
+                          title="Select for Diff comparison"
+                        >
+                          {isCompared ? '✓ Diff' : '+ Diff'}
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   <div className={styles.cardBody}>
@@ -372,33 +548,48 @@ export const PromptLibraryPage: React.FC = () => {
                       <span>{item.model}</span>
                     </div>
                     <div className={styles.cardActionsRow}>
-                      <IconButton
-                        title="Copy prompt"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyText(item.metadata?.prompt || '', `card-${item.id}`);
-                        }}
-                      >
-                        {copiedField === `card-${item.id}` ? <CheckIcon size={14} color="#4ade80" /> : <CopyIcon size={14} />}
-                      </IconButton>
-                      <IconButton
-                        title="Open full extraction result"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openRecipeInResult(item);
-                        }}
-                      >
-                        <EyeIcon size={14} />
-                      </IconButton>
-                      <IconButton
-                        title="Delete from library"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteItem(item.id);
-                        }}
-                      >
-                        <TrashIcon size={14} />
-                      </IconButton>
+                      {isEditMode ? (
+                        <button
+                          className={styles.cardInlineDeleteBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteItem(item.id);
+                          }}
+                        >
+                          <TrashIcon size={13} />
+                          <span>Delete Image</span>
+                        </button>
+                      ) : (
+                        <>
+                          <IconButton
+                            title="Copy prompt"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyText(item.metadata?.prompt || '', `card-${item.id}`);
+                            }}
+                          >
+                            {copiedField === `card-${item.id}` ? <CheckIcon size={14} color="#4ade80" /> : <CopyIcon size={14} />}
+                          </IconButton>
+                          <IconButton
+                            title="Open full extraction result"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRecipeInResult(item);
+                            }}
+                          >
+                            <EyeIcon size={14} />
+                          </IconButton>
+                          <IconButton
+                            title="Delete from library"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteItem(item.id);
+                            }}
+                          >
+                            <TrashIcon size={14} />
+                          </IconButton>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -410,7 +601,14 @@ export const PromptLibraryPage: React.FC = () => {
         {/* Column 3: Selected Item Detail Pane */}
         {activeItem ? (
           <aside className={styles.detailPane}>
-            <div className={styles.detailImageWrap}>
+            <div
+              className={styles.detailImageWrap}
+              onClick={() => {
+                if (!isEditMode) openRecipeInResult(activeItem);
+              }}
+              style={{ cursor: isEditMode ? 'default' : 'pointer' }}
+              title={isEditMode ? undefined : 'Click to open full scan results'}
+            >
               <img
                 src={activeItem.thumbnailUrl}
                 alt={activeItem.title}
@@ -418,7 +616,10 @@ export const PromptLibraryPage: React.FC = () => {
               />
               <button
                 className={styles.detailFavBtn}
-                onClick={() => toggleFavorite(activeItem.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(activeItem.id);
+                }}
               >
                 <StarIcon size={20} filled={favorites.includes(activeItem.id)} />
               </button>

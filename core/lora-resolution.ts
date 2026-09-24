@@ -2,6 +2,7 @@ import type { LoraReference, ModelCatalogRecord } from './types.js';
 import {
   getCachedLoraByHash,
   getCachedLoraByAlias,
+  findMatchingSeedLorasInText,
   upsertLoraRecord,
   toResolvedLora,
 } from './lora-cache.js';
@@ -15,10 +16,11 @@ import {
 /**
  * Normalizes raw LoRA filenames or prompt tags into clean search queries.
  * Examples:
+ *  - "【Anima】Landscape specialization lora" -> "Anima Landscape specialization"
+ *  - "CyberpunkInterior, YFG-Aarchy" -> "Cyberpunk Interior"
+ *  - "Cyberpunk Interior (Architecture) (Buildings) (Krea2) (AD)" -> "Cyberpunk Interior"
  *  - "Echidna_ReZero_SDXL_v1.0.safetensors" -> "Echidna ReZero"
  *  - "<lora:epiCRealism_v5:0.8>" -> "epiCRealism"
- *  - "detail_tweaker_offset.safetensors" -> "detail tweaker"
- *  - "add_detail_v1" -> "add detail"
  */
 export function normalizeLoraName(rawName: string): string {
   if (!rawName) return '';
@@ -30,20 +32,51 @@ export function normalizeLoraName(rawName: string): string {
   name = name.replace(/:[\d.]+(>)?$/, '');
   name = name.replace(/>$/, '');
 
+  // Strip Asian / Unicode brackets: 【 】 《 》 （ ） ［ ］
+  name = name.replace(/[【】《》（）［］]/g, ' ');
+
+  // Strip parenthetical descriptors: (Architecture) (Buildings) (Krea2) (AD)
+  name = name.replace(/\([^)]*\)/g, ' ');
+
   // Strip file extensions
   name = name.replace(/\.(safetensors|ckpt|pt|bin)$/i, '');
 
-  // Strip common training/model suffixes
-  name = name.replace(/_?(sdxl|sd15|sd1\.5|sd2\.1|pony|flux|illustrious|animagine)/gi, ' ');
-  name = name.replace(/_?(v\d+(\.\d+)?|epoch\d+|step\d+|offset|lora|style|lora_v\d+)/gi, ' ');
+  // Split camelCase and acronym boundaries (e.g. CSMMovieStyleIL -> CSM Movie Style IL)
+  name = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  name = name.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
 
-  // Replace underscores, dashes, dots with spaces
-  name = name.replace(/[_\-.]+/g, ' ');
+  // Strip common training/model suffixes
+  name = name.replace(/_?(sdxl|sd15|sd1\.5|sd2\.1|pony|flux|illustrious|animagine|krea2|krea|il|xl|pd)\b/gi, ' ');
+  name = name.replace(/_?(v\d+(\.\d+)?|epoch\d+|step\d+|offset|lora|style|lora_v\d+)\b/gi, ' ');
+
+  // Replace underscores, dashes, dots, commas with spaces
+  name = name.replace(/[_\-.,]+/g, ' ');
 
   // Collapse multiple spaces and trim
   name = name.replace(/\s+/g, ' ').trim();
 
   return name || rawName.trim();
+}
+
+/**
+ * Scans prompt text for known LoRA trigger words and aliases
+ */
+export function scanPromptForKnownLoras(promptText: string): LoraReference[] {
+  if (!promptText) return [];
+  const matched = findMatchingSeedLorasInText(promptText);
+  return matched.map((item) => ({
+    rawName: item.name,
+    strength: 1.0,
+    resolved: {
+      name: item.name,
+      source: 'civitai' as const,
+      modelUrl: item.modelUrl,
+      coverImageUrl: item.coverImageUrl,
+      triggerWords: item.triggerWords,
+      baseModel: item.baseModel,
+      versionName: 'v1.0',
+    },
+  }));
 }
 
 let cachedAsyncApiKey: string | null = null;
@@ -128,14 +161,15 @@ function getCivitaiApiKey(): string | null {
  */
 export async function searchCivitaiCandidates(
   query: string,
-  targetHash?: string
+  targetHash?: string,
+  modelType: 'LORA' | 'Checkpoint' | 'all' = 'LORA'
 ): Promise<CandidateMatchResult[]> {
   const cleanQuery = query.trim();
   if (!cleanQuery && !targetHash) return [];
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.4 (Metadata-Extractor)',
+    'User-Agent': 'PromptHound/1.0.5 (Metadata-Extractor)',
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };
@@ -168,8 +202,9 @@ export async function searchCivitaiCandidates(
   // 2. Search by query text
   if (cleanQuery.length >= 2) {
     try {
+      const typeParam = modelType === 'all' ? '' : `&types=${modelType}`;
       const searchRes = await fetch(
-        `https://civitai.com/api/v1/models?query=${encodeURIComponent(cleanQuery)}&types=LORA&limit=10`,
+        `https://civitai.com/api/v1/models?query=${encodeURIComponent(cleanQuery)}${typeParam}&limit=10`,
         { headers }
       );
       if (searchRes.ok) {
@@ -355,4 +390,93 @@ export async function resolveLoras(loras: LoraReference[]): Promise<LoraReferenc
   );
 
   return settled.map((r, i) => (r.status === 'fulfilled' ? r.value : loras[i]));
+}
+
+/**
+ * Resolves a base model checkpoint name or hash to its verified Civitai metadata
+ */
+export async function resolveModelCheckpoint(
+  rawModelName?: string,
+  modelHash?: string
+): Promise<{
+  name: string;
+  source?: 'civitai';
+  modelUrl?: string;
+  coverImageUrl?: string;
+  baseModel?: string;
+  versionName?: string;
+  civitaiModelId?: number;
+  civitaiVersionId?: number;
+} | null> {
+  if (!rawModelName && !modelHash) return null;
+
+  const normalized = rawModelName ? normalizeLoraName(rawModelName) : '';
+
+  // 1. Check local seed & cache
+  if (modelHash) {
+    const cachedByHash = getCachedLoraByHash(modelHash);
+    if (cachedByHash) {
+      return {
+        name: cachedByHash.name,
+        source: 'civitai',
+        modelUrl: cachedByHash.modelUrl,
+        coverImageUrl: cachedByHash.coverImageUrl,
+        baseModel: cachedByHash.baseModel,
+        civitaiModelId: cachedByHash.civitaiModelId,
+        civitaiVersionId: cachedByHash.civitaiVersionId,
+      };
+    }
+  }
+
+  if (normalized) {
+    const cachedByAlias = getCachedLoraByAlias(normalized);
+    if (cachedByAlias) {
+      return {
+        name: cachedByAlias.name,
+        source: 'civitai',
+        modelUrl: cachedByAlias.modelUrl,
+        coverImageUrl: cachedByAlias.coverImageUrl,
+        baseModel: cachedByAlias.baseModel,
+        civitaiModelId: cachedByAlias.civitaiModelId,
+        civitaiVersionId: cachedByAlias.civitaiVersionId,
+      };
+    }
+  }
+
+  // 2. Query Civitai Candidates (Checkpoint type)
+  try {
+    const candidates = await searchCivitaiCandidates(
+      normalized || rawModelName || '',
+      modelHash,
+      'Checkpoint'
+    );
+
+    const topMatch = candidates.find((c) => c.score >= 0.4);
+    if (topMatch) {
+      const model = topMatch.candidate;
+      const matchedVersion = topMatch.matchedVersionId
+        ? model.modelVersions?.find((v) => v.id === topMatch.matchedVersionId)
+        : model.modelVersions?.[0];
+
+      const modelId = Number(model.id);
+      const versionId = matchedVersion?.id ? Number(matchedVersion.id) : undefined;
+      const coverImage = matchedVersion?.images?.[0];
+      const isNsfw = Boolean(model.nsfw ?? (model.nsfwLevel && model.nsfwLevel > 1));
+
+      return {
+        name: model.name || rawModelName || '',
+        source: 'civitai',
+        modelUrl: buildCivitaiModelUrl(modelId, versionId, isNsfw),
+        coverImageUrl: coverImage?.url,
+        baseModel: matchedVersion?.baseModel,
+        versionName: matchedVersion?.name,
+        civitaiModelId: modelId,
+        civitaiVersionId: versionId,
+      };
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
