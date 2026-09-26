@@ -37,9 +37,12 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: '【Anima】Landscape specialization lora',
             source: 'civitai',
-            modelUrl: 'https://civitai.com/models/2625400/animalandscape-specialization-lora?modelVersionId=2947634',
-            triggerWords: ['landscape', 'fog-drenched', 'fjord', 'scenery', 'mist'],
+            modelUrl: 'https://civitai.com/models/2625400?modelVersionId=2947634',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/e8e0a880-c719-419f-8dfa-245ea82b9b2f/original=true/130787319.jpeg',
             baseModel: 'Anima',
+            nsfw: false,
+            versionName: 'v1.0',
             matchedBy: 'civitai-version',
           },
         },
@@ -50,9 +53,12 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: 'Anima Lighting Atmosphere Enhancer',
             source: 'civitai',
-            modelUrl: 'https://civitai.com/models/2628200/anima-lighting-atmosphere-enhancer?modelVersionId=3082260',
-            triggerWords: ['atmospheric lighting', 'warm glow', 'natural depth of field', 'cinematic'],
+            modelUrl: 'https://civitai.com/models/2628200?modelVersionId=3082260',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/c2f927d2-884c-47e0-a6d1-35db44ee1b4c/original=true/135254753.jpeg',
             baseModel: 'Anima',
+            nsfw: false,
+            versionName: 'sliderv1',
             matchedBy: 'civitai-version',
           },
         },
@@ -104,10 +110,13 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: 'Cyberpunk Interior (Architecture) (Buildings) (Krea2) (AD)',
             source: 'civitai',
-            modelUrl:
-              'https://civitai.com/models/2863043/cyberpunk-interior-architecture-buildings-krea2-ad?modelVersionId=3234278',
-            triggerWords: ['CyberpunkInterior', 'YFG-Aarchy', 'interior', 'architecture', 'brutalist'],
-            baseModel: 'Krea-2',
+            modelUrl: 'https://civitai.com/models/2863043?modelVersionId=3234278',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/876483b3-7b13-42ea-8b9e-00176e33e19f/original=true/139943294.jpeg',
+            triggerWords: ['CyberpunkInterior'],
+            baseModel: 'Krea 2',
+            nsfw: false,
+            versionName: 'V1',
             matchedBy: 'civitai-version',
           },
         },
@@ -118,10 +127,13 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: 'Aesthetic Quality Modifiers - Masterpiece',
             source: 'civitai',
-            modelUrl:
-              'https://civitai.com/models/929497/aesthetic-quality-modifiers-masterpiece?modelVersionId=3077110',
-            triggerWords: ['masterpiece', 'very aesthetic', 'aesthetic quality'],
-            baseModel: 'SDXL',
+            modelUrl: 'https://civitai.com/models/929497?modelVersionId=3077110',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/b52ca5ee-60d0-4605-972e-1ec03a4b1fab/original=true/135097140.jpeg',
+            triggerWords: ['masterpiece', 'very aesthetic'],
+            baseModel: 'Krea 2',
+            nsfw: false,
+            versionName: 'v5.1 [krea2]',
             matchedBy: 'civitai-version',
           },
         },
@@ -129,6 +141,18 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           rawName: 'YFG Aarchy [Flux | ZIT | Krea2]',
           strength: 0.7,
           civitaiVersionId: 3098382,
+          resolved: {
+            name: 'YFG Aarchy [Flux | ZIT | Krea2]',
+            source: 'civitai',
+            modelUrl: 'https://civitai.com/models/1108935?modelVersionId=3098382',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a9e30873-0fd4-4620-8baa-2ba8e25820e7/original=true/135731005.jpeg',
+            triggerWords: ['YFG-Aarchy'],
+            baseModel: 'Krea 2',
+            nsfw: false,
+            versionName: 'Krea2 - v1.0',
+            matchedBy: 'civitai-version',
+          },
         },
       ],
       detectedFormat: 'a1111',
@@ -174,10 +198,16 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: '[Illustrious XL] Chainsaw Man - The Movie: Reze Arc (劇場版 チェンソーマン レゼ篇) | Character Pack + Style',
             source: 'civitai',
-            modelUrl:
-              'https://civitai.com/models/2384018/illustrious-xl-chainsaw-man-the-movie-reze-arc-or-character-pack-style?modelVersionId=2681478',
-            triggerWords: ['chainsaw man movie style', 'reze'],
+            modelUrl: 'https://civitai.com/models/2384018?modelVersionId=2681478',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/652faf1f-a5f0-481d-aadd-9b0b1547ee23/original=true/120763768.jpeg',
+            triggerWords: [
+              'chainsaw man movie style',
+              'chainsaw man movie style, makima (chainsaw man), 1girl, red hair, long hair, alternate hairstyle, ringed eyes',
+            ],
             baseModel: 'Illustrious',
+            nsfw: false,
+            versionName: 'Illust v0.1',
             matchedBy: 'manual',
           },
         },
@@ -220,9 +250,13 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
           resolved: {
             name: 'Watercolor/saturated | Illustrious Style Lora',
             source: 'civitai',
-            modelUrl:
-              'https://civitai.com/models/1362657/watercolorsaturated-or-illustrious-style-lora?modelVersionId=1714931',
+            modelUrl: 'https://civitai.com/models/1362657?modelVersionId=1714931',
+            coverImageUrl:
+              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/4eaf3aff-1391-49b8-b957-07372601fab8/original=true/72630998.jpeg',
+            triggerWords: ['b3Jp, traditional media'],
             baseModel: 'Illustrious',
+            nsfw: false,
+            versionName: 'v1.1 illustriousXL v01',
             matchedBy: 'civitai-version',
           },
         },

@@ -81,8 +81,9 @@ export function normalizeLoraName(rawName: string): string {
       .split(' ');
   };
 
+  // Any character other than letters, digits and dots separates words ("|", ":", "/", emoji)
   const allTokens = name
-    .split(/[\s_\-,+&]+/)
+    .split(/[^\p{L}\p{N}.]+/u)
     .flatMap(splitCamel)
     .map((t) => t.trim())
     .filter(Boolean);

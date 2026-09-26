@@ -46,7 +46,14 @@ interface CatalogRecord {
 const LORA_TYPES = ['LORA', 'LoCon', 'DoRA'];
 const MAX_TRIGGER_WORDS = 12;
 // Shorter aliases ("xl", "3d") would match far too many unrelated LoRA names
-const MIN_ALIAS_LENGTH = 3;
+const MIN_ALIAS_LENGTH = 4;
+
+// Upload-generated file names ("pyewdxjpyz8p8r0f1gk7qrzsx0") identify nothing
+const looksRandom = (alias: string) =>
+  alias.split(' ').some((t) => /=/.test(t) || (t.length >= 12 && /\d/.test(t) && /[a-z]/.test(t)));
+
+// Titles are not paths: "Watercolor/saturated" must keep both words
+const titleAlias = (title: string) => normalizeLoraName(title.replace(/[\\/]/g, ' ')).toLowerCase();
 
 // ---------- options ----------
 
@@ -220,7 +227,7 @@ function assignAliases(records: CatalogRecord[]): CatalogRecord[] {
     const isNewestVersion = !seenModels.has(record.civitaiModelId);
     seenModels.add(record.civitaiModelId);
 
-    const nameAlias = normalizeLoraName(record.name).toLowerCase();
+    const nameAlias = titleAlias(record.name);
     if (isNewestVersion && nameAlias.length >= MIN_ALIAS_LENGTH && !claimed.has(nameAlias)) {
       claimed.add(nameAlias);
       out.push({ ...record, normalizedAlias: nameAlias });
@@ -231,7 +238,7 @@ function assignAliases(records: CatalogRecord[]): CatalogRecord[] {
     // Prompt tags and ComfyUI loaders use the file name, which often differs from the title
     const fileName = fileNames.get(record.civitaiVersionId);
     const fileAlias = fileName ? normalizeLoraName(fileName).toLowerCase() : '';
-    if (fileAlias.length >= MIN_ALIAS_LENGTH && fileAlias !== nameAlias && !claimed.has(fileAlias)) {
+    if (fileAlias.length >= MIN_ALIAS_LENGTH && !looksRandom(fileAlias) && fileAlias !== nameAlias && !claimed.has(fileAlias)) {
       claimed.add(fileAlias);
       out.push({ ...record, normalizedAlias: fileAlias });
     }
