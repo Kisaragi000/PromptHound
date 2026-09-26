@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.11
+
+### Image card ("Save Image Card")
+- Shows the base model and every LoRA with its preview image, name, version, base
+  model and weight, instead of plain text pills.
+- The layout follows the image: model and LoRAs sit under wide images and next to
+  tall ones; the four main settings share one row.
+- LoRA re-links made on the result page are reflected on the card.
+- Exports still work offline: previews that cannot be loaded show an icon.
+
 ## v1.0.10
 
 ### Prompt Library and Favorites

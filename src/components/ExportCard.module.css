@@ -61,7 +61,8 @@
 .imageSection {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  min-width: 0;
 }
 
 .imageFrame {
@@ -151,7 +152,7 @@
 
 .paramsGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -182,13 +183,7 @@
   white-space: nowrap;
 }
 
-.loraSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.loraLabel {
+.sectionLabel {
   font-size: 11px;
   font-weight: 700;
   color: #f59a22;
@@ -196,28 +191,118 @@
   letter-spacing: 0.05em;
 }
 
-.loraTagsList {
+.thumb {
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b0e15;
+  border: 1px solid rgba(160, 175, 200, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #687386;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.modelBlock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(24, 30, 44, 0.85);
+  border: 1px solid rgba(160, 175, 200, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.modelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.modelName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f2f3f5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipRow {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  font-size: 11px;
+  color: #8f9db2;
+  background: rgba(45, 55, 75, 0.45);
+  border: 1px solid rgba(160, 175, 200, 0.14);
+  border-radius: 5px;
+  padding: 1px 7px;
+}
+
+.loraSection {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.loraPill {
-  background: rgba(245, 154, 34, 0.12);
-  border: 1px solid rgba(245, 154, 34, 0.28);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+.loraGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.loraRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  background: rgba(24, 30, 44, 0.85);
+  border: 1px solid rgba(160, 175, 200, 0.14);
+  border-radius: 8px;
+  padding: 6px 10px 6px 6px;
+  min-width: 0;
+}
+
+.loraInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.loraName {
+  font-size: 12.5px;
+  font-weight: 600;
   color: #f2f3f5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loraMeta {
+  font-size: 11px;
+  color: #8f9db2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loraStrength {
   color: #f59a22;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 

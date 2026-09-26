@@ -222,7 +222,7 @@ function getCivitaiApiKey(): string | null {
 /**
  * Performs a live Civitai search and scores candidate models against query and target hash.
  */
-const USER_AGENT = 'PromptHound/1.0.10 (Metadata-Extractor)';
+const USER_AGENT = 'PromptHound/1.0.11 (Metadata-Extractor)';
 
 // Civitai lists LyCORIS as "LoCon" and DoRA separately from "LORA"; all load as LoRAs
 const LORA_MODEL_TYPES = ['LORA', 'LoCon', 'DoRA'];

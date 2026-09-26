@@ -212,6 +212,8 @@ export const ExtractionResultPage: React.FC = () => {
       const dataUrl = await toPng(exportCardRef.current, {
         pixelRatio: 2,
         cacheBust: true,
+        // A preview that cannot be fetched (offline) must not abort the export
+        imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
       });
       const link = document.createElement('a');
       const baseFilename = metadata?.model
@@ -776,7 +778,7 @@ export const ExtractionResultPage: React.FC = () => {
       >
         <ExportCard
           ref={exportCardRef}
-          metadata={metadata}
+          metadata={{ ...metadata, loras: displayedLoras }}
           previewUrl={previewUrl}
           sourceLabel={sourceLabel}
         />
