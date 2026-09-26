@@ -1,7 +1,7 @@
 {
   "name": "prompthound",
   "productName": "PromptHound",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "AI prompt and metadata extractor for AI-generated images",
   "main": "dist-electron/main.cjs",
   "type": "module",

@@ -47,6 +47,11 @@ export const PromptLibraryPage: React.FC = () => {
   // Edit Library mode for deletion management
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedForDeletion, setSelectedForDeletion] = useState<string[]>([]);
+  // Edit mode: move the selected items to an existing folder or a new one
+  const NEW_FOLDER_OPTION = '__new_folder__';
+  const [moveTarget, setMoveTarget] = useState('');
+  const [moveNewFolderName, setMoveNewFolderName] = useState('');
+  const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
 
   // View Layout mode: 'grid' or 'table'
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -136,6 +141,20 @@ export const PromptLibraryPage: React.FC = () => {
     });
     setCompareSelection((prev) => prev.filter((id) => !selectedForDeletion.includes(id)));
     setSelectedForDeletion([]);
+  };
+
+  const moveDestination = moveTarget === NEW_FOLDER_OPTION ? moveNewFolderName.trim() : moveTarget;
+
+  const handleMoveSelected = () => {
+    if (selectedForDeletion.length === 0 || !moveDestination) return;
+    if (moveTarget === NEW_FOLDER_OPTION) addFolder(moveDestination);
+    selectedForDeletion.forEach((id) => updateLibraryItem(id, { folder: moveDestination }));
+    const count = selectedForDeletion.length;
+    setSelectedForDeletion([]);
+    setMoveTarget('');
+    setMoveNewFolderName('');
+    setMoveFeedback(`Moved ${count} ${count === 1 ? 'item' : 'items'} to "${moveDestination}"`);
+    setTimeout(() => setMoveFeedback(null), 2500);
   };
 
   const handleCreateFolder = (e: React.FormEvent) => {
@@ -272,10 +291,46 @@ export const PromptLibraryPage: React.FC = () => {
           <div className={styles.editModeToolbarLeft}>
             <span className={styles.editModeBadge}>Edit Mode Active</span>
             <span className={styles.editModeHelp}>
-              Click items or trash icons to delete images from your library.
+              {moveFeedback ?? 'Select items to move them to a folder or delete them.'}
             </span>
           </div>
           <div className={styles.editModeToolbarRight}>
+            <select
+              className={styles.toolbarSelect}
+              value={moveTarget}
+              onChange={(e) => setMoveTarget(e.target.value)}
+              title="Folder to move the selected items to"
+            >
+              <option value="">Move to folder…</option>
+              {folders
+                .filter((f) => f !== 'All Prompts')
+                .map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              <option value={NEW_FOLDER_OPTION}>+ New folder…</option>
+            </select>
+            {moveTarget === NEW_FOLDER_OPTION && (
+              <input
+                className={styles.toolbarInput}
+                value={moveNewFolderName}
+                onChange={(e) => setMoveNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleMoveSelected();
+                }}
+                placeholder="New folder name"
+                autoFocus
+              />
+            )}
+            <button
+              className={styles.toolbarMoveBtn}
+              disabled={selectedForDeletion.length === 0 || !moveDestination}
+              onClick={handleMoveSelected}
+            >
+              <FolderIcon size={14} />
+              <span>Move ({selectedForDeletion.length})</span>
+            </button>
             <button
               className={styles.toolbarSecondaryBtn}
               onClick={handleSelectAllForDeletion}

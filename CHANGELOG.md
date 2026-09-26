@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.0.10
+
+### Prompt Library and Favorites
+- Edit Library: select items and move them to an existing folder or a new one
+  (Move to folder… → + New folder…).
+- Favorites work like the Prompt Library: the first click previews a favorite in a
+  side pane (image, prompt, settings, LoRAs), a second click or a double-click opens
+  the full result.
+
+### Fixed
+- Esc closes the full-size image view, as its close button says.
+- The saved image card ("Save Image Card") and the LoRA trigger-word chips still used
+  the old green theme; both now use the current blue-black palette.
+- The image card shows the generator name (e.g. "A1111 / Forge", "ComfyUI") instead of
+  "UNKNOWN", and hides the badge when the generator is unknown.
+- The About page names the current theme.
+
 ## v1.0.9
 
 ### Fixed

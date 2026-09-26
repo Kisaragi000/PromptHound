@@ -3,6 +3,17 @@ import type { ExtractedMetadata, LoraReference } from '../../core/types.js';
 import { PromptHoundLogo } from './icons/Icons.js';
 import styles from './ExportCard.module.css';
 
+// Generator shown in the card header; unknown formats show no badge
+const FORMAT_LABELS: Partial<Record<ExtractedMetadata['detectedFormat'], string>> = {
+  a1111: 'A1111 / Forge',
+  comfyui: 'ComfyUI',
+  novelai: 'NovelAI',
+  invokeai: 'InvokeAI',
+  swarmui: 'SwarmUI',
+  fooocus: 'Fooocus',
+  'page-json': 'Web Page',
+};
+
 interface ExportCardProps {
   metadata: ExtractedMetadata;
   previewUrl?: string;
@@ -28,9 +39,9 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
               <div className={styles.brandSubtitle}>AI Generation Metadata Card</div>
             </div>
           </div>
-          <div className={styles.formatBadge}>
-            {metadata.detectedFormat?.toUpperCase() || 'EXTRACTED'}
-          </div>
+          {FORMAT_LABELS[metadata.detectedFormat] && (
+            <div className={styles.formatBadge}>{FORMAT_LABELS[metadata.detectedFormat]}</div>
+          )}
         </div>
 
         {/* Body Grid */}
@@ -115,7 +126,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
                 <div className={styles.loraTagsList}>
                   {metadata.loras.map((lora: LoraReference, idx: number) => {
                     const loraName = lora.resolved?.name ?? lora.rawName;
-                    const strengthText = lora.strength !== undefined ? `: ${lora.strength}` : '';
+                    const strengthText = lora.strength !== undefined ? `× ${lora.strength}` : '';
                     return (
                       <div key={idx} className={styles.loraPill}>
                         <span>{loraName}</span>
