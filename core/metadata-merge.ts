@@ -51,6 +51,10 @@ export function mergeLoras(primary: LoraReference[], secondary: LoraReference[])
       continue;
     }
 
+    // "Civitai model version 123" is a stand-in; prefer a real name from the other parser
+    if (/^Civitai model version \d+$/.test(existing.rawName) && !/^Civitai model version \d+$/.test(extra.rawName)) {
+      existing.rawName = extra.rawName;
+    }
     if (existing.hash === undefined && extra.hash !== undefined) existing.hash = extra.hash;
     if (existing.civitaiVersionId === undefined && extra.civitaiVersionId !== undefined) {
       existing.civitaiVersionId = extra.civitaiVersionId;
