@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.8)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.9)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.8-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)
+[![Release](https://img.shields.io/badge/Release-v1.0.9-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.9)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.8](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)**
+📦 **[Download Latest Release v1.0.9](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.9)**
 
 ---
 
@@ -89,7 +89,12 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.8
+## 🆕 What's New in 1.0.9
+
+- **Base model card**: the checkpoint is identified like the LoRAs (hash, Civitai id, name) and shown with a preview image, version and base model.
+- **Fixed**: dropping an image after viewing a library item showed the library item instead of the new result.
+
+### 1.0.8
 
 - **More reliable extraction** from PNG, JPEG and WebP (A1111 / Forge, ComfyUI, SwarmUI, Civitai on-site images), with ComfyUI graph tracing rebuilt.
 - **Accurate LoRA identification**: hashes, Civitai version ids and AIR ids first, name matching only as a labeled fallback; no more LoRAs invented from prompt words.

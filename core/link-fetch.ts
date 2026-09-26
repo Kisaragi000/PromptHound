@@ -4,7 +4,7 @@ import { extractFromPngChunks } from './format-detect.js';
 import { isWebp, extractFromWebpBuffer } from './webp.js';
 import { isJpeg, extractFromJpegBuffer } from './jpeg.js';
 import { scrapePageMetadata } from './page-json.js';
-import { resolveLoras } from './lora-resolution.js';
+import { resolveLoras, resolveBaseModel } from './lora-resolution.js';
 import { mergeExtractedMetadata } from './metadata-merge.js';
 import { isExtractionError } from './types.js';
 import type { ExtractedMetadata, ExtractionResult, ExtractionError, SourceInfo } from './types.js';
@@ -29,6 +29,13 @@ function readNativeMetadata(uint8: Uint8Array): ExtractedMetadata | null {
 
 function hasGenerationData(meta: ExtractedMetadata): boolean {
   return Boolean(meta.prompt || meta.loras.length > 0 || meta.sampler || meta.steps);
+}
+
+/** Identifies the LoRAs and the checkpoint on Civitai / in the catalog, in parallel. */
+async function resolveAll(meta: ExtractedMetadata): Promise<void> {
+  const [loras, model] = await Promise.all([resolveLoras(meta.loras), resolveBaseModel(meta).catch(() => undefined)]);
+  meta.loras = loras;
+  if (model) meta.modelResolved = model;
 }
 
 /**
@@ -68,7 +75,7 @@ export async function extractFromImageBuffer(
     return libraryError ?? NO_METADATA_ERROR;
   }
 
-  merged.loras = await resolveLoras(merged.loras);
+  await resolveAll(merged);
   return { source, metadata: merged, previewUrl };
 }
 
@@ -113,9 +120,7 @@ export async function extractFromUrl(url: string): Promise<ExtractionResult | Ex
     const { metadata, primaryImageUrl } = scrapePageMetadata(html);
 
     if (metadata && metadata.prompt) {
-      if (metadata.loras.length > 0) {
-        metadata.loras = await resolveLoras(metadata.loras);
-      }
+      await resolveAll(metadata);
       return {
         source: { kind: 'page-url', label: cleanUrl },
         metadata,

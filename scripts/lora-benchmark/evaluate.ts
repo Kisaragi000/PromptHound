@@ -32,12 +32,24 @@ async function truthForHash(h: string) {
 const truth: any[] = JSON.parse(fs.readFileSync(`${DIR}/truth.json`, 'utf8'));
 const v = { hashedResolved: 0, hashedCorrect: 0, hashedWrong: 0, hashUnknownToCivitai: 0 };
 const c = { images: 0, noMeta: 0, withLoraTruth: 0, truthLoras: 0, found: 0, refs: 0, exactVersion: 0, rightModel: 0, wrong: 0, unresolved: 0, byMethod: {} as Record<string, any> };
+const ckpt = { images: 0, correct: 0, wrong: 0, unresolved: 0, byMethod: {} as Record<string, number> };
+const ckptWrong: any[] = [];
 const wrongExamples: any[] = []; const unresolvedExamples: any[] = []; const missed: any[] = [];
 for (const t of truth) {
   c.images++;
   const buf = new Uint8Array(fs.readFileSync(`${DIR}/img/${t.id}.bin`));
   const r: any = await extractFromImageBuffer(buf, { kind: 'file', label: String(t.id) });
   if (r.code) { c.noMeta++; continue; }
+  // Base model (checkpoint): the resolved model must be one of the image's checkpoints
+  const tc = t.versions.filter((v: any) => v.type === 'Checkpoint');
+  if (tc.length) {
+    ckpt.images++;
+    const mr = r.metadata.modelResolved;
+    const m = mr?.modelUrl?.match(/models\/(\d+)/);
+    if (!m) ckpt.unresolved++;
+    else if (tc.some((v: any) => v.modelId === Number(m[1]))) { ckpt.correct++; ckpt.byMethod[mr.matchedBy] = (ckpt.byMethod[mr.matchedBy] || 0) + 1; }
+    else { ckpt.wrong++; if (ckptWrong.length < 15) ckptWrong.push({ img: t.id, model: r.metadata.model, hash: r.metadata.modelHash, got: mr.name, method: mr.matchedBy, truth: tc.map((x: any) => x.name) }); }
+  }
   const tl = t.versions.filter((v: any) => LORA.has(v.type));
   if (tl.length === 0) continue;
   c.withLoraTruth++; c.truthLoras += tl.length;
@@ -63,5 +75,6 @@ for (const t of truth) {
   for (const v of tl) if (matchedTruth.has(v.modelId)) c.found++; else if (missed.length < 30) missed.push({ img: t.id, want: v.name, extracted: r.metadata.loras.map((l: any) => l.rawName) });
 }
 fs.writeFileSync(hashFile, JSON.stringify(hashTruth));
-console.log(JSON.stringify({ ...c, hashVerified: v }, null, 1));
+console.log(JSON.stringify({ ...c, hashVerified: v, baseModel: ckpt }, null, 1));
+if (ckptWrong.length) console.log('base model mismatches (vs Civitai image list):', JSON.stringify(ckptWrong, null, 1));
 fs.writeFileSync(`${DIR}/${MODE}-details.json`, JSON.stringify({ wrongExamples, unresolvedExamples, missed }, null, 1));

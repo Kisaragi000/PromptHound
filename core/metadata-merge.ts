@@ -112,6 +112,8 @@ export function fillMissingFields(primary: ExtractedMetadata, secondary: Extract
     seed: pick('seed'),
     model: pick('model'),
     modelHash: pick('modelHash'),
+    modelVersionId: pick('modelVersionId'),
+    modelResolved: pick('modelResolved'),
     // Width and height belong together; never mix one parser's width with another's height
     width: primary.width !== undefined && primary.height !== undefined ? primary.width : secondary.width ?? primary.width,
     height: primary.width !== undefined && primary.height !== undefined ? primary.height : secondary.height ?? primary.height,

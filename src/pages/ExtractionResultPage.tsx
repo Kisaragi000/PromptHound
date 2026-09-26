@@ -17,6 +17,7 @@ import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
 import { IconButton } from '../components/primitives/IconButton.js';
 import { EmptyStatePanel } from '../components/primitives/EmptyStatePanel.js';
 import { ExportCard } from '../components/ExportCard.js';
+import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
 import { PromptFormatSelector } from '../components/recipe/PromptFormatSelector.js';
@@ -347,7 +348,8 @@ export const ExtractionResultPage: React.FC = () => {
       dimensions,
       isFavorite: false,
       thumbnailUrl: previewUrl || '',
-      metadata,
+      // Keep LoRA re-links / unlinks made on this page
+      metadata: { ...metadata, loras: displayedLoras },
     });
 
     setIsSaved(true);
@@ -599,7 +601,7 @@ export const ExtractionResultPage: React.FC = () => {
               {/* Generation Settings Row 2: Model & Resolution */}
               <div className={styles.settingsGridRow2}>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Base Model / Checkpoint</span>
+                  <span className={styles.metricLabel}>Checkpoint File</span>
                   <span className={styles.metricValue}>
                     {metadata.model || metadata.modelHash || 'Unknown Checkpoint'}
                   </span>
@@ -613,6 +615,16 @@ export const ExtractionResultPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Base model, identified like the LoRAs, with a preview image */}
+              {(metadata.model || metadata.modelHash || metadata.modelResolved) && (
+                <div style={{ marginTop: '8px' }}>
+                  <h3 className={styles.loraSectionTitle}>Base Model</h3>
+                  <div style={{ marginTop: '8px' }}>
+                    <ModelCard model={metadata.model} modelHash={metadata.modelHash} resolved={metadata.modelResolved} />
+                  </div>
+                </div>
+              )}
 
               {/* Embedded LoRAs */}
               {displayedLoras.length > 0 && (

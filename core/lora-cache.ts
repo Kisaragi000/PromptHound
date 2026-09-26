@@ -2,10 +2,17 @@ import type { ModelCatalogRecord, LoraReference, LoraMatchMethod } from './types
 import seedData from './data/lora-seed.json';
 import olderVersionData from './data/lora-version-index.json';
 import { diceCoefficient, extractMeaningfulTokens } from './similarity.js';
+import { civitaiThumbnail } from './civitai-images.js';
 
 // In-memory catalog maps for fast synchronous lookups & browser preview
 const hashIndex = new Map<string, ModelCatalogRecord>();
 const aliasIndex = new Map<string, ModelCatalogRecord>();
+// Checkpoints have their own name index: a checkpoint and a LoRA can share a name
+const checkpointAliasIndex = new Map<string, ModelCatalogRecord>();
+
+export type CatalogKind = 'lora' | 'checkpoint';
+const isCheckpoint = (record: { modelType?: string }) => record.modelType === 'Checkpoint';
+const aliasIndexFor = (kind: CatalogKind) => (kind === 'checkpoint' ? checkpointAliasIndex : aliasIndex);
 const versionIndex = new Map<number, ModelCatalogRecord>();
 
 // Older versions of catalog models (compact index: version id, model id, AutoV2 hash, name)
@@ -17,18 +24,22 @@ const autoV3Index = new Map<string, ModelCatalogRecord>();
 // Newest catalog record per model, used as the template for its older versions
 const modelRecords = new Map<number, ModelCatalogRecord>();
 // Models that exist only in the compact index (no full record): name, alias, base model
-const compactModels = new Map<number, { name: string; alias: string; baseModel: string; nsfw: boolean; newestVersionId?: number }>();
+const compactModels = new Map<
+  number,
+  { name: string; alias: string; baseModel: string; modelType: string; nsfw: boolean; newestVersionId?: number }
+>();
 
 function loadOlderVersionIndex(): void {
   const models: unknown = (olderVersionData as any)?.models;
   if (Array.isArray(models)) {
     for (const row of models) {
       if (!Array.isArray(row) || typeof row[0] !== 'number' || typeof row[1] !== 'string') continue;
-      const [modelId, name, alias, baseModel, , nsfw] = row;
+      const [modelId, name, alias, baseModel, modelType, nsfw] = row;
       compactModels.set(modelId, {
         name,
         alias: typeof alias === 'string' ? alias : '',
         baseModel: typeof baseModel === 'string' ? baseModel : '',
+        modelType: typeof modelType === 'string' ? modelType : '',
         nsfw: nsfw === 1,
       });
     }
@@ -65,6 +76,7 @@ function compactModelRecord(modelId: number): ModelCatalogRecord | undefined {
     normalizedAlias: '',
     triggerWords: [],
     baseModel: compact.baseModel || undefined,
+    modelType: compact.modelType || undefined,
     nsfw: compact.nsfw,
     source: 'civitai',
     modelUrl: `https://civitai.com/models/${modelId}`,
@@ -142,7 +154,9 @@ function indexRecord(record: ModelCatalogRecord): void {
   }
   if (record.hashSha256) hashIndex.set(normalizeHash(record.hashSha256), record);
   if (record.hashAutoV3) autoV3Index.set(record.hashAutoV3.toLowerCase(), record);
-  if (record.normalizedAlias) aliasIndex.set(record.normalizedAlias.trim().toLowerCase(), record);
+  if (record.normalizedAlias) {
+    aliasIndexFor(isCheckpoint(record) ? 'checkpoint' : 'lora').set(record.normalizedAlias.trim().toLowerCase(), record);
+  }
   if (record.civitaiVersionId) versionIndex.set(record.civitaiVersionId, record);
 }
 
@@ -202,8 +216,15 @@ export function findLoraByVersionId(versionId: number): Promise<ModelCatalogReco
   return lookupWithFallback(() => getCachedLoraByVersionId(versionId), (p) => p.getByVersionId(versionId));
 }
 
-export function findLoraByAlias(alias: string): Promise<ModelCatalogRecord | undefined> {
-  return lookupWithFallback(() => getCachedLoraByAlias(alias), (p) => p.getByAlias(alias.trim().toLowerCase()));
+export function findLoraByAlias(alias: string, kind: CatalogKind = 'lora'): Promise<ModelCatalogRecord | undefined> {
+  return lookupWithFallback(
+    () => getCachedLoraByAlias(alias, kind),
+    async (p) => {
+      const stored = await p.getByAlias(alias.trim().toLowerCase());
+      // Only a record of the requested kind answers a name lookup
+      return stored && isCheckpoint(stored) === (kind === 'checkpoint') ? stored : undefined;
+    }
+  );
 }
 
 /**
@@ -236,6 +257,7 @@ export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] 
 function loadSeedCache(): void {
   hashIndex.clear();
   aliasIndex.clear();
+  checkpointAliasIndex.clear();
   versionIndex.clear();
   modelRecords.clear();
   autoV3Index.clear();
@@ -255,6 +277,7 @@ function loadSeedCache(): void {
         coverImageUrl: entry.coverImageUrl,
         triggerWords: entry.triggerWords || [],
         baseModel: entry.baseModel,
+        modelType: entry.modelType,
         nsfw: typeof entry.nsfw === 'boolean' ? entry.nsfw : undefined,
         source: entry.source === 'local' ? 'local' : 'civitai',
         modelUrl: entry.modelUrl,
@@ -267,9 +290,10 @@ function loadSeedCache(): void {
 
   // Compact-index models are found by name through their newest version
   for (const compact of compactModels.values()) {
-    if (!compact.alias || compact.newestVersionId === undefined || aliasIndex.has(compact.alias)) continue;
+    const index = aliasIndexFor(isCheckpoint(compact) ? 'checkpoint' : 'lora');
+    if (!compact.alias || compact.newestVersionId === undefined || index.has(compact.alias)) continue;
     const record = recordForOlderVersion(compact.newestVersionId);
-    if (record) aliasIndex.set(compact.alias, record);
+    if (record) index.set(compact.alias, record);
   }
 }
 
@@ -323,9 +347,10 @@ export function getCachedLoraByVersionId(versionId: number): ModelCatalogRecord 
 /**
  * Lookup by normalized alias name (Tier 1) with strict token similarity
  */
-export function getCachedLoraByAlias(normalizedAlias: string): ModelCatalogRecord | undefined {
+export function getCachedLoraByAlias(normalizedAlias: string, kind: CatalogKind = 'lora'): ModelCatalogRecord | undefined {
   if (!normalizedAlias) return undefined;
   const clean = normalizedAlias.trim().toLowerCase();
+  const aliasIndex = aliasIndexFor(kind);
 
   // 1. Direct exact alias match
   if (aliasIndex.has(clean)) {
@@ -384,9 +409,10 @@ export function upsertLoraRecord(record: Omit<ModelCatalogRecord, 'cachedAt'> & 
  */
 export function removeLoraRecord(hashOrAlias: string): void {
   const clean = normalizeHash(hashOrAlias);
-  const removed = [hashIndex.get(clean), aliasIndex.get(clean)].filter(Boolean);
+  const removed = [hashIndex.get(clean), aliasIndex.get(clean), checkpointAliasIndex.get(clean)].filter(Boolean);
   hashIndex.delete(clean);
   aliasIndex.delete(clean);
+  checkpointAliasIndex.delete(clean);
   for (const [versionId, record] of versionIndex.entries()) {
     if (removed.includes(record)) versionIndex.delete(versionId);
   }
@@ -410,7 +436,7 @@ export function toResolvedLora(
     name: record.name,
     source: record.source || 'civitai',
     modelUrl: record.modelUrl,
-    coverImageUrl: record.coverImageUrl,
+    coverImageUrl: civitaiThumbnail(record.coverImageUrl),
     triggerWords: record.triggerWords,
     baseModel: record.baseModel,
     nsfw: record.nsfw,
@@ -424,7 +450,9 @@ export function toResolvedLora(
  * Returns cache stats for Settings UI
  */
 export function getLoraCacheStats(): { count: number; userCount: number; lastUpdated?: number } {
-  const all = Array.from(new Set([...hashIndex.values(), ...aliasIndex.values(), ...versionIndex.values()]));
+  const all = Array.from(
+    new Set([...hashIndex.values(), ...aliasIndex.values(), ...checkpointAliasIndex.values(), ...versionIndex.values()])
+  );
   const userRecords = all.filter((r) => (r.cachedAt || 0) > 0);
   const latest = userRecords.reduce((max, r) => Math.max(max, r.cachedAt || 0), 0);
 
