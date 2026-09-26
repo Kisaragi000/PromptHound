@@ -93,6 +93,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.editModeToolbarRight button {
+  white-space: nowrap;
 }
 
 .toolbarSecondaryBtn {
@@ -109,6 +115,50 @@
 
 .toolbarSecondaryBtn:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+.toolbarSelect,
+.toolbarInput {
+  background: rgba(20, 24, 34, 0.9);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.toolbarSelect:focus,
+.toolbarInput:focus {
+  border-color: var(--color-border-accent);
+}
+
+.toolbarInput {
+  width: 150px;
+}
+
+.toolbarMoveBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(111, 143, 184, 0.28);
+  border: 1px solid rgba(137, 169, 208, 0.7);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbarMoveBtn:hover:not(:disabled) {
+  background: rgba(111, 143, 184, 0.42);
+}
+
+.toolbarMoveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .toolbarDeleteBtn {
@@ -798,4 +848,9 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 4px;
+}
+
+.toolbarSelect option {
+  background: #141822;
+  color: var(--color-text-primary);
 }

@@ -41,7 +41,7 @@ export const AboutPage: React.FC = () => {
             <strong style={{ color: 'var(--color-text-secondary)' }}>Engine:</strong> Electron + Vite + React + TypeScript
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Theme:</strong> Dark Forest Glassmorphism
+            <strong style={{ color: 'var(--color-text-secondary)' }}>Theme:</strong> Smoked Blue-Black Glass
           </div>
           <div>
             <strong style={{ color: 'var(--color-text-secondary)' }}>Target OS:</strong> Windows 10 / 11 (x64)

@@ -129,6 +129,19 @@ export const ExtractionResultPage: React.FC = () => {
     ? (activeMetadata as ExtractedMetadata)
     : (result?.metadata ?? null);
 
+  // Esc closes the full-size image view, as its close button promises
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsLightboxOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isLightboxOpen]);
+
   // LoRA edits (re-link / unlink) belong to the image they were made on
   useEffect(() => {
     setCustomLoras(null);
