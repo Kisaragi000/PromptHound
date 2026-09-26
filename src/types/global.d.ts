@@ -49,6 +49,8 @@ export interface PromptHoundAPI {
 }
 
 declare global {
+  /** package.json version, injected by Vite */
+  const __APP_VERSION__: string;
   interface Window {
     promptHound?: PromptHoundAPI;
   }

@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.4)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.8)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.4-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)
+[![Release](https://img.shields.io/badge/Release-v1.0.8-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.4](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)**
+📦 **[Download Latest Release v1.0.8](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)**
 
 ---
 
@@ -89,7 +89,16 @@ PromptHound/
 
 ---
 
-## ⚡ Features in Version 1.0.4
+## 🆕 What's New in 1.0.8
+
+- **More reliable extraction** from PNG, JPEG and WebP (A1111 / Forge, ComfyUI, SwarmUI, Civitai on-site images), with ComfyUI graph tracing rebuilt.
+- **Accurate LoRA identification**: hashes, Civitai version ids and AIR ids first, name matching only as a labeled fallback; no more LoRAs invented from prompt words.
+- **Real offline LoRA catalog** generated from Civitai (top 10,000 models), plus a persistent cache of LoRAs you look up or link.
+- **Example images** in the Prompt Library on first launch.
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
+
+## ⚡ Features
 
 1. **Batch Extraction Queue (10-File Limit)**:
    - Drag & drop or browse up to 10 images concurrently.

@@ -221,6 +221,8 @@ function getCivitaiApiKey(): string | null {
 /**
  * Performs a live Civitai search and scores candidate models against query and target hash.
  */
+const USER_AGENT = 'PromptHound/1.0.8 (Metadata-Extractor)';
+
 // Civitai lists LyCORIS as "LoCon" and DoRA separately from "LORA"; all load as LoRAs
 const LORA_MODEL_TYPES = ['LORA', 'LoCon', 'DoRA'];
 
@@ -235,7 +237,7 @@ export async function searchCivitaiCandidates(
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.7 (Metadata-Extractor)',
+    'User-Agent': USER_AGENT,
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };
@@ -391,7 +393,7 @@ async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.7 (Metadata-Extractor)',
+    'User-Agent': USER_AGENT,
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };

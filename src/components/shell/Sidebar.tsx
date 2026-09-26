@@ -82,7 +82,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className={styles.versionFooter}>
-        PromptHound v1.0.4
+        PromptHound v{__APP_VERSION__}
       </div>
     </aside>
   );
