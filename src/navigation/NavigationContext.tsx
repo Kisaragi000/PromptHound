@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ExtractedMetadata, ExtractionResult, SavedPromptItem } from '../../core/types.js';
 import { INITIAL_SAMPLE_PROMPTS, isLegacyPlaceholderSample } from './samplePrompts.js';
 
@@ -49,6 +49,8 @@ interface NavigationContextType {
   addFolder: (folderName: string) => void;
   toggleFavorite: (id: string) => void;
   openRecipeInResult: (item: SavedPromptItem) => void;
+  /** Leaves any library / batch recipe view so the next extraction result is shown */
+  clearRecipeView: () => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
@@ -251,6 +253,12 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     setFolders((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
   };
 
+  const clearRecipeView = useCallback(() => {
+    setSelectedLibraryItem(null);
+    setActiveMetadata(null);
+    setActivePreviewUrl(null);
+  }, []);
+
   const openRecipeInResult = (item: SavedPromptItem) => {
     let width = item.metadata?.width || (item.metadata as any)?.image?.width;
     let height = item.metadata?.height || (item.metadata as any)?.image?.height;
@@ -306,6 +314,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
         addFolder,
         toggleFavorite,
         openRecipeInResult,
+        clearRecipeView,
       }}
     >
       {children}

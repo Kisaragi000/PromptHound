@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import {
   ChevronLeftIcon,
@@ -103,6 +103,7 @@ export const ExtractionResultPage: React.FC = () => {
     error,
     reset,
     extractFromFile,
+    extractFromFilePath,
     extractMultipleFiles,
     addSessionImages,
     sessionImages,
@@ -117,12 +118,20 @@ export const ExtractionResultPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
 
-  // If navigating to inspect a saved library/favorite recipe, prioritize activeMetadata/activePreviewUrl
-  const isFromLibraryOrFavorites = Boolean(selectedLibraryItem || previousRoute === 'library' || previousRoute === 'favorites');
+  // activeMetadata is set only while a saved recipe (library, favorites, recent strip)
+  // or a batch item is being inspected; every new extraction clears it. Deciding by
+  // anything else (e.g. the previous route) showed stale library images after a drop.
+  const isViewingSavedRecipe = Boolean(activeMetadata);
+  const isFromLibraryOrFavorites = Boolean(selectedLibraryItem);
 
-  const metadata: ExtractedMetadata | null = isFromLibraryOrFavorites && activeMetadata
+  const metadata: ExtractedMetadata | null = isViewingSavedRecipe
     ? (activeMetadata as ExtractedMetadata)
-    : (result?.metadata ?? (activeMetadata as ExtractedMetadata | null));
+    : (result?.metadata ?? null);
+
+  // LoRA edits (re-link / unlink) belong to the image they were made on
+  useEffect(() => {
+    setCustomLoras(null);
+  }, [result, activeMetadata]);
 
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
 
@@ -132,9 +141,9 @@ export const ExtractionResultPage: React.FC = () => {
     );
     setCustomLoras(list);
   };
-  const previewUrl = isFromLibraryOrFavorites && (activePreviewUrl || selectedLibraryItem?.thumbnailUrl)
-    ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || null)
-    : (result?.previewUrl ?? activePreviewUrl ?? (activeMetadata as any)?.image?.url ?? null);
+  const previewUrl = isViewingSavedRecipe
+    ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || (activeMetadata as any)?.image?.url || null)
+    : (result?.previewUrl ?? null);
 
   const sourceLabel = isFromLibraryOrFavorites && selectedLibraryItem
     ? `${selectedLibraryItem.source || 'Saved'} · ${selectedLibraryItem.folder || 'Library'}`
@@ -159,10 +168,7 @@ export const ExtractionResultPage: React.FC = () => {
     if (window.promptHound?.extraction?.openFileDialog) {
       const selected = await window.promptHound.extraction.openFileDialog();
       if (selected) {
-        setSelectedLibraryItem(null);
-        setActiveMetadata(null);
-        setActivePreviewUrl(null);
-        // Electron IPC extraction
+        await extractFromFilePath(selected);
         return;
       }
     }
