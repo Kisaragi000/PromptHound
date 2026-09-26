@@ -1,20 +1,41 @@
-import { extractWithCivitaiPipeline } from './civitai-extractor.js';
+import { readCivitaiLibraryMetadata, NO_METADATA_ERROR } from './civitai-extractor.js';
 import { readPngChunks, isPng } from './png.js';
 import { extractFromPngChunks } from './format-detect.js';
 import { isWebp, extractFromWebpBuffer } from './webp.js';
 import { isJpeg, extractFromJpegBuffer } from './jpeg.js';
 import { scrapePageMetadata } from './page-json.js';
 import { resolveLoras } from './lora-resolution.js';
+import { mergeExtractedMetadata } from './metadata-merge.js';
 import { isExtractionError } from './types.js';
-import type { ExtractionResult, ExtractionError, SourceInfo } from './types.js';
+import type { ExtractedMetadata, ExtractionResult, ExtractionError, SourceInfo } from './types.js';
 
 export function isDirectImageUrl(url: string): boolean {
   return /\.(png|jpe?g|webp|jfif|avif)($|\?)/i.test(url.trim());
 }
 
 /**
- * Extracts metadata from an image byte buffer using the Civitai pipeline
- * with fallback to custom PNG, WebP, and JPEG/JFIF chunk readers.
+ * PromptHound's own chunk readers (PNG text chunks, WebP RIFF, JPEG segments).
+ */
+function readNativeMetadata(uint8: Uint8Array): ExtractedMetadata | null {
+  try {
+    if (isPng(uint8)) return extractFromPngChunks(readPngChunks(uint8));
+    if (isWebp(uint8)) return extractFromWebpBuffer(uint8);
+    if (isJpeg(uint8)) return extractFromJpegBuffer(uint8);
+  } catch {
+    // A malformed file must not hide what the Civitai engine found
+  }
+  return null;
+}
+
+function hasGenerationData(meta: ExtractedMetadata): boolean {
+  return Boolean(meta.prompt || meta.loras.length > 0 || meta.sampler || meta.steps);
+}
+
+/**
+ * Extracts metadata from an image byte buffer. Both the Civitai generation-metadata
+ * engine and PromptHound's native chunk readers run, and their results are merged
+ * field by field, so a field one of them misses (e.g. a ComfyUI prompt fed from a
+ * separate text node) can still come from the other. LoRAs are resolved once, after merging.
  */
 export async function extractFromImageBuffer(
   buffer: Buffer | Uint8Array,
@@ -24,73 +45,31 @@ export async function extractFromImageBuffer(
   // Ensure buffer is Uint8Array
   const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 
-  // 1. Primary extractor: Civitai generation-metadata pipeline (PNG, WebP, JPEG)
-  const civitaiResult = await extractWithCivitaiPipeline(uint8, source, previewUrl);
-  if (!isExtractionError(civitaiResult) && (civitaiResult.metadata.prompt || civitaiResult.metadata.loras.length > 0 || civitaiResult.metadata.sampler)) {
-    return civitaiResult;
+  let libraryMeta: ExtractedMetadata | null = null;
+  let libraryError: ExtractionError | null = null;
+  try {
+    libraryMeta = await readCivitaiLibraryMetadata(uint8);
+  } catch (err) {
+    libraryError = {
+      code: 'parse-error',
+      message: err instanceof Error ? err.message : 'Failed to parse image metadata.',
+    };
   }
 
-  // 2. Secondary fallback for PNG: direct PNG chunk inspector (for non-standard chunk names)
-  if (isPng(uint8)) {
-    try {
-      const pngResult = readPngChunks(uint8);
-      if (pngResult.allChunks.length > 0 || Object.keys(pngResult.textChunks).length > 0) {
-        const fallbackMeta = extractFromPngChunks(pngResult);
-        if (fallbackMeta && (fallbackMeta.prompt || fallbackMeta.loras.length > 0 || fallbackMeta.sampler)) {
-          if (fallbackMeta.loras.length > 0) {
-            fallbackMeta.loras = await resolveLoras(fallbackMeta.loras);
-          }
-          return {
-            source,
-            metadata: fallbackMeta,
-            previewUrl,
-          };
-        }
-      }
-    } catch {
-      // Ignore PNG fallback failure
-    }
+  const nativeMeta = readNativeMetadata(uint8);
+
+  // For ComfyUI, the native parser traces the graph from the sampler that feeds the
+  // saved image, so its prompt is preferred whenever it found one.
+  const merged = mergeExtractedMetadata([libraryMeta, nativeMeta], (candidates) =>
+    candidates.findIndex((c) => c === nativeMeta && c.detectedFormat === 'comfyui' && Boolean(c.prompt))
+  );
+
+  if (!merged || !hasGenerationData(merged)) {
+    return libraryError ?? NO_METADATA_ERROR;
   }
 
-  // 3. Secondary fallback for WebP: direct RIFF chunk inspector
-  if (isWebp(uint8)) {
-    try {
-      const webpMeta = extractFromWebpBuffer(uint8);
-      if (webpMeta && (webpMeta.prompt || webpMeta.loras.length > 0 || webpMeta.sampler)) {
-        if (webpMeta.loras.length > 0) {
-          webpMeta.loras = await resolveLoras(webpMeta.loras);
-        }
-        return {
-          source,
-          metadata: webpMeta,
-          previewUrl,
-        };
-      }
-    } catch {
-      // Ignore WebP fallback failure
-    }
-  }
-
-  // 4. Secondary fallback for JPEG/JFIF: direct segment scanner
-  if (isJpeg(uint8)) {
-    try {
-      const jpegMeta = extractFromJpegBuffer(uint8);
-      if (jpegMeta && (jpegMeta.prompt || jpegMeta.loras.length > 0 || jpegMeta.sampler)) {
-        if (jpegMeta.loras.length > 0) {
-          jpegMeta.loras = await resolveLoras(jpegMeta.loras);
-        }
-        return {
-          source,
-          metadata: jpegMeta,
-          previewUrl,
-        };
-      }
-    } catch {
-      // Ignore JPEG fallback failure
-    }
-  }
-
-  return civitaiResult;
+  merged.loras = await resolveLoras(merged.loras);
+  return { source, metadata: merged, previewUrl };
 }
 
 /**
