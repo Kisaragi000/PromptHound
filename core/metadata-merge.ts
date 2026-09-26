@@ -1,6 +1,29 @@
 import type { ExtractedMetadata, LoraReference } from './types.js';
 
 /**
+ * Inline network tags: <lora:name:weight>, <lyco:name:weight>, and Civitai AIR ids
+ * (<lora:urn:air:sdxl:lora:civitai:341353@382152:0.8>), whose name contains colons.
+ * Group 1 is the name, group 2 the parameters.
+ */
+export const INLINE_LORA_TAG = /<(?:lora|lyco|lycoris):(urn:air:(?:[^:>]+:){4}[^:>@]+@[^:>]+|[^:>]+)(?::([^>]+))?>/gi;
+
+/** Civitai AIR id: urn:air:{ecosystem}:{type}:civitai:{modelId}@{versionId} */
+export function parseCivitaiAir(name: string): { modelId: number; versionId: number } | undefined {
+  const match = name.trim().match(/^urn:air:[^:]+:[^:]+:civitai:(\d+)@(\d+)/i);
+  return match ? { modelId: Number(match[1]), versionId: Number(match[2]) } : undefined;
+}
+
+/**
+ * An AIR id names the exact Civitai version; store it as such and give the LoRA the
+ * same placeholder name other parsers use, so the entries merge and resolve by id.
+ */
+export function applyAirIdentifier(lora: LoraReference): LoraReference {
+  const air = parseCivitaiAir(lora.rawName);
+  if (!air) return lora;
+  return { ...lora, rawName: `Civitai model version ${air.versionId}`, civitaiVersionId: lora.civitaiVersionId ?? air.versionId };
+}
+
+/**
  * Identity key for a LoRA across parsers: file name without folders, extension or case.
  * "characters\\Echidna_ReZero_SDXL.safetensors" and "Echidna_ReZero_SDXL" are the same LoRA.
  */
@@ -36,9 +59,15 @@ export function completenessScore(meta: ExtractedMetadata): number {
  * `secondary` only fill in what the primary is missing (hash, version id, weight).
  */
 export function mergeLoras(primary: LoraReference[], secondary: LoraReference[]): LoraReference[] {
-  const merged = primary.map((l) => ({ ...l }));
+  const merged: LoraReference[] = [];
+  // Within one parser's list too: an AIR tag and a "Civitai resources" entry are one LoRA
+  for (const l of primary.map(applyAirIdentifier)) {
+    const same = merged.find((m) => m.civitaiVersionId !== undefined && m.civitaiVersionId === l.civitaiVersionId);
+    if (!same) merged.push({ ...l });
+    else if (/^Civitai model version \d+$/.test(same.rawName)) same.rawName = l.rawName;
+  }
 
-  for (const extra of secondary) {
+  for (const extra of secondary.map(applyAirIdentifier)) {
     const existing = merged.find(
       (l) =>
         loraKey(l.rawName) === loraKey(extra.rawName) ||

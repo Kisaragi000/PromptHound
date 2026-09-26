@@ -1,4 +1,5 @@
 import type { LoraReference, ModelCatalogRecord } from './types.js';
+import { applyAirIdentifier } from './metadata-merge.js';
 import {
   findLoraByHash,
   findLoraByAlias,
@@ -58,8 +59,12 @@ export function normalizeLoraName(rawName: string): string {
   name = name.replace(/(:[\d.]+)+>?$/, '');
   name = name.replace(/>$/, '');
 
-  // Drop folder paths (ComfyUI "characters\\name.safetensors") and file extensions
-  name = name.split(/[\\/]/).pop() || name;
+  // Drop folder paths (ComfyUI "characters\\name.safetensors") and file extensions.
+  // Only for things that look like file paths: model titles such as
+  // "Art Style / [Illustrious/NoobAI]" contain slashes too.
+  if (/\.(safetensors|ckpt|pt|bin)$/i.test(name) || !/\s/.test(name)) {
+    name = name.split(/[\\/]/).pop() || name;
+  }
   name = name.replace(/\.(safetensors|ckpt|pt|bin)$/i, '');
 
   // Keep the contents of Asian / full-width brackets: 【Anima】Landscape -> Anima Landscape
@@ -361,7 +366,8 @@ async function fetchVersionRecord(
  * Exact identifiers are checked before names so a similar-looking cached alias
  * can never override what the image itself states.
  */
-async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
+async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
+  const lora = applyAirIdentifier(input);
   // Placeholder names ("Civitai model version 123") carry no searchable information
   const hasRealName = !CIVITAI_VERSION_PLACEHOLDER.test(lora.rawName);
   const normalizedAlias = hasRealName ? normalizeLoraName(lora.rawName) : '';
@@ -420,7 +426,10 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
   // 3. Tier 1: cached alias
   if (normalizedAlias) {
     const cachedByAlias = await findLoraByAlias(normalizedAlias);
-    if (cachedByAlias) {
+    // The bundled catalog holds the hash of every version of its models. When the image
+    // gives a hash that none of them has, a same-name catalog model is a different file.
+    const hashContradicts = Boolean(hash && hash.length >= 10) && cachedByAlias?.cachedAt === 0;
+    if (cachedByAlias && !hashContradicts) {
       return { ...lora, resolved: toResolvedLora(cachedByAlias, 'name-match') };
     }
   }

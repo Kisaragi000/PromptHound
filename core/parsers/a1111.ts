@@ -1,6 +1,7 @@
 import type { ExtractedMetadata, LoraReference } from '../types.js';
 import { samplerLabel } from '../sampler-names.js';
 import { diceCoefficient } from '../similarity.js';
+import { INLINE_LORA_TAG } from '../metadata-merge.js';
 
 /**
  * Parses settings string into key-value pairs while respecting quotes.
@@ -70,7 +71,7 @@ function parseSettingsPairs(settingsStr: string): Record<string, string> {
 export function extractInlineLoras(prompt: string): { cleanPrompt: string; loras: LoraReference[] } {
   const loras: LoraReference[] = [];
   // Greedy on the weight/parameter segment to safely capture Forge / WebUI 1.6+ multi-weights
-  const loraRegex = /<lora:([^:>]+)(?::([^>]+))?>/gi;
+  const loraRegex = new RegExp(INLINE_LORA_TAG.source, 'gi');
 
   let cleanPrompt = prompt.replace(loraRegex, (_match, rawName, paramsStr) => {
     let strength = 1.0;
@@ -91,7 +92,7 @@ export function extractInlineLoras(prompt: string): { cleanPrompt: string; loras
   });
 
   cleanPrompt = cleanPrompt
-    .replace(/,\s*,+/g, ',')
+    .replace(/,(\s*,)+/g, ',')
     .replace(/\s{2,}/g, ' ')
     .trim()
     .replace(/^,\s*|,\s*$/g, '');

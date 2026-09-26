@@ -3,24 +3,7 @@ import { normalizeGeneration } from '@civitai/generation-metadata';
 import type { ExtractedMetadata, ExtractionResult, ExtractionError, LoraReference, SourceInfo } from './types.js';
 import { resolveLoras } from './lora-resolution.js';
 import { extractFromRawText } from './format-detect.js';
-
-/**
- * Extracts inline <lora:name:strength> tags from prompt string.
- */
-function extractInlineLoras(prompt: string): { cleanPrompt: string; inlineLoras: LoraReference[] } {
-  const inlineLoras: LoraReference[] = [];
-  const regex = /<lora:([^:>]+)(?::([^>]+))?>/gi;
-
-  const cleanPrompt = prompt.replace(regex, (_m, name, strength) => {
-    inlineLoras.push({
-      rawName: name.trim(),
-      strength: strength ? parseFloat(strength) : 1.0,
-    });
-    return '';
-  }).trim();
-
-  return { cleanPrompt, inlineLoras };
-}
+import { extractInlineLoras } from './parsers/a1111.js';
 
 /**
  * Reads generation metadata with Civitai's generation-metadata engine, without
@@ -123,7 +106,7 @@ export async function readCivitaiLibraryMetadata(input: any): Promise<ExtractedM
     negativePrompt = String(negativePrompt);
   }
 
-  const { cleanPrompt, inlineLoras } = extractInlineLoras(prompt);
+  const { cleanPrompt, loras: inlineLoras } = extractInlineLoras(prompt);
   prompt = cleanPrompt;
 
   const loras: LoraReference[] = [...inlineLoras];
@@ -139,7 +122,8 @@ export async function readCivitaiLibraryMetadata(input: any): Promise<ExtractedM
           (versionId !== undefined && l.civitaiVersionId === versionId) ||
           l.rawName.toLowerCase() === rawName.toLowerCase()
       );
-      const strength = typeof res.weight === 'number' ? res.weight : 1.0;
+      // Unknown stays undefined so another parser's real weight can fill it in
+      const strength = typeof res.weight === 'number' ? res.weight : undefined;
       const hash = res.hash;
 
       // The version id is resolved against /model-versions/{id} in resolveLoras;

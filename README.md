@@ -149,18 +149,30 @@ node scripts/dev.mjs
 
 ### Rebuilding the Offline LoRA Catalog
 
-`core/data/lora-seed.json` is the catalog PromptHound uses to identify LoRAs without a network connection. It is generated from Civitai's public API; never edit hashes, ids or trigger words by hand.
+PromptHound identifies LoRAs offline from two generated files; never edit their hashes, ids or trigger words by hand:
+
+- `core/data/lora-seed.json`: full records (name, trigger words, cover, SHA256 and AutoV3 hashes) for the 2,000 most-downloaded LoRA / LoCon / DoRA models, 3 versions each, plus the versions in `scripts/catalog-includes.json`.
+- `core/data/lora-version-index.json`: a compact index (ids, names, AutoV2 and AutoV3 hash prefixes) of every other version of those models and of the next 8,000 models.
 
 ```bash
-# Check the current catalog against Civitai (writes nothing; exits 1 on mismatches)
+# Check the catalog against Civitai (writes nothing; exits 1 on mismatches)
 npm run catalog:verify
 
-# Rebuild it: the 2,000 most-downloaded LoRA / LoCon / DoRA models, 3 versions each,
-# plus every version listed in scripts/catalog-includes.json
-CIVITAI_API_KEY=... npm run catalog:build -- --models 2000 --versions 3
+# Rebuild both files
+CIVITAI_API_KEY=... npm run catalog:build -- --models 2000 --versions 3 --compact-models 10000
 ```
 
-Useful options: `--dry-run` (report only), `--extra file.json` (merge hand-made records, e.g. private models), `--all-covers` (keep cover images of any rating; PG-rated only by default). See the header of `scripts/build-lora-catalog.ts` for the full list. The desktop app replaces its stored copy of the catalog automatically when the bundled file changes; LoRAs users found or linked themselves are kept.
+Useful options: `--dry-run`, `--extra file.json` (merge hand-made records), `--all-covers` (covers of any rating; PG only by default). See the header of `scripts/build-lora-catalog.ts`. The desktop app replaces its stored copy of the catalog automatically when the bundled file changes; LoRAs users found or linked themselves are kept.
+
+### Measuring LoRA Identification
+
+```bash
+CIVITAI_API_KEY=... npm run benchmark:collect    # ~360 real Civitai images + ground truth into .benchmark/
+npm run benchmark:eval -- offline                # bundled catalog only
+CIVITAI_API_KEY=... npm run benchmark:eval -- online
+```
+
+In a sandbox whose proxy Node does not pick up automatically, prefix the commands with `NODE_USE_ENV_PROXY=1`.
 
 ---
 

@@ -1,11 +1,91 @@
 import type { ModelCatalogRecord, LoraReference, LoraMatchMethod } from './types.js';
 import seedData from './data/lora-seed.json';
+import olderVersionData from './data/lora-version-index.json';
 import { diceCoefficient, extractMeaningfulTokens } from './similarity.js';
 
 // In-memory catalog maps for fast synchronous lookups & browser preview
 const hashIndex = new Map<string, ModelCatalogRecord>();
 const aliasIndex = new Map<string, ModelCatalogRecord>();
 const versionIndex = new Map<number, ModelCatalogRecord>();
+
+// Older versions of catalog models (compact index: version id, model id, AutoV2 hash, name)
+const olderVersions = new Map<number, { modelId: number; versionName: string }>();
+const olderVersionsByHash = new Map<string, number>();
+const olderVersionsByAutoV3 = new Map<string, number>();
+// AutoV3 (weights-only hash, 12 hex) of full catalog records
+const autoV3Index = new Map<string, ModelCatalogRecord>();
+// Newest catalog record per model, used as the template for its older versions
+const modelRecords = new Map<number, ModelCatalogRecord>();
+// Models that exist only in the compact index (no full record): name, alias, base model
+const compactModels = new Map<number, { name: string; alias: string; baseModel: string; nsfw: boolean; newestVersionId?: number }>();
+
+function loadOlderVersionIndex(): void {
+  const models: unknown = (olderVersionData as any)?.models;
+  if (Array.isArray(models)) {
+    for (const row of models) {
+      if (!Array.isArray(row) || typeof row[0] !== 'number' || typeof row[1] !== 'string') continue;
+      const [modelId, name, alias, baseModel, , nsfw] = row;
+      compactModels.set(modelId, {
+        name,
+        alias: typeof alias === 'string' ? alias : '',
+        baseModel: typeof baseModel === 'string' ? baseModel : '',
+        nsfw: nsfw === 1,
+      });
+    }
+  }
+
+  const rows: unknown = (olderVersionData as any)?.versions;
+  if (!Array.isArray(rows)) return;
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    const [versionId, modelId, hash10, versionName, autoV3] = row;
+    if (typeof versionId !== 'number' || typeof modelId !== 'number') continue;
+    olderVersions.set(versionId, { modelId, versionName: typeof versionName === 'string' ? versionName : '' });
+    // Versions are listed newest first per model
+    const compact = compactModels.get(modelId);
+    if (compact && compact.newestVersionId === undefined) compact.newestVersionId = versionId;
+    if (typeof hash10 === 'string' && hash10.length === 10) olderVersionsByHash.set(hash10.toLowerCase(), versionId);
+    if (typeof autoV3 === 'string' && autoV3.length === 12) olderVersionsByAutoV3.set(autoV3.toLowerCase(), versionId);
+  }
+}
+
+loadOlderVersionIndex();
+
+/**
+ * Builds a record for an older version of a catalog model. Name, cover and base model
+ * come from the model's newest catalog version; trigger words are left empty because
+ * they can differ between versions.
+ */
+function compactModelRecord(modelId: number): ModelCatalogRecord | undefined {
+  const compact = compactModels.get(modelId);
+  if (!compact) return undefined;
+  return {
+    civitaiModelId: modelId,
+    name: compact.name,
+    normalizedAlias: '',
+    triggerWords: [],
+    baseModel: compact.baseModel || undefined,
+    nsfw: compact.nsfw,
+    source: 'civitai',
+    modelUrl: `https://civitai.com/models/${modelId}`,
+    cachedAt: 0,
+  };
+}
+
+function recordForOlderVersion(versionId: number): ModelCatalogRecord | undefined {
+  const entry = olderVersions.get(versionId);
+  const base = entry ? modelRecords.get(entry.modelId) ?? compactModelRecord(entry.modelId) : undefined;
+  if (!entry || !base) return undefined;
+  return {
+    ...base,
+    civitaiVersionId: versionId,
+    versionName: entry.versionName || undefined,
+    normalizedAlias: '',
+    hashSha256: undefined,
+    triggerWords: [],
+    modelUrl: `https://civitai.com/models/${entry.modelId}?modelVersionId=${versionId}`,
+  };
+}
 
 /**
  * Durable storage behind the in-memory indexes (the SQLite `lora_cache` table).
@@ -57,7 +137,11 @@ export function normalizeHash(hash: string): string {
 }
 
 function indexRecord(record: ModelCatalogRecord): void {
+  if (record.civitaiModelId && record.cachedAt === 0 && !modelRecords.has(record.civitaiModelId)) {
+    modelRecords.set(record.civitaiModelId, record);
+  }
   if (record.hashSha256) hashIndex.set(normalizeHash(record.hashSha256), record);
+  if (record.hashAutoV3) autoV3Index.set(record.hashAutoV3.toLowerCase(), record);
   if (record.normalizedAlias) aliasIndex.set(record.normalizedAlias.trim().toLowerCase(), record);
   if (record.civitaiVersionId) versionIndex.set(record.civitaiVersionId, record);
 }
@@ -153,6 +237,8 @@ function loadSeedCache(): void {
   hashIndex.clear();
   aliasIndex.clear();
   versionIndex.clear();
+  modelRecords.clear();
+  autoV3Index.clear();
 
   // 1. Seed with offline bundled master dataset (0ms cold start)
   if (Array.isArray(seedData)) {
@@ -164,6 +250,7 @@ function loadSeedCache(): void {
         versionName: entry.versionName,
         normalizedAlias: entry.normalizedAlias || '',
         hashSha256: entry.hashSha256 || undefined,
+        hashAutoV3: entry.hashAutoV3 || undefined,
         coverImageId: entry.coverImageId,
         coverImageUrl: entry.coverImageUrl,
         triggerWords: entry.triggerWords || [],
@@ -176,6 +263,13 @@ function loadSeedCache(): void {
 
       indexRecord(rec);
     });
+  }
+
+  // Compact-index models are found by name through their newest version
+  for (const compact of compactModels.values()) {
+    if (!compact.alias || compact.newestVersionId === undefined || aliasIndex.has(compact.alias)) continue;
+    const record = recordForOlderVersion(compact.newestVersionId);
+    if (record) aliasIndex.set(compact.alias, record);
   }
 }
 
@@ -193,6 +287,14 @@ export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord |
     return hashIndex.get(clean);
   }
 
+  // A1111 "Lora hashes" are AutoV3: the first 12 hex digits of a weights-only hash
+  if (clean.length === 12) {
+    const byAutoV3 = autoV3Index.get(clean);
+    if (byAutoV3) return byAutoV3;
+    const olderVersionId = olderVersionsByAutoV3.get(clean);
+    if (olderVersionId !== undefined) return recordForOlderVersion(olderVersionId);
+  }
+
   // Prefix match for short AutoV1/AutoV2 hashes (>= 8 chars)
   if (clean.length >= 8) {
     for (const [fullHash, record] of hashIndex.entries()) {
@@ -202,6 +304,12 @@ export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord |
     }
   }
 
+  // Older versions of catalog models are indexed by their first 10 hex digits (AutoV2)
+  if (clean.length >= 10) {
+    const olderVersionId = olderVersionsByHash.get(clean.slice(0, 10));
+    if (olderVersionId !== undefined) return recordForOlderVersion(olderVersionId);
+  }
+
   return undefined;
 }
 
@@ -209,7 +317,7 @@ export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord |
  * Lookup by exact Civitai model-version id (Tier 1)
  */
 export function getCachedLoraByVersionId(versionId: number): ModelCatalogRecord | undefined {
-  return versionIndex.get(versionId);
+  return versionIndex.get(versionId) ?? recordForOlderVersion(versionId);
 }
 
 /**

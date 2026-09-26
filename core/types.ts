@@ -9,6 +9,8 @@ export interface ModelCatalogRecord {
   versionName?: string;
   normalizedAlias: string;
   hashSha256?: string;
+  /** Weights-only hash (12 hex) that A1111 writes in "Lora hashes" */
+  hashAutoV3?: string;
   coverImageId?: string;
   coverImageUrl?: string;
   triggerWords: string[];

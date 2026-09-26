@@ -8,12 +8,17 @@
  * Options
  *   --models N        Most-downloaded LoRA / LoCon / DoRA models to fetch (default 2000)
  *   --versions N      Newest versions to keep per model (default 3)
+ *   --compact-models N  Total models to cover (default 10000). Models beyond --models
+ *                     go into the compact index only: name, ids and hash prefixes, so
+ *                     images using them are still identified offline
  *   --include FILE    Model-version ids that must be in the catalog even if not in the
  *                     top N, e.g. checkpoints (default scripts/catalog-includes.json)
  *   --extra FILE      Extra hand-made records to merge (JSON array, same shape as the
  *                     catalog), e.g. private or non-Civitai models
  *   --all-covers      Keep cover images of any rating (default: PG-rated covers only)
  *   --out FILE        Output path (default core/data/lora-seed.json)
+ *   --index-out FILE  Compact index of every other version of the catalog's models
+ *                     (default core/data/lora-version-index.json)
  *   --api-base URL    API root (default https://civitai.com/api/v1)
  *   --dry-run         Fetch and report, but do not write
  *
@@ -34,6 +39,8 @@ interface CatalogRecord {
   versionName?: string;
   normalizedAlias: string;
   hashSha256?: string;
+  /** Hash of the weights only (first 12 hex); what A1111 writes in "Lora hashes" */
+  hashAutoV3?: string;
   coverImageUrl?: string;
   triggerWords: string[];
   baseModel?: string;
@@ -67,9 +74,11 @@ const option = (name: string, fallback: string) => {
 
 const MODEL_LIMIT = Number(option('models', '2000'));
 const VERSIONS_PER_MODEL = Number(option('versions', '3'));
+const COMPACT_LIMIT = Math.max(MODEL_LIMIT, Number(option('compact-models', '10000')));
 const INCLUDE_FILE = option('include', 'scripts/catalog-includes.json');
 const EXTRA_FILE = option('extra', '');
 const OUT_FILE = option('out', 'core/data/lora-seed.json');
+const INDEX_FILE = option('index-out', 'core/data/lora-version-index.json');
 const API_BASE = option('api-base', 'https://civitai.com/api/v1').replace(/\/$/, '');
 const ALL_COVERS = flag('all-covers');
 const DRY_RUN = flag('dry-run');
@@ -122,6 +131,11 @@ function sha256Of(version: any): string | undefined {
   return typeof hash === 'string' && /^[0-9a-f]{64}$/i.test(hash) ? hash.toLowerCase() : undefined;
 }
 
+function autoV3Of(version: any): string | undefined {
+  const hash = primaryFile(version)?.hashes?.AutoV3;
+  return typeof hash === 'string' && /^[0-9a-f]{10,64}$/i.test(hash) ? hash.toLowerCase().slice(0, 12) : undefined;
+}
+
 function coverOf(version: any): string | undefined {
   const images: any[] = Array.isArray(version?.images) ? version.images : [];
   // nsfwLevel 1 = PG on Civitai; unrated images are skipped unless --all-covers
@@ -151,6 +165,7 @@ function toRecord(model: { id: number; name: string; type?: string; nsfw?: boole
     versionName: typeof version.name === 'string' ? version.name : undefined,
     normalizedAlias: '', // assigned later, once per alias across the whole catalog
     hashSha256: sha256Of(version),
+    hashAutoV3: autoV3Of(version),
     coverImageUrl: coverOf(version),
     triggerWords: triggerWordsOf(version),
     baseModel: typeof version.baseModel === 'string' ? version.baseModel : undefined,
@@ -163,6 +178,21 @@ function toRecord(model: { id: number; name: string; type?: string; nsfw?: boole
 
 // ---------- fetching ----------
 
+/** [versionId, modelId, first 10 hex of SHA256 (AutoV2), versionName, AutoV3 (12 hex)] */
+type CompactVersion = [number, number, string, string, string];
+const compactVersions: CompactVersion[] = [];
+/** [modelId, name, alias, baseModel, modelType, nsfw 0/1] for models without full records */
+type CompactModel = [number, string, string, string, string, number];
+const compactModels: CompactModel[] = [];
+
+const compactVersion = (model: any, version: any): CompactVersion => [
+  Number(version.id),
+  Number(model.id),
+  sha256Of(version)?.slice(0, 10) ?? '',
+  String(version.name ?? ''),
+  autoV3Of(version) ?? '',
+];
+
 async function fetchTopModels(): Promise<CatalogRecord[]> {
   const records: CatalogRecord[] = [];
   const typeParams = LORA_TYPES.map((t) => `types=${t}`).join('&');
@@ -170,21 +200,35 @@ async function fetchTopModels(): Promise<CatalogRecord[]> {
     `${API_BASE}/models?${typeParams}&sort=Most%20Downloaded&period=AllTime&nsfw=true&limit=100`;
   let models = 0;
 
-  while (url && models < MODEL_LIMIT) {
+  while (url && models < COMPACT_LIMIT) {
     const data = await fetchJson(url);
     const items: any[] = Array.isArray(data?.items) ? data.items : [];
     if (items.length === 0) break;
 
     for (const model of items) {
-      if (models >= MODEL_LIMIT) break;
+      if (models >= COMPACT_LIMIT) break;
       const versions: any[] = Array.isArray(model.modelVersions) ? model.modelVersions : [];
       if (versions.length === 0) continue;
       models++;
-      // The API lists versions newest first
-      for (const version of versions.slice(0, VERSIONS_PER_MODEL)) records.push(toRecord(model, version));
+      if (models <= MODEL_LIMIT) {
+        // The API lists versions newest first
+        for (const version of versions.slice(0, VERSIONS_PER_MODEL)) records.push(toRecord(model, version));
+        // Older versions are still used in images: keep just enough to map them to the model
+        for (const version of versions.slice(VERSIONS_PER_MODEL)) compactVersions.push(compactVersion(model, version));
+      } else {
+        compactModels.push([
+          Number(model.id),
+          String(model.name).trim(),
+          '', // alias assigned once full-record aliases are claimed
+          String(versions[0]?.baseModel ?? ''),
+          String(model.type ?? ''),
+          model.nsfw ? 1 : 0,
+        ]);
+        for (const version of versions) compactVersions.push(compactVersion(model, version));
+      }
     }
 
-    process.stdout.write(`\r  models: ${models}/${MODEL_LIMIT}, versions: ${records.length}`);
+    process.stdout.write(`\r  models: ${models}/${COMPACT_LIMIT}, full versions: ${records.length}`);
     // Civitai paginates with a cursor; metadata.nextPage is the full next URL
     url = typeof data?.metadata?.nextPage === 'string' ? data.metadata.nextPage : undefined;
     await sleep(350);
@@ -218,8 +262,9 @@ function readJson(file: string): any {
  * exactly as the app normalizes LoRA names. Earlier (more downloaded) models claim an
  * alias first; only the newest version of a model carries it.
  */
+const claimed = new Set<string>();
+
 function assignAliases(records: CatalogRecord[]): CatalogRecord[] {
-  const claimed = new Set<string>();
   const seenModels = new Set<number>();
   const out: CatalogRecord[] = [];
 
@@ -290,7 +335,7 @@ async function verify(): Promise<void> {
 // ---------- build ----------
 
 async function build(): Promise<void> {
-  console.log(`Fetching the ${MODEL_LIMIT} most-downloaded ${LORA_TYPES.join('/')} models (${VERSIONS_PER_MODEL} versions each)`);
+  console.log(`Fetching the ${COMPACT_LIMIT} most-downloaded ${LORA_TYPES.join('/')} models (top ${MODEL_LIMIT} with full records, ${VERSIONS_PER_MODEL} versions each)`);
   const top = await fetchTopModels();
 
   const includeIds: number[] = fs.existsSync(INCLUDE_FILE) ? readJson(INCLUDE_FILE).modelVersionIds || [] : [];
@@ -307,6 +352,14 @@ async function build(): Promise<void> {
   }
 
   let records = assignAliases([...top, ...included]);
+  // Compact-tier models get a title alias only where no full-record model claimed it
+  for (const model of compactModels) {
+    const alias = titleAlias(model[1]);
+    if (alias.length >= MIN_ALIAS_LENGTH && !claimed.has(alias)) {
+      claimed.add(alias);
+      model[2] = alias;
+    }
+  }
 
   if (EXTRA_FILE) {
     const extra: any[] = readJson(EXTRA_FILE);
@@ -339,6 +392,13 @@ async function build(): Promise<void> {
   fs.writeFileSync(tmp, body);
   fs.renameSync(tmp, OUT_FILE);
   console.log(`Wrote ${OUT_FILE} (${(Buffer.byteLength(body) / 1024).toFixed(0)} KB)`);
+
+  const indexBody = JSON.stringify({ format: 2, models: compactModels, versions: compactVersions });
+  fs.writeFileSync(`${INDEX_FILE}.tmp`, indexBody);
+  fs.renameSync(`${INDEX_FILE}.tmp`, INDEX_FILE);
+  console.log(
+    `Wrote ${INDEX_FILE} (${compactModels.length} compact models, ${compactVersions.length} versions, ${(Buffer.byteLength(indexBody) / 1024).toFixed(0)} KB)`
+  );
 }
 
 (mode === 'verify' ? verify() : build()).catch((err) => {
