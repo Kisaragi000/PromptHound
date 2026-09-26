@@ -1,5 +1,7 @@
 import type { ExtractedMetadata, LoraReference } from '../types.js';
-import { findMatchingSeedLorasInText } from '../lora-cache.js';
+import { samplerLabel } from '../sampler-names.js';
+import { diceCoefficient } from '../similarity.js';
+import { INLINE_LORA_TAG } from '../metadata-merge.js';
 
 /**
  * Parses settings string into key-value pairs while respecting quotes.
@@ -11,23 +13,37 @@ function parseSettingsPairs(settingsStr: string): Record<string, string> {
   let currentValue = '';
   let readingKey = true;
   let inQuotes = false;
+  // JSON values (Civitai resources / metadata) contain commas between quoted strings;
+  // only split at depth 0
+  let depth = 0;
 
   for (let i = 0; i < settingsStr.length; i++) {
     const char = settingsStr[i];
 
-    if (char === '"') {
+    if (char === '\\' && inQuotes && !readingKey) {
+      currentValue += char + (settingsStr[i + 1] ?? '');
+      i++;
+    } else if (char === '"') {
       inQuotes = !inQuotes;
+      if (readingKey) currentKey += char;
+      else currentValue += char;
+    } else if (!inQuotes && !readingKey && (char === '[' || char === '{')) {
+      depth++;
+      currentValue += char;
+    } else if (!inQuotes && !readingKey && (char === ']' || char === '}')) {
+      depth = Math.max(0, depth - 1);
       currentValue += char;
     } else if (char === ':' && readingKey && !inQuotes) {
       readingKey = false;
       if (settingsStr[i + 1] === ' ') i++;
-    } else if ((char === ',' || char === ';') && !inQuotes) {
+    } else if ((char === ',' || char === ';') && !inQuotes && depth === 0) {
       if (currentKey) {
         fields[currentKey.trim()] = currentValue.trim();
       }
       currentKey = '';
       currentValue = '';
       readingKey = true;
+      depth = 0;
       if (settingsStr[i + 1] === ' ') i++;
     } else {
       if (readingKey) {
@@ -55,7 +71,7 @@ function parseSettingsPairs(settingsStr: string): Record<string, string> {
 export function extractInlineLoras(prompt: string): { cleanPrompt: string; loras: LoraReference[] } {
   const loras: LoraReference[] = [];
   // Greedy on the weight/parameter segment to safely capture Forge / WebUI 1.6+ multi-weights
-  const loraRegex = /<lora:([^:>]+)(?::([^>]+))?>/gi;
+  const loraRegex = new RegExp(INLINE_LORA_TAG.source, 'gi');
 
   let cleanPrompt = prompt.replace(loraRegex, (_match, rawName, paramsStr) => {
     let strength = 1.0;
@@ -76,7 +92,7 @@ export function extractInlineLoras(prompt: string): { cleanPrompt: string; loras
   });
 
   cleanPrompt = cleanPrompt
-    .replace(/,\s*,+/g, ',')
+    .replace(/,(\s*,)+/g, ',')
     .replace(/\s{2,}/g, ' ')
     .trim()
     .replace(/^,\s*|,\s*$/g, '');
@@ -131,7 +147,13 @@ function parseAddNetLoras(settings: Record<string, string>, loras: LoraReference
  * Parses Civitai Resources JSON if embedded in settings.
  * Example: Civitai resources: [{"type":"lora","modelVersionId":1234,"modelName":"foo","weight":0.8}]
  */
-function parseCivitaiResources(settings: Record<string, string>, loras: LoraReference[]): void {
+interface CivitaiCheckpoint {
+  name?: string;
+  versionId?: number;
+}
+
+function parseCivitaiResources(settings: Record<string, string>, loras: LoraReference[]): CivitaiCheckpoint | undefined {
+  let checkpoint: CivitaiCheckpoint | undefined;
   const resourceKey = Object.keys(settings).find((k) =>
     /^(Civitai resources|Resources|civitai_resources)$/i.test(k)
   );
@@ -142,39 +164,85 @@ function parseCivitaiResources(settings: Record<string, string>, loras: LoraRefe
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (Array.isArray(parsed)) {
         for (const item of parsed) {
+          // Civitai on-site images name the checkpoint only here, not in a "Model:" field
+          if ((item.type === 'checkpoint' || item.kind === 'checkpoint') && !checkpoint) {
+            const versionName = typeof item.modelVersionName === 'string' ? item.modelVersionName : '';
+            const modelName = typeof item.modelName === 'string' ? item.modelName : '';
+            checkpoint = {
+              name: modelName ? (versionName ? `${modelName} (${versionName})` : modelName) : undefined,
+              versionId: Number.isFinite(Number(item.modelVersionId)) ? Number(item.modelVersionId) : undefined,
+            };
+          }
           if (item.type === 'lora' || item.kind === 'lora') {
-            const rawName = item.modelName || item.name || 'Unknown LoRA';
+            const rawVersionId = item.modelVersionId ?? item.id;
+            const versionId = rawVersionId != null && Number.isFinite(Number(rawVersionId)) ? Number(rawVersionId) : undefined;
+            const rawName = item.modelName || item.name || (versionId ? `Civitai model version ${versionId}` : 'Unknown LoRA');
             const weight = typeof item.weight === 'number' ? item.weight : 1.0;
-            const modelVersionId = item.modelVersionId || item.id;
-            const existing = loras.find((l) => l.rawName.toLowerCase() === rawName.toLowerCase());
+            const existing = loras.find(
+              (l) =>
+                (versionId !== undefined && l.civitaiVersionId === versionId) ||
+                l.rawName.toLowerCase() === rawName.toLowerCase()
+            );
 
+            // The version id is resolved against /model-versions/{id} in resolveLoras;
+            // it is not a model id, so no model URL is built from it here.
             if (existing) {
-              if (weight !== undefined) existing.strength = weight;
-              if (modelVersionId && !existing.resolved) {
-                existing.resolved = {
-                  name: rawName,
-                  source: 'civitai',
-                  modelUrl: `https://civitai.com/models/${modelVersionId}`,
-                };
+              existing.strength = weight;
+              if (versionId !== undefined && existing.civitaiVersionId === undefined) {
+                existing.civitaiVersionId = versionId;
               }
             } else {
-              loras.push({
-                rawName,
-                strength: weight,
-                resolved: modelVersionId
-                  ? {
-                      name: rawName,
-                      source: 'civitai',
-                      modelUrl: `https://civitai.com/models/${modelVersionId}`,
-                    }
-                  : undefined,
-              });
+              loras.push({ rawName, strength: weight, civitaiVersionId: versionId });
             }
           }
         }
       }
     } catch {
       // ignore invalid json
+    }
+  }
+  return checkpoint;
+}
+
+/** Scheduler named in the "Civitai metadata" JSON (on-site generator), if any. */
+function extraScheduler(settings: Record<string, string>): string | undefined {
+  const key = Object.keys(settings).find((k) => /^Civitai metadata$/i.test(k));
+  if (!key) return undefined;
+  try {
+    const parsed = JSON.parse(settings[key]);
+    return typeof parsed?.scheduler === 'string' ? parsed.scheduler : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const tokenKey = (name: string) =>
+  name
+    .replace(/\.(safetensors|pt|ckpt)$/i, '')
+    .replace(/[【】\[\]()（）]/g, ' ')
+    .replace(/\b(lora|v?\d+(\.\d+)*)\b/gi, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, '')
+    .toLowerCase();
+
+/**
+ * Civitai on-site images list each LoRA twice: as a <lora:file_name:w> prompt tag and
+ * as a "Civitai resources" entry with the model's display name. Fold the tag into the
+ * resource entry when their weights match and their names clearly agree.
+ */
+function mergeInlineTagsIntoResources(loras: LoraReference[]): void {
+  for (let i = loras.length - 1; i >= 0; i--) {
+    const tag = loras[i];
+    if (tag.civitaiVersionId !== undefined) continue;
+    const matches = loras.filter(
+      (r) =>
+        r !== tag &&
+        r.civitaiVersionId !== undefined &&
+        (r.strength ?? 1) === (tag.strength ?? 1) &&
+        diceCoefficient(tokenKey(r.rawName), tokenKey(tag.rawName)) >= 0.8
+    );
+    if (matches.length === 1) {
+      if (!matches[0].hash && tag.hash) matches[0].hash = tag.hash;
+      loras.splice(i, 1);
     }
   }
 }
@@ -263,31 +331,8 @@ export function parseA1111(
   parseAddNetLoras(settings, loras);
 
   // Parse Civitai Resources JSON
-  parseCivitaiResources(settings, loras);
-
-  // Also check prompt for known LoRA tags / trigger words (e.g. CyberpunkInterior, YFG-Aarchy)
-  try {
-    const matchedRecords = findMatchingSeedLorasInText(rawPrompt);
-    for (const record of matchedRecords) {
-      if (!loras.some((l) => l.rawName.toLowerCase() === record.name.toLowerCase() || l.resolved?.modelUrl === record.modelUrl)) {
-        loras.push({
-          rawName: record.name,
-          strength: 1.0,
-          resolved: {
-            name: record.name,
-            source: 'civitai',
-            modelUrl: record.modelUrl,
-            coverImageUrl: record.coverImageUrl,
-            triggerWords: record.triggerWords,
-            baseModel: record.baseModel,
-            versionName: 'v1.0',
-          },
-        });
-      }
-    }
-  } catch {
-    // ignore
-  }
+  const civitaiCheckpoint = parseCivitaiResources(settings, loras);
+  mergeInlineTagsIntoResources(loras);
 
   // Parse Dimensions from Size: WxH
   let width = imageDimensions?.width;
@@ -316,16 +361,18 @@ export function parseA1111(
   return {
     prompt: cleanPrompt,
     negativePrompt: rawNegativePrompt || undefined,
-    sampler: samplerKey ? settings[samplerKey] : undefined,
+    sampler: samplerKey ? samplerLabel(settings[samplerKey], extraScheduler(settings)) : undefined,
     steps: Number.isFinite(steps) ? steps : undefined,
     cfgScale: Number.isFinite(cfgScale) ? cfgScale : undefined,
     seed: seedKey ? settings[seedKey] : undefined,
-    model: modelKey ? settings[modelKey] : undefined,
+    model: modelKey ? settings[modelKey] : civitaiCheckpoint?.name,
     modelHash: modelHashKey ? settings[modelHashKey] : undefined,
     width,
     height,
     loras,
     detectedFormat: 'a1111',
-    extraFields: settings,
+    extraFields: civitaiCheckpoint?.versionId
+      ? { ...settings, civitaiCheckpointVersionId: civitaiCheckpoint.versionId }
+      : settings,
   };
 }

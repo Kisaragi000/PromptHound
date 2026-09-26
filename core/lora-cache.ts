@@ -1,10 +1,210 @@
-import type { ModelCatalogRecord, LoraReference } from './types.js';
+import type { ModelCatalogRecord, LoraReference, LoraMatchMethod } from './types.js';
 import seedData from './data/lora-seed.json';
+import olderVersionData from './data/lora-version-index.json';
 import { diceCoefficient, extractMeaningfulTokens } from './similarity.js';
 
 // In-memory catalog maps for fast synchronous lookups & browser preview
 const hashIndex = new Map<string, ModelCatalogRecord>();
 const aliasIndex = new Map<string, ModelCatalogRecord>();
+const versionIndex = new Map<number, ModelCatalogRecord>();
+
+// Older versions of catalog models (compact index: version id, model id, AutoV2 hash, name)
+const olderVersions = new Map<number, { modelId: number; versionName: string }>();
+const olderVersionsByHash = new Map<string, number>();
+const olderVersionsByAutoV3 = new Map<string, number>();
+// AutoV3 (weights-only hash, 12 hex) of full catalog records
+const autoV3Index = new Map<string, ModelCatalogRecord>();
+// Newest catalog record per model, used as the template for its older versions
+const modelRecords = new Map<number, ModelCatalogRecord>();
+// Models that exist only in the compact index (no full record): name, alias, base model
+const compactModels = new Map<number, { name: string; alias: string; baseModel: string; nsfw: boolean; newestVersionId?: number }>();
+
+function loadOlderVersionIndex(): void {
+  const models: unknown = (olderVersionData as any)?.models;
+  if (Array.isArray(models)) {
+    for (const row of models) {
+      if (!Array.isArray(row) || typeof row[0] !== 'number' || typeof row[1] !== 'string') continue;
+      const [modelId, name, alias, baseModel, , nsfw] = row;
+      compactModels.set(modelId, {
+        name,
+        alias: typeof alias === 'string' ? alias : '',
+        baseModel: typeof baseModel === 'string' ? baseModel : '',
+        nsfw: nsfw === 1,
+      });
+    }
+  }
+
+  const rows: unknown = (olderVersionData as any)?.versions;
+  if (!Array.isArray(rows)) return;
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    const [versionId, modelId, hash10, versionName, autoV3] = row;
+    if (typeof versionId !== 'number' || typeof modelId !== 'number') continue;
+    olderVersions.set(versionId, { modelId, versionName: typeof versionName === 'string' ? versionName : '' });
+    // Versions are listed newest first per model
+    const compact = compactModels.get(modelId);
+    if (compact && compact.newestVersionId === undefined) compact.newestVersionId = versionId;
+    if (typeof hash10 === 'string' && hash10.length === 10) olderVersionsByHash.set(hash10.toLowerCase(), versionId);
+    if (typeof autoV3 === 'string' && autoV3.length === 12) olderVersionsByAutoV3.set(autoV3.toLowerCase(), versionId);
+  }
+}
+
+loadOlderVersionIndex();
+
+/**
+ * Builds a record for an older version of a catalog model. Name, cover and base model
+ * come from the model's newest catalog version; trigger words are left empty because
+ * they can differ between versions.
+ */
+function compactModelRecord(modelId: number): ModelCatalogRecord | undefined {
+  const compact = compactModels.get(modelId);
+  if (!compact) return undefined;
+  return {
+    civitaiModelId: modelId,
+    name: compact.name,
+    normalizedAlias: '',
+    triggerWords: [],
+    baseModel: compact.baseModel || undefined,
+    nsfw: compact.nsfw,
+    source: 'civitai',
+    modelUrl: `https://civitai.com/models/${modelId}`,
+    cachedAt: 0,
+  };
+}
+
+function recordForOlderVersion(versionId: number): ModelCatalogRecord | undefined {
+  const entry = olderVersions.get(versionId);
+  const base = entry ? modelRecords.get(entry.modelId) ?? compactModelRecord(entry.modelId) : undefined;
+  if (!entry || !base) return undefined;
+  return {
+    ...base,
+    civitaiVersionId: versionId,
+    versionName: entry.versionName || undefined,
+    normalizedAlias: '',
+    hashSha256: undefined,
+    triggerWords: [],
+    modelUrl: `https://civitai.com/models/${entry.modelId}?modelVersionId=${versionId}`,
+  };
+}
+
+/**
+ * Durable storage behind the in-memory indexes (the SQLite `lora_cache` table).
+ * The renderer reaches it over IPC; Electron's main process talks to SQLite directly.
+ */
+export interface LoraPersistence {
+  getAll(): Promise<ModelCatalogRecord[]>;
+  getByHash(hash: string): Promise<ModelCatalogRecord | null | undefined>;
+  getByVersionId(versionId: number): Promise<ModelCatalogRecord | null | undefined>;
+  getByAlias(alias: string): Promise<ModelCatalogRecord | null | undefined>;
+  upsert(record: ModelCatalogRecord): Promise<void>;
+  remove(hashOrAlias: string): Promise<void>;
+  clearUserRecords(): Promise<void>;
+}
+
+// undefined = auto-detect the renderer's IPC bridge; null = memory only
+let configuredPersistence: LoraPersistence | null | undefined;
+let hydration: Promise<void> | null = null;
+
+/**
+ * Sets the storage backend explicitly (Electron main process, tests). Resets hydration.
+ */
+export function configureLoraPersistence(persistence: LoraPersistence | null): void {
+  configuredPersistence = persistence;
+  hydration = null;
+}
+
+function getPersistence(): LoraPersistence | null {
+  if (configuredPersistence !== undefined) return configuredPersistence;
+  if (typeof window === 'undefined' || !window.promptHound?.loraDb) return null;
+
+  const ipc = window.promptHound.loraDb;
+  return {
+    getAll: () => (ipc.getAll ? ipc.getAll() : Promise.resolve([])),
+    getByHash: (hash) => ipc.getByHash(hash),
+    getByVersionId: (versionId) => (ipc.getByVersionId ? ipc.getByVersionId(versionId) : Promise.resolve(null)),
+    getByAlias: (alias) => ipc.getByAlias(alias),
+    upsert: (record) => ipc.upsert(record),
+    remove: (hashOrAlias) => ipc.remove(hashOrAlias),
+    clearUserRecords: () => ipc.clearUserCache(),
+  };
+}
+
+/**
+ * Canonical hash form: lowercase, no whitespace, no SwarmUI-style "0x" prefix.
+ */
+export function normalizeHash(hash: string): string {
+  return hash.trim().toLowerCase().replace(/^0x/, '');
+}
+
+function indexRecord(record: ModelCatalogRecord): void {
+  if (record.civitaiModelId && record.cachedAt === 0 && !modelRecords.has(record.civitaiModelId)) {
+    modelRecords.set(record.civitaiModelId, record);
+  }
+  if (record.hashSha256) hashIndex.set(normalizeHash(record.hashSha256), record);
+  if (record.hashAutoV3) autoV3Index.set(record.hashAutoV3.toLowerCase(), record);
+  if (record.normalizedAlias) aliasIndex.set(record.normalizedAlias.trim().toLowerCase(), record);
+  if (record.civitaiVersionId) versionIndex.set(record.civitaiVersionId, record);
+}
+
+/**
+ * Loads every persisted record into memory once per process. Records saved in
+ * earlier sessions (lookups, manual re-links) are reused instead of re-fetched.
+ */
+export function ensureLoraCacheHydrated(): Promise<void> {
+  const persistence = getPersistence();
+  if (!persistence) return Promise.resolve();
+  if (!hydration) {
+    hydration = persistence
+      .getAll()
+      .then((records) => {
+        // Oldest first, so the most recent record for a key wins
+        [...(records || [])]
+          .sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0))
+          .forEach(indexRecord);
+      })
+      .catch((err) => {
+        console.warn('Failed to load persisted LoRA cache:', err);
+      });
+  }
+  return hydration;
+}
+
+/**
+ * Memory first, then durable storage (which another process may have written to).
+ */
+async function lookupWithFallback(
+  fromMemory: () => ModelCatalogRecord | undefined,
+  fromStorage: (persistence: LoraPersistence) => Promise<ModelCatalogRecord | null | undefined>
+): Promise<ModelCatalogRecord | undefined> {
+  await ensureLoraCacheHydrated();
+  const cached = fromMemory();
+  if (cached) return cached;
+
+  const persistence = getPersistence();
+  if (!persistence) return undefined;
+  try {
+    const stored = await fromStorage(persistence);
+    if (stored) {
+      indexRecord(stored);
+      return stored;
+    }
+  } catch {
+    // Storage unavailable: behave as a cache miss
+  }
+  return undefined;
+}
+
+export function findLoraByHash(hash: string): Promise<ModelCatalogRecord | undefined> {
+  return lookupWithFallback(() => getCachedLoraByHash(hash), (p) => p.getByHash(normalizeHash(hash)));
+}
+
+export function findLoraByVersionId(versionId: number): Promise<ModelCatalogRecord | undefined> {
+  return lookupWithFallback(() => getCachedLoraByVersionId(versionId), (p) => p.getByVersionId(versionId));
+}
+
+export function findLoraByAlias(alias: string): Promise<ModelCatalogRecord | undefined> {
+  return lookupWithFallback(() => getCachedLoraByAlias(alias), (p) => p.getByAlias(alias.trim().toLowerCase()));
+}
 
 /**
  * Scans a text block (e.g. prompt or tags) for known LoRAs based on alias and trigger words
@@ -14,11 +214,15 @@ export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] 
   const lower = text.toLowerCase();
   const matched: ModelCatalogRecord[] = [];
 
+  // Whole-word only: a substring test turns "highly detailed" into a "detail" LoRA hit
+  const containsPhrase = (phrase: string): boolean => {
+    const escaped = phrase.toLowerCase().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escaped.length > 0 && new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u').test(lower);
+  };
+
   for (const record of aliasIndex.values()) {
-    const aliasHit = record.normalizedAlias && lower.includes(record.normalizedAlias.toLowerCase());
-    const triggerHit = record.triggerWords?.some(
-      (tw) => tw.length > 3 && lower.includes(tw.toLowerCase())
-    );
+    const aliasHit = Boolean(record.normalizedAlias) && containsPhrase(record.normalizedAlias);
+    const triggerHit = record.triggerWords?.some((tw) => tw.length > 3 && containsPhrase(tw));
 
     if (aliasHit || triggerHit) {
       if (!matched.some((m) => m.civitaiModelId === record.civitaiModelId || m.name === record.name)) {
@@ -32,6 +236,9 @@ export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] 
 function loadSeedCache(): void {
   hashIndex.clear();
   aliasIndex.clear();
+  versionIndex.clear();
+  modelRecords.clear();
+  autoV3Index.clear();
 
   // 1. Seed with offline bundled master dataset (0ms cold start)
   if (Array.isArray(seedData)) {
@@ -40,24 +247,29 @@ function loadSeedCache(): void {
         civitaiModelId: entry.civitaiModelId,
         civitaiVersionId: entry.civitaiVersionId,
         name: entry.name,
-        normalizedAlias: entry.normalizedAlias,
+        versionName: entry.versionName,
+        normalizedAlias: entry.normalizedAlias || '',
         hashSha256: entry.hashSha256 || undefined,
+        hashAutoV3: entry.hashAutoV3 || undefined,
         coverImageId: entry.coverImageId,
         coverImageUrl: entry.coverImageUrl,
         triggerWords: entry.triggerWords || [],
         baseModel: entry.baseModel,
-        source: 'civitai',
+        nsfw: typeof entry.nsfw === 'boolean' ? entry.nsfw : undefined,
+        source: entry.source === 'local' ? 'local' : 'civitai',
         modelUrl: entry.modelUrl,
         cachedAt: 0, // 0 = seed data
       };
 
-      if (rec.hashSha256) {
-        hashIndex.set(rec.hashSha256.trim().toLowerCase(), rec);
-      }
-      if (rec.normalizedAlias) {
-        aliasIndex.set(rec.normalizedAlias.trim().toLowerCase(), rec);
-      }
+      indexRecord(rec);
     });
+  }
+
+  // Compact-index models are found by name through their newest version
+  for (const compact of compactModels.values()) {
+    if (!compact.alias || compact.newestVersionId === undefined || aliasIndex.has(compact.alias)) continue;
+    const record = recordForOlderVersion(compact.newestVersionId);
+    if (record) aliasIndex.set(compact.alias, record);
   }
 }
 
@@ -68,11 +280,19 @@ loadSeedCache();
  */
 export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord | undefined {
   if (!sha256OrShort) return undefined;
-  const clean = sha256OrShort.trim().toLowerCase();
+  const clean = normalizeHash(sha256OrShort);
 
   // Direct exact key match
   if (hashIndex.has(clean)) {
     return hashIndex.get(clean);
+  }
+
+  // A1111 "Lora hashes" are AutoV3: the first 12 hex digits of a weights-only hash
+  if (clean.length === 12) {
+    const byAutoV3 = autoV3Index.get(clean);
+    if (byAutoV3) return byAutoV3;
+    const olderVersionId = olderVersionsByAutoV3.get(clean);
+    if (olderVersionId !== undefined) return recordForOlderVersion(olderVersionId);
   }
 
   // Prefix match for short AutoV1/AutoV2 hashes (>= 8 chars)
@@ -84,7 +304,20 @@ export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord |
     }
   }
 
+  // Older versions of catalog models are indexed by their first 10 hex digits (AutoV2)
+  if (clean.length >= 10) {
+    const olderVersionId = olderVersionsByHash.get(clean.slice(0, 10));
+    if (olderVersionId !== undefined) return recordForOlderVersion(olderVersionId);
+  }
+
   return undefined;
+}
+
+/**
+ * Lookup by exact Civitai model-version id (Tier 1)
+ */
+export function getCachedLoraByVersionId(versionId: number): ModelCatalogRecord | undefined {
+  return versionIndex.get(versionId) ?? recordForOlderVersion(versionId);
 }
 
 /**
@@ -136,40 +369,43 @@ export function upsertLoraRecord(record: Omit<ModelCatalogRecord, 'cachedAt'> & 
     cachedAt: record.cachedAt || Date.now(),
   };
 
-  if (fullRecord.hashSha256) {
-    hashIndex.set(fullRecord.hashSha256.trim().toLowerCase(), fullRecord);
-  }
-  if (fullRecord.normalizedAlias) {
-    aliasIndex.set(fullRecord.normalizedAlias.trim().toLowerCase(), fullRecord);
-  }
+  if (fullRecord.hashSha256) fullRecord.hashSha256 = normalizeHash(fullRecord.hashSha256);
+  indexRecord(fullRecord);
 
-  // Persist to native SQLite via Electron IPC if available
-  if (typeof window !== 'undefined' && window.promptHound?.loraDb) {
-    window.promptHound.loraDb.upsert(fullRecord).catch((err) => {
+  getPersistence()
+    ?.upsert(fullRecord)
+    .catch((err) => {
       console.warn('Failed to upsert LoRA record to SQLite:', err);
     });
-  }
 }
 
 /**
  * Removes a specific record by hash or alias
  */
 export function removeLoraRecord(hashOrAlias: string): void {
-  const clean = hashOrAlias.trim().toLowerCase();
+  const clean = normalizeHash(hashOrAlias);
+  const removed = [hashIndex.get(clean), aliasIndex.get(clean)].filter(Boolean);
   hashIndex.delete(clean);
   aliasIndex.delete(clean);
+  for (const [versionId, record] of versionIndex.entries()) {
+    if (removed.includes(record)) versionIndex.delete(versionId);
+  }
 
-  if (typeof window !== 'undefined' && window.promptHound?.loraDb) {
-    window.promptHound.loraDb.remove(clean).catch((err) => {
+  getPersistence()
+    ?.remove(clean)
+    .catch((err) => {
       console.warn('Failed to remove LoRA record from SQLite:', err);
     });
-  }
 }
 
 /**
  * Helper to convert ModelCatalogRecord to resolved LoraReference format
  */
-export function toResolvedLora(record: ModelCatalogRecord): NonNullable<LoraReference['resolved']> {
+export function toResolvedLora(
+  record: ModelCatalogRecord,
+  matchedBy?: LoraMatchMethod,
+  matchScore?: number
+): NonNullable<LoraReference['resolved']> {
   return {
     name: record.name,
     source: record.source || 'civitai',
@@ -178,6 +414,9 @@ export function toResolvedLora(record: ModelCatalogRecord): NonNullable<LoraRefe
     triggerWords: record.triggerWords,
     baseModel: record.baseModel,
     nsfw: record.nsfw,
+    ...(record.versionName ? { versionName: record.versionName } : {}),
+    ...(matchedBy ? { matchedBy } : {}),
+    ...(matchScore !== undefined ? { matchScore } : {}),
   };
 }
 
@@ -185,7 +424,7 @@ export function toResolvedLora(record: ModelCatalogRecord): NonNullable<LoraRefe
  * Returns cache stats for Settings UI
  */
 export function getLoraCacheStats(): { count: number; userCount: number; lastUpdated?: number } {
-  const all = Array.from(new Set([...hashIndex.values(), ...aliasIndex.values()]));
+  const all = Array.from(new Set([...hashIndex.values(), ...aliasIndex.values(), ...versionIndex.values()]));
   const userRecords = all.filter((r) => (r.cachedAt || 0) > 0);
   const latest = userRecords.reduce((max, r) => Math.max(max, r.cachedAt || 0), 0);
 
@@ -200,13 +439,11 @@ export function getLoraCacheStats(): { count: number; userCount: number; lastUpd
  * Clears user discovered LoRA cache (runs DELETE FROM lora_cache WHERE cachedAt > 0 in SQLite)
  */
 export function clearLoraCache(): void {
-  hashIndex.clear();
-  aliasIndex.clear();
   loadSeedCache();
 
-  if (typeof window !== 'undefined' && window.promptHound?.loraDb) {
-    window.promptHound.loraDb.clearUserCache().catch((err) => {
+  getPersistence()
+    ?.clearUserRecords()
+    .catch((err) => {
       console.warn('Failed to clear SQLite user records:', err);
     });
-  }
 }

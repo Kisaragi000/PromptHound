@@ -1,5 +1,6 @@
 import type { ExtractedMetadata } from './types.js';
 import { extractFromRawText } from './format-detect.js';
+import { readExifTextFromPayload } from './exif.js';
 
 /**
  * Checks if the buffer starts with the standard JPEG/JFIF SOI signature (0xFF, 0xD8).
@@ -59,7 +60,10 @@ export function readJpegSegments(buffer: Uint8Array | Buffer): JpegParseResult {
         const header6 = decLatin1.decode(payload.subarray(0, 6));
         if (header6.startsWith('Exif\0\0') || header6.startsWith('Exif')) {
           const exifData = payload.subarray(header6.startsWith('Exif\0\0') ? 6 : 4);
-          
+
+          // Structured EXIF text tags (UserComment is often UTF-16)
+          result.textEntries.push(...readExifTextFromPayload(exifData));
+
           // Full UTF-8 decode
           const fullText = decUtf8.decode(exifData);
           if (fullText) result.textEntries.push(fullText);

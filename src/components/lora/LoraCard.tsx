@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
-import type { LoraReference } from '../../../core/types.js';
+import type { LoraReference, LoraMatchMethod } from '../../../core/types.js';
 import { ExternalLinkIcon, CopyIcon, CheckIcon, LayersIcon, SearchIcon } from '../icons/Icons.js';
 import styles from './LoraCard.module.css';
+
+const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = {
+  hash: { label: 'Hash match', title: 'Identified by the file hash stored in the image metadata' },
+  'civitai-version': { label: 'Civitai ID', title: 'The image names this exact Civitai model version' },
+  'name-match': {
+    label: 'Name match',
+    title: 'Matched by name only, so this may be the wrong model. Click to inspect or re-link.',
+  },
+  manual: { label: 'Linked manually', title: 'You linked this model by hand' },
+  local: { label: 'Local file', title: 'Read from a local .safetensors file' },
+};
+
+// Name matches are guesses; tint them so they stand apart from exact identifications
+const NAME_MATCH_PILL_STYLE: React.CSSProperties = {
+  background: 'rgba(245, 158, 11, 0.16)',
+  borderColor: 'rgba(245, 158, 11, 0.4)',
+  color: '#fcd34d',
+};
 
 interface LoraCardProps {
   lora: LoraReference;
@@ -35,6 +53,9 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
   const displayName = lora.resolved?.name || lora.rawName;
   const coverImg = lora.resolved?.coverImageUrl;
   const triggerWords = lora.resolved?.triggerWords || [];
+  const matchedBy = lora.resolved?.matchedBy;
+  const matchInfo = matchedBy ? MATCH_LABELS[matchedBy] : undefined;
+  const matchScore = lora.resolved?.matchScore;
 
   return (
     <div
@@ -131,6 +152,16 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
 
           {/* Meta Tags (Base Model, Version, or Hash) */}
           <div className={styles.metaRow}>
+            {matchInfo && (
+              <span
+                className={styles.tagPill}
+                style={matchedBy === 'name-match' ? NAME_MATCH_PILL_STYLE : undefined}
+                title={matchInfo.title}
+              >
+                {matchInfo.label}
+                {matchedBy === 'name-match' && matchScore !== undefined ? ` ${Math.round(matchScore * 100)}%` : ''}
+              </span>
+            )}
             {lora.resolved?.baseModel && (
               <span className={styles.tagPill}>{lora.resolved.baseModel}</span>
             )}

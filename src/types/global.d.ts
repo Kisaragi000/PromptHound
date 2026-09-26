@@ -22,6 +22,8 @@ export interface PromptHoundAPI {
     openFileDialog: () => Promise<string | null>;
   };
   loraDb?: {
+    getAll?: () => Promise<any[]>;
+    getByVersionId?: (versionId: number) => Promise<any>;
     getByHash: (hash: string) => Promise<any>;
     getByAlias: (alias: string) => Promise<any>;
     upsert: (record: any) => Promise<void>;
@@ -47,6 +49,8 @@ export interface PromptHoundAPI {
 }
 
 declare global {
+  /** package.json version, injected by Vite */
+  const __APP_VERSION__: string;
   interface Window {
     promptHound?: PromptHoundAPI;
   }

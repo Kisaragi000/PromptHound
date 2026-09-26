@@ -1,0 +1,9 @@
+{
+  "note": "Civitai model-version ids that must be in the offline catalog even when they are not among the most-downloaded LoRAs: the models used by the Prompt Library example images (checkpoints included, since checkpoint lookups share the catalog).",
+  "modelVersionIds": [
+    3301424, 2947634, 3082260,
+    3257037, 3234278, 3077110, 3098382,
+    1714002, 2681478,
+    2862490, 1714931
+  ]
+}

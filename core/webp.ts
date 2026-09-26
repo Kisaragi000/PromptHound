@@ -1,5 +1,6 @@
 import type { ExtractedMetadata } from './types.js';
 import { extractFromRawText } from './format-detect.js';
+import { readExifTextFromPayload } from './exif.js';
 
 /**
  * Checks if the buffer starts with the standard RIFF/WEBP signature.
@@ -51,11 +52,14 @@ export function readWebpChunks(buffer: Uint8Array | Buffer): string[] {
         }
       }
 
-      // 1. Full text decoded string
+      // 1. Structured EXIF text tags (UserComment is often UTF-16)
+      results.push(...readExifTextFromPayload(exifPayload));
+
+      // 2. Full text decoded string
       const textUtf8 = decUtf8.decode(exifPayload);
       if (textUtf8) results.push(textUtf8);
 
-      // 2. Scan for zero-terminated ASCII string blocks inside the EXIF binary
+      // 3. Scan for zero-terminated ASCII string blocks inside the EXIF binary
       let strStart = -1;
       for (let i = 0; i < exifPayload.length; i++) {
         const byte = exifPayload[i];

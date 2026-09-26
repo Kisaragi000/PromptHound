@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ExtractedMetadata, ExtractionResult, SavedPromptItem } from '../../core/types.js';
+import { INITIAL_SAMPLE_PROMPTS, isLegacyPlaceholderSample } from './samplePrompts.js';
 
 export type RouteKey =
   | 'home'
@@ -14,94 +15,15 @@ const STORAGE_KEY_PROMPTS = 'prompthound_library_items_v9';
 const STORAGE_KEY_FOLDERS = 'prompthound_folders_v2';
 const STORAGE_KEY_FAVORITES = 'prompthound_favorites_v2';
 
-const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
-  {
-    id: 'sample-1',
-    title: 'Cyberpunk Girl',
-    folder: 'Portraits',
-    source: 'Civitai',
-    date: 'Apr 28, 2025',
-    model: 'Anything v5.0',
-    dimensions: '1024 × 1536',
-    isFavorite: true,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
-    metadata: {
-      prompt: 'masterpiece, best quality, ultra detailed, 1girl, cyberpunk style, neon lights, night city, blue hair, looking back, jacket, cinematic lighting, sharp focus, depth of field',
-      negativePrompt: 'low quality, bad anatomy, extra fingers, blurry, watermark, text, logo, deformed',
-      sampler: 'DPM++ 2M Karras',
-      steps: 30,
-      cfgScale: 7.5,
-      seed: 123456789,
-      model: 'Anything v5.0',
-      width: 1024,
-      height: 1536,
-      loras: [
-        {
-          rawName: 'Cyberpunk_Style',
-          strength: 0.8,
-          resolved: {
-            name: 'Cyberpunk Style (SDXL)',
-            source: 'civitai',
-            modelUrl: 'https://civitai.com/models/12345',
-            coverImageUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=150&q=80',
-            triggerWords: ['cyberpunk', 'neon lights', 'night city'],
-            baseModel: 'SDXL 1.0',
-            versionName: 'v1.2',
-          },
-        },
-      ],
-      detectedFormat: 'a1111',
-    },
-  },
-  {
-    id: 'sample-2',
-    title: 'Fantasy Landscape',
-    folder: 'Landscapes',
-    source: 'Civitai',
-    date: 'Apr 27, 2025',
-    model: 'Juggernaut XL v9',
-    dimensions: '1536 × 1024',
-    isFavorite: false,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
-    metadata: {
-      prompt: 'ethereal fantasy valley, ancient stone ruins, cascading waterfalls, emerald river, golden hour sunlight, majestic mountains, hyperdetailed matte painting',
-      negativePrompt: 'foggy, lowres, oversaturated, blown out, modern buildings',
-      sampler: 'Euler a',
-      steps: 35,
-      cfgScale: 6.5,
-      seed: 884719201,
-      model: 'Juggernaut XL v9',
-      width: 1536,
-      height: 1024,
-      loras: [{ rawName: 'Nature_Enhancer', strength: 0.6 }],
-      detectedFormat: 'a1111',
-    },
-  },
-  {
-    id: 'sample-3',
-    title: 'Anime Style Portrait',
-    folder: 'Anime Style',
-    source: 'Civitai',
-    date: 'Apr 25, 2025',
-    model: 'Animagine XL v3.1',
-    dimensions: '1024 × 1024',
-    isFavorite: true,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
-    metadata: {
-      prompt: 'anime girl with ribbon, soft sakura blossoms falling, expressive eyes, delicate lineart, Makoto Shinkai style, studio lighting',
-      negativePrompt: 'worst quality, normal quality, artifacts, 3d render',
-      sampler: 'DPM++ SDE Karras',
-      steps: 28,
-      cfgScale: 8.0,
-      seed: 554109823,
-      model: 'Animagine XL v3.1',
-      width: 1024,
-      height: 1024,
-      loras: [],
-      detectedFormat: 'a1111',
-    },
-  },
-];
+/**
+ * Replaces the placeholder samples shipped before v1.0.8 (stock photos with made-up
+ * metadata) with the real example images. The user's own items are never touched.
+ */
+function upgradeLegacySamples(items: SavedPromptItem[]): { items: SavedPromptItem[]; changed: boolean } {
+  if (!items.some(isLegacyPlaceholderSample)) return { items, changed: false };
+  const kept = items.filter((i) => !isLegacyPlaceholderSample(i) && !i.id.startsWith('sample-'));
+  return { items: [...INITIAL_SAMPLE_PROMPTS, ...kept], changed: true };
+}
 
 const INITIAL_FOLDERS = ['All Prompts', 'Portraits', 'Landscapes', 'Architecture', 'Illustrations', 'Anime', 'My Creations'];
 
@@ -145,7 +67,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return upgradeLegacySamples(parsed).items;
         }
       }
     } catch {
@@ -187,8 +109,17 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     if (window.promptHound?.library?.getAll) {
       window.promptHound.library.getAll().then((items) => {
         if (Array.isArray(items) && items.length > 0) {
-          setLibraryItems(items);
-          const favs = items.filter((i) => i.isFavorite).map((i) => i.id);
+          const upgraded = upgradeLegacySamples(items);
+          if (upgraded.changed) {
+            for (const legacy of items.filter(isLegacyPlaceholderSample)) {
+              window.promptHound?.library?.deletePrompt(legacy.id);
+            }
+            for (const sample of INITIAL_SAMPLE_PROMPTS) {
+              window.promptHound?.library?.savePrompt(sample);
+            }
+          }
+          setLibraryItems(upgraded.items);
+          const favs = upgraded.items.filter((i) => i.isFavorite).map((i) => i.id);
           setFavorites(favs);
         } else {
           // Initialize native DB with initial sample prompts

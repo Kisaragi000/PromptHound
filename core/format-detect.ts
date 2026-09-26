@@ -69,6 +69,37 @@ function parseNovelAI(obj: any, imageDimensions?: { width?: number; height?: num
 }
 
 /**
+ * SwarmUI lists LoRAs in sui_image_params.loras / loraweights and their hashes
+ * ("0x"-prefixed SHA256) in sui_models.
+ */
+function addSwarmLoras(obj: any, loras: LoraReference[]): void {
+  const baseName = (name: string) =>
+    name.trim().split(/[\\/]/).pop()!.replace(/\.(safetensors|ckpt|pt|bin)$/i, '');
+  const find = (name: string) => loras.find((l) => baseName(l.rawName).toLowerCase() === baseName(name).toLowerCase());
+
+  const params = obj.sui_image_params || {};
+  const names: unknown[] = Array.isArray(params.loras) ? params.loras : [];
+  const weights: unknown[] = Array.isArray(params.loraweights) ? params.loraweights : [];
+  names.forEach((name, i) => {
+    if (typeof name !== 'string' || !name.trim()) return;
+    const weight = Number(weights[i]);
+    const existing = find(name);
+    if (existing) {
+      if (Number.isFinite(weight)) existing.strength = weight;
+    } else {
+      loras.push({ rawName: baseName(name), strength: Number.isFinite(weight) ? weight : 1.0 });
+    }
+  });
+
+  const models: any[] = Array.isArray(obj.sui_models) ? obj.sui_models : [];
+  for (const model of models) {
+    if (model?.param !== 'loras' || typeof model.name !== 'string' || typeof model.hash !== 'string') continue;
+    const existing = find(model.name);
+    if (existing && !existing.hash) existing.hash = model.hash.replace(/^0x/i, '');
+  }
+}
+
+/**
  * Parses SwarmUI / InvokeAI / Fooocus metadata JSON payloads.
  */
 function parseGenericJson(obj: any, imageDimensions?: { width?: number; height?: number }): ExtractedMetadata | null {
@@ -79,6 +110,7 @@ function parseGenericJson(obj: any, imageDimensions?: { width?: number; height?:
     const p = obj.sui_image_params;
     const prompt = p.prompt || '';
     const { cleanPrompt, loras } = extractInlineLoras(prompt);
+    addSwarmLoras(obj, loras);
     return {
       prompt: cleanPrompt,
       negativePrompt: p.negativeprompt || p.negative_prompt || undefined,

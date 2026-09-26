@@ -1,7 +1,7 @@
 {
   "name": "prompthound",
   "productName": "PromptHound",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "AI prompt and metadata extractor for AI-generated images",
   "main": "dist-electron/main.cjs",
   "type": "module",
@@ -13,7 +13,10 @@
     "build:installer-assets": "node scripts/generate-installer-assets.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-electron release",
-    "seed:lora-db": "node scripts/seed-lora-db.mjs",
+    "catalog:build": "tsx scripts/build-lora-catalog.ts build",
+    "catalog:verify": "tsx scripts/build-lora-catalog.ts verify",
+    "benchmark:collect": "tsx scripts/lora-benchmark/collect.ts",
+    "benchmark:eval": "tsx scripts/lora-benchmark/evaluate.ts",
     "lint": "tsc --noEmit"
   },
   "build": {
@@ -78,7 +81,7 @@
     "autoprefixer": "^10.4.21",
     "electron": "^44.4.3",
     "electron-builder": "^26.15.3",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.27.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"

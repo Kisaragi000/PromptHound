@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.4)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.8)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.4-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)
+[![Release](https://img.shields.io/badge/Release-v1.0.8-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.4](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.4)**
+📦 **[Download Latest Release v1.0.8](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.8)**
 
 ---
 
@@ -89,7 +89,16 @@ PromptHound/
 
 ---
 
-## ⚡ Features in Version 1.0.4
+## 🆕 What's New in 1.0.8
+
+- **More reliable extraction** from PNG, JPEG and WebP (A1111 / Forge, ComfyUI, SwarmUI, Civitai on-site images), with ComfyUI graph tracing rebuilt.
+- **Accurate LoRA identification**: hashes, Civitai version ids and AIR ids first, name matching only as a labeled fallback; no more LoRAs invented from prompt words.
+- **Real offline LoRA catalog** generated from Civitai (top 10,000 models), plus a persistent cache of LoRAs you look up or link.
+- **Example images** in the Prompt Library on first launch.
+
+See [CHANGELOG.md](CHANGELOG.md) for details.
+
+## ⚡ Features
 
 1. **Batch Extraction Queue (10-File Limit)**:
    - Drag & drop or browse up to 10 images concurrently.
@@ -146,6 +155,33 @@ Or use the development runner:
 ```bash
 node scripts/dev.mjs
 ```
+
+### Rebuilding the Offline LoRA Catalog
+
+PromptHound identifies LoRAs offline from two generated files; never edit their hashes, ids or trigger words by hand:
+
+- `core/data/lora-seed.json`: full records (name, trigger words, cover, SHA256 and AutoV3 hashes) for the 2,000 most-downloaded LoRA / LoCon / DoRA models, 3 versions each, plus the versions in `scripts/catalog-includes.json`.
+- `core/data/lora-version-index.json`: a compact index (ids, names, AutoV2 and AutoV3 hash prefixes) of every other version of those models and of the next 8,000 models.
+
+```bash
+# Check the catalog against Civitai (writes nothing; exits 1 on mismatches)
+npm run catalog:verify
+
+# Rebuild both files
+CIVITAI_API_KEY=... npm run catalog:build -- --models 2000 --versions 3 --compact-models 10000
+```
+
+Useful options: `--dry-run`, `--extra file.json` (merge hand-made records), `--all-covers` (covers of any rating; PG only by default). See the header of `scripts/build-lora-catalog.ts`. The desktop app replaces its stored copy of the catalog automatically when the bundled file changes; LoRAs users found or linked themselves are kept.
+
+### Measuring LoRA Identification
+
+```bash
+CIVITAI_API_KEY=... npm run benchmark:collect    # ~360 real Civitai images + ground truth into .benchmark/
+npm run benchmark:eval -- offline                # bundled catalog only
+CIVITAI_API_KEY=... npm run benchmark:eval -- online
+```
+
+In a sandbox whose proxy Node does not pick up automatically, prefix the commands with `NODE_USE_ENV_PROXY=1`.
 
 ---
 

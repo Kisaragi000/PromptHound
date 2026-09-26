@@ -1,7 +1,10 @@
 import type { LoraReference, ModelCatalogRecord } from './types.js';
+import { applyAirIdentifier } from './metadata-merge.js';
 import {
-  getCachedLoraByHash,
-  getCachedLoraByAlias,
+  findLoraByHash,
+  findLoraByAlias,
+  findLoraByVersionId,
+  normalizeHash,
   findMatchingSeedLorasInText,
   upsertLoraRecord,
   toResolvedLora,
@@ -17,45 +20,104 @@ import {
  * Normalizes raw LoRA filenames or prompt tags into clean search queries.
  * Examples:
  *  - "【Anima】Landscape specialization lora" -> "Anima Landscape specialization"
- *  - "CyberpunkInterior, YFG-Aarchy" -> "Cyberpunk Interior"
  *  - "Cyberpunk Interior (Architecture) (Buildings) (Krea2) (AD)" -> "Cyberpunk Interior"
- *  - "Echidna_ReZero_SDXL_v1.0.safetensors" -> "Echidna ReZero"
- *  - "<lora:epiCRealism_v5:0.8>" -> "epiCRealism"
+ *  - "Echidna_ReZero_SDXL_v1.0.safetensors" -> "Echidna Re Zero"
+ *  - "anime_style_xl" -> "anime style" (not "anime")
+ *  - "add_detail" -> "add detail" (words are never cut apart)
+ */
+// Network-type words that never identify a specific LoRA
+const NETWORK_TYPE_TOKENS = new Set(['lora', 'loras', 'lycoris', 'locon', 'loha', 'lokr', 'dora', 'lyco']);
+
+// Base-model markers dropped only from the ends of a name ("Echidna_ReZero_SDXL"),
+// never from the middle, and never when they are all that is left
+const TRAILING_ARCH_TOKENS = new Set([
+  'sdxl', 'sd15', 'sd1.5', 'sd21', 'sd2.1', 'sd3', 'sd35', 'sd', 'xl', 'il', 'ill', 'illu',
+  'pdxl', 'ponyxl', 'pony', 'flux', 'flux1', 'illustrious', 'noobai', 'nai', 'animagine', 'krea', 'krea2', 'pd',
+]);
+// Leading markers are a narrower set: "flux_realism" and "pony_score" start with a real word
+const LEADING_ARCH_TOKENS = new Set(['sdxl', 'sd15', 'sd1.5', 'sd21', 'sd2.1', 'sd3', 'sd', 'xl', 'il', 'pdxl']);
+
+function isVersionToken(token: string): boolean {
+  return (
+    /^v?\d+(\.\d+)*[a-z]?$/i.test(token) ||
+    /^(epoch|ep|e|step|steps|s)\d+$/i.test(token) ||
+    /^\d+(ep|epoch|epochs|step|steps)$/i.test(token)
+  );
+}
+
+/**
+ * Turns a raw LoRA filename or prompt tag into a search / alias string.
+ * Works on whole tokens so words are never cut apart ("add_detail" stays "add detail").
  */
 export function normalizeLoraName(rawName: string): string {
   if (!rawName) return '';
 
   let name = rawName.trim();
 
-  // Strip leading '<lora:' or 'lora:' and trailing ':weight>'
-  name = name.replace(/^<lora:/i, '').replace(/^lora:/i, '');
-  name = name.replace(/:[\d.]+(>)?$/, '');
+  // Strip '<lora:' / '<lyco:' prefixes and trailing ':weight>'
+  name = name.replace(/^<?(lora|lyco|lycoris):/i, '');
+  name = name.replace(/(:[\d.]+)+>?$/, '');
   name = name.replace(/>$/, '');
 
-  // Strip Asian / Unicode brackets: 【 】 《 》 （ ） ［ ］
-  name = name.replace(/[【】《》（）［］]/g, ' ');
-
-  // Strip parenthetical descriptors: (Architecture) (Buildings) (Krea2) (AD)
-  name = name.replace(/\([^)]*\)/g, ' ');
-
-  // Strip file extensions
+  // Drop folder paths (ComfyUI "characters\\name.safetensors") and file extensions.
+  // Only for things that look like file paths: model titles such as
+  // "Art Style / [Illustrious/NoobAI]" contain slashes too.
+  if (/\.(safetensors|ckpt|pt|bin)$/i.test(name) || !/\s/.test(name)) {
+    name = name.split(/[\\/]/).pop() || name;
+  }
   name = name.replace(/\.(safetensors|ckpt|pt|bin)$/i, '');
 
-  // Split camelCase and acronym boundaries (e.g. CSMMovieStyleIL -> CSM Movie Style IL)
-  name = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-  name = name.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+  // Keep the contents of Asian / full-width brackets: 【Anima】Landscape -> Anima Landscape
+  name = name.replace(/[【】《》（）［］]/g, ' ');
 
-  // Strip common training/model suffixes
-  name = name.replace(/_?(sdxl|sd15|sd1\.5|sd2\.1|pony|flux|illustrious|animagine|krea2|krea|il|xl|pd)\b/gi, ' ');
-  name = name.replace(/_?(v\d+(\.\d+)?|epoch\d+|step\d+|offset|lora|style|lora_v\d+)\b/gi, ' ');
+  // Strip ASCII parenthetical / bracketed descriptors: (Architecture) [Illustrious]
+  name = name.replace(/\([^)]*\)|\[[^\]]*\]/g, ' ');
 
-  // Replace underscores, dashes, dots, commas with spaces
-  name = name.replace(/[_\-.,]+/g, ' ');
+  // Isolate network-type words so camelCase splitting cannot turn "LoRA" into "Lo RA"
+  name = name.replace(/(LoRA|LyCORIS|LoCon|LoHa|LoKr|DoRA)/g, ' $1 ');
 
-  // Collapse multiple spaces and trim
-  name = name.replace(/\s+/g, ' ').trim();
+  // Split camelCase and acronym boundaries (CSMMovieStyleIL -> CSM Movie Style IL)
+  const splitCamel = (token: string): string[] => {
+    if (NETWORK_TYPE_TOKENS.has(token.toLowerCase())) return [token];
+    return token
+      .replace(/([a-z])([A-Z])(?=[a-z])/g, '$1 $2')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .replace(/([a-z])([A-Z]{2,})$/g, '$1 $2')
+      .split(' ');
+  };
 
-  return name || rawName.trim();
+  // Any character other than letters, digits and dots separates words ("|", ":", "/", emoji)
+  const allTokens = name
+    .split(/[^\p{L}\p{N}.]+/u)
+    .flatMap(splitCamel)
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  let tokens = allTokens.filter((t) => !NETWORK_TYPE_TOKENS.has(t.toLowerCase()) && !isVersionToken(t));
+
+  const meaningful = tokens.filter((t) => !TRAILING_ARCH_TOKENS.has(t.toLowerCase()));
+  if (meaningful.length > 0) {
+    while (tokens.length > 1 && TRAILING_ARCH_TOKENS.has(tokens[tokens.length - 1].toLowerCase())) {
+      tokens.pop();
+    }
+    while (tokens.length > 1 && LEADING_ARCH_TOKENS.has(tokens[0].toLowerCase())) {
+      tokens.shift();
+    }
+  }
+
+  // Remaining dotted tokens (e.g. "detail.tweaker") become separate words
+  const result = tokens
+    .flatMap((t) => (/^\d+(\.\d+)+$/.test(t) ? [t] : t.split('.')))
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (result) return result;
+
+  // Everything was noise: fall back to whatever non-network tokens exist
+  const fallback = allTokens.filter((t) => !NETWORK_TYPE_TOKENS.has(t.toLowerCase())).join(' ').trim();
+  return fallback || rawName.trim();
 }
 
 /**
@@ -159,26 +221,32 @@ function getCivitaiApiKey(): string | null {
 /**
  * Performs a live Civitai search and scores candidate models against query and target hash.
  */
+const USER_AGENT = 'PromptHound/1.0.8 (Metadata-Extractor)';
+
+// Civitai lists LyCORIS as "LoCon" and DoRA separately from "LORA"; all load as LoRAs
+const LORA_MODEL_TYPES = ['LORA', 'LoCon', 'DoRA'];
+
 export async function searchCivitaiCandidates(
   query: string,
   targetHash?: string,
-  modelType: 'LORA' | 'Checkpoint' | 'all' = 'LORA'
+  modelType: 'LORA' | 'Checkpoint' | 'all' = 'LORA',
+  options: { skipHashLookup?: boolean } = {}
 ): Promise<CandidateMatchResult[]> {
   const cleanQuery = query.trim();
   if (!cleanQuery && !targetHash) return [];
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.5 (Metadata-Extractor)',
+    'User-Agent': USER_AGENT,
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };
 
   const results: CandidateModelItem[] = [];
 
-  // 1. Search by hash if provided
-  if (targetHash) {
-    const cleanHash = targetHash.trim().toLowerCase();
+  // 1. Search by hash if provided (callers that already queried by-hash skip this)
+  if (targetHash && !options.skipHashLookup) {
+    const cleanHash = normalizeHash(targetHash);
     try {
       const hashRes = await fetch(
         `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(cleanHash)}`,
@@ -202,7 +270,8 @@ export async function searchCivitaiCandidates(
   // 2. Search by query text
   if (cleanQuery.length >= 2) {
     try {
-      const typeParam = modelType === 'all' ? '' : `&types=${modelType}`;
+      const types = modelType === 'all' ? [] : modelType === 'LORA' ? LORA_MODEL_TYPES : [modelType];
+      const typeParam = types.map((t) => `&types=${encodeURIComponent(t)}`).join('');
       const searchRes = await fetch(
         `https://civitai.com/api/v1/models?query=${encodeURIComponent(cleanQuery)}${typeParam}&limit=10`,
         { headers }
@@ -226,88 +295,148 @@ export async function searchCivitaiCandidates(
 
   // Score all candidates
   const scored = results
-    .map((c) => scoreModelCandidate(cleanQuery, normalized, c, targetHash))
+    .map((c) => scoreModelCandidate(cleanQuery, normalized, c, targetHash ? normalizeHash(targetHash) : undefined))
     .sort((a, b) => b.score - a.score);
 
   return scored;
 }
 
-/**
- * Resolves a single LoRA reference with multi-strategy waterfall & strict similarity guardrails:
- * 1. Tier 1 Cache Hit (by exact/prefix SHA256 or alias)
- * 2. Tier 2 Exact Hash Lookup via Civitai /model-versions/by-hash/:hash -> Auto-Upsert
- * 3. Tier 2 Multi-Candidate Civitai Search with strict similarity threshold (score >= 0.45) -> Auto-Upsert
- */
-async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
-  const normalizedAlias = normalizeLoraName(lora.rawName);
+const CIVITAI_VERSION_PLACEHOLDER = /^Civitai model version \d+$/;
 
-  // 1. Tier 1: Check Local Cache (exact SHA256, short hash, or alias)
-  if (lora.hash) {
-    const cachedByHash = getCachedLoraByHash(lora.hash);
+/**
+ * Builds a catalog record from a Civitai model-version payload, as returned by both
+ * /model-versions/{id} and /model-versions/by-hash/{hash}.
+ */
+function recordFromVersionData(
+  data: any,
+  lora: LoraReference,
+  normalizedAlias: string,
+  hash?: string
+): Omit<ModelCatalogRecord, 'cachedAt'> | null {
+  if (!data || !data.modelId) return null;
+
+  const modelId = Number(data.modelId);
+  const versionId = Number(data.id);
+  const coverImage = data.images?.[0];
+  const triggerWords = Array.isArray(data.trainedWords) ? data.trainedWords : [];
+  const isNsfw = Boolean(data.model?.nsfw ?? data.nsfw ?? (data.nsfwLevel && data.nsfwLevel > 1));
+  const name = data.model?.name || data.name || lora.rawName;
+
+  return {
+    civitaiModelId: modelId,
+    civitaiVersionId: Number.isFinite(versionId) ? versionId : undefined,
+    name,
+    versionName: typeof data.name === 'string' ? data.name : undefined,
+    normalizedAlias: normalizedAlias || normalizeLoraName(name),
+    hashSha256: hash ? normalizeHash(hash) : undefined,
+    coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
+    coverImageUrl: coverImage?.url || undefined,
+    triggerWords,
+    baseModel: data.baseModel || undefined,
+    nsfw: isNsfw,
+    source: 'civitai',
+    modelUrl: buildCivitaiModelUrl(modelId, Number.isFinite(versionId) ? versionId : undefined, isNsfw),
+  };
+}
+
+async function fetchVersionRecord(
+  url: string,
+  lora: LoraReference,
+  normalizedAlias: string,
+  headers: Record<string, string>,
+  matchedBy: 'hash' | 'civitai-version',
+  hash?: string
+): Promise<LoraReference | null> {
+  try {
+    const response = await fetch(url, { headers });
+    if (!response.ok) return null;
+    const record = recordFromVersionData(await response.json(), lora, normalizedAlias, hash);
+    if (!record) return null;
+    upsertLoraRecord(record);
+    return { ...lora, resolved: toResolvedLora({ ...record, cachedAt: Date.now() }, matchedBy) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves a single LoRA reference, most reliable identifier first:
+ * 1. Cache hit by hash, then by Civitai model-version id
+ * 2. Civitai /model-versions/by-hash/{hash}, then /model-versions/{id}
+ * 3. Cache hit by normalized alias
+ * 4. Multi-candidate Civitai name search with strict similarity threshold (score >= 0.45)
+ * Exact identifiers are checked before names so a similar-looking cached alias
+ * can never override what the image itself states.
+ */
+async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
+  const lora = applyAirIdentifier(input);
+  // Placeholder names ("Civitai model version 123") carry no searchable information
+  const hasRealName = !CIVITAI_VERSION_PLACEHOLDER.test(lora.rawName);
+  const normalizedAlias = hasRealName ? normalizeLoraName(lora.rawName) : '';
+
+  const hash = lora.hash ? normalizeHash(lora.hash) : undefined;
+
+  // 1. Tier 1: exact identifiers in the local cache (memory, then SQLite)
+  if (hash) {
+    const cachedByHash = await findLoraByHash(hash);
     if (cachedByHash) {
-      return { ...lora, resolved: toResolvedLora(cachedByHash) };
+      return { ...lora, resolved: toResolvedLora(cachedByHash, 'hash') };
     }
   }
 
-  if (normalizedAlias) {
-    const cachedByAlias = getCachedLoraByAlias(normalizedAlias);
-    if (cachedByAlias) {
-      return { ...lora, resolved: toResolvedLora(cachedByAlias) };
+  if (lora.civitaiVersionId !== undefined) {
+    const cachedByVersion = await findLoraByVersionId(lora.civitaiVersionId);
+    if (cachedByVersion) {
+      return { ...lora, resolved: toResolvedLora(cachedByVersion, 'civitai-version') };
     }
   }
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.4 (Metadata-Extractor)',
+    'User-Agent': USER_AGENT,
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };
 
-  // 2. Tier 2: Exact Hash Lookup Waterfall Step
-  if (lora.hash) {
-    const cleanHash = lora.hash.trim().toLowerCase();
-    try {
-      const response = await fetch(
-        `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(cleanHash)}`,
-        { headers }
-      );
+  // 2. Tier 2: exact identifiers online
+  if (hash) {
+    const byHash = await fetchVersionRecord(
+      `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(hash)}`,
+      lora,
+      normalizedAlias,
+      headers,
+      'hash',
+      hash
+    );
+    if (byHash) return byHash;
+  }
 
-      if (response.ok) {
-        const data = (await response.json()) as any;
-        if (data && data.modelId) {
-          const modelId = Number(data.modelId);
-          const versionId = Number(data.id);
-          const coverImage = data.images?.[0];
-          const triggerWords = Array.isArray(data.trainedWords) ? data.trainedWords : [];
-          const isNsfw = Boolean(data.model?.nsfw ?? data.nsfw ?? (data.nsfwLevel && data.nsfwLevel > 1));
+  if (lora.civitaiVersionId !== undefined) {
+    const byVersion = await fetchVersionRecord(
+      `https://civitai.com/api/v1/model-versions/${lora.civitaiVersionId}`,
+      lora,
+      normalizedAlias,
+      headers,
+      'civitai-version'
+    );
+    if (byVersion) return byVersion;
+  }
 
-          const catalogRecord: Omit<ModelCatalogRecord, 'cachedAt'> = {
-            civitaiModelId: modelId,
-            civitaiVersionId: versionId,
-            name: data.model?.name || data.name || lora.rawName,
-            normalizedAlias: normalizedAlias || normalizeLoraName(data.model?.name || lora.rawName),
-            hashSha256: cleanHash,
-            coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
-            coverImageUrl: coverImage?.url || undefined,
-            triggerWords,
-            baseModel: data.baseModel || undefined,
-            nsfw: isNsfw,
-            source: 'civitai',
-            modelUrl: buildCivitaiModelUrl(modelId, versionId, isNsfw),
-          };
+  // Without a real name there is nothing safe to match on
+  if (!hasRealName) return lora;
 
-          // Auto-upsert verified hash record
-          upsertLoraRecord(catalogRecord);
-
-          return { ...lora, resolved: toResolvedLora({ ...catalogRecord, cachedAt: Date.now() }) };
-        }
-      }
-    } catch {
-      // Degrade to candidate search
+  // 3. Tier 1: cached alias
+  if (normalizedAlias) {
+    const cachedByAlias = await findLoraByAlias(normalizedAlias);
+    // The bundled catalog holds the hash of every version of its models. When the image
+    // gives a hash that none of them has, a same-name catalog model is a different file.
+    const hashContradicts = Boolean(hash && hash.length >= 10) && cachedByAlias?.cachedAt === 0;
+    if (cachedByAlias && !hashContradicts) {
+      return { ...lora, resolved: toResolvedLora(cachedByAlias, 'name-match') };
     }
   }
 
-  // 3. Tier 2: Multi-Candidate Search with Strict Match Validation
+  // 4. Tier 2: Multi-Candidate Search with Strict Match Validation
   const queryTokens = extractMeaningfulTokens(normalizedAlias || lora.rawName);
   if (queryTokens.length > 0) {
     try {
@@ -321,7 +450,8 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
 
       for (const q of uniqueQueries) {
         if (q.length < 2) continue;
-        const res = await searchCivitaiCandidates(q, lora.hash);
+        // by-hash was already queried in tier 2; the hash is still used to score file hashes
+        const res = await searchCivitaiCandidates(q, hash, 'LORA', { skipHashLookup: true });
         if (res.length > 0) {
           candidates = res;
           break;
@@ -349,13 +479,16 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
           ? matchedVersion.trainedWords
           : [];
         const isNsfw = Boolean(model.nsfw ?? (model.nsfwLevel && model.nsfwLevel > 1));
+        // Only a file-hash hit proves the hash; a name guess must not be cached under it,
+        // or later images with that hash would get the guess back as a "hash match"
+        const hashVerified = Boolean(hash) && topValid.matchReason.startsWith('Exact hash match');
 
         const catalogRecord: Omit<ModelCatalogRecord, 'cachedAt'> = {
           civitaiModelId: modelId,
           civitaiVersionId: versionId,
           name: model.name || lora.rawName,
           normalizedAlias: normalizedAlias || normalizeLoraName(model.name),
-          hashSha256: lora.hash ? lora.hash.trim().toLowerCase() : undefined,
+          hashSha256: hashVerified ? hash : undefined,
           coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
           coverImageUrl: coverImage?.url || undefined,
           triggerWords,
@@ -368,7 +501,14 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
         // Auto-upsert verified candidate
         upsertLoraRecord(catalogRecord);
 
-        return { ...lora, resolved: toResolvedLora({ ...catalogRecord, cachedAt: Date.now() }) };
+        return {
+          ...lora,
+          resolved: toResolvedLora(
+            { ...catalogRecord, cachedAt: Date.now() },
+            hashVerified ? 'hash' : 'name-match',
+            hashVerified ? undefined : topValid.score
+          ),
+        };
       }
     } catch {
       // Network failure / offline
@@ -414,7 +554,7 @@ export async function resolveModelCheckpoint(
 
   // 1. Check local seed & cache
   if (modelHash) {
-    const cachedByHash = getCachedLoraByHash(modelHash);
+    const cachedByHash = await findLoraByHash(modelHash);
     if (cachedByHash) {
       return {
         name: cachedByHash.name,
@@ -429,7 +569,7 @@ export async function resolveModelCheckpoint(
   }
 
   if (normalized) {
-    const cachedByAlias = getCachedLoraByAlias(normalized);
+    const cachedByAlias = await findLoraByAlias(normalized);
     if (cachedByAlias) {
       return {
         name: cachedByAlias.name,

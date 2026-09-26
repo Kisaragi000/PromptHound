@@ -6,8 +6,11 @@ export interface ModelCatalogRecord {
   civitaiModelId?: number;
   civitaiVersionId?: number;
   name: string;
+  versionName?: string;
   normalizedAlias: string;
   hashSha256?: string;
+  /** Weights-only hash (12 hex) that A1111 writes in "Lora hashes" */
+  hashAutoV3?: string;
   coverImageId?: string;
   coverImageUrl?: string;
   triggerWords: string[];
@@ -18,10 +21,22 @@ export interface ModelCatalogRecord {
   cachedAt: number;
 }
 
+/**
+ * How a LoRA reference was tied to a catalog entry, most reliable first:
+ * - hash: the file hash in the image metadata matched
+ * - civitai-version: the image named the exact Civitai model version
+ * - name-match: fuzzy name match (cached or live search); may be wrong
+ * - manual: the user linked it by hand
+ * - local: read from a local .safetensors file
+ */
+export type LoraMatchMethod = 'hash' | 'civitai-version' | 'name-match' | 'manual' | 'local';
+
 export interface LoraReference {
   rawName: string;
   strength?: number;
   hash?: string;
+  /** Civitai model-version id when the metadata names one (on-site / "Civitai resources") */
+  civitaiVersionId?: number;
   resolved?: {
     name: string;
     source: 'civitai' | 'local';
@@ -32,6 +47,9 @@ export interface LoraReference {
     versionName?: string;
     baseModel?: string;
     nsfw?: boolean;
+    matchedBy?: LoraMatchMethod;
+    /** Similarity score (0-1) when matchedBy is 'name-match' via live search */
+    matchScore?: number;
   };
 }
 

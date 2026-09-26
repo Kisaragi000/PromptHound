@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshIcon, CheckIcon } from '../icons/Icons.js';
 import { getLoraCacheStats, upsertLoraRecord } from '../../../core/lora-cache.js';
+import { normalizeLoraName } from '../../../core/lora-resolution.js';
 
 interface CatalogSyncButtonProps {
   variant?: 'compact' | 'full' | 'sidebar';
@@ -27,7 +28,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
     try {
       // Simulate incremental fetch of trending/latest LoRAs
       const apiKey = localStorage.getItem('prompthound_civitai_key') || '';
-      const url = `https://civitai.com/api/v1/models?types=LORA&sort=Most%20Downloaded&limit=50`;
+      const url = `https://civitai.com/api/v1/models?types=LORA&types=LoCon&types=DoRA&sort=Most%20Downloaded&limit=50`;
 
       setProgress({ current: 30, total: 100 });
 
@@ -53,11 +54,9 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
               civitaiModelId: model.id,
               civitaiVersionId: version.id,
               name: model.name,
-              normalizedAlias: model.name
-                .toLowerCase()
-                .replace(/\.(safetensors|pt|ckpt)$/i, '')
-                .replace(/[_\-]+/g, ' ')
-                .trim(),
+              versionName: version.name,
+              // Same normalization as LoRA lookups, so synced records can be found by name
+              normalizedAlias: normalizeLoraName(model.name).toLowerCase(),
               hashSha256: version.files?.[0]?.hashes?.SHA256,
               coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
               coverImageUrl: coverImage?.url,
