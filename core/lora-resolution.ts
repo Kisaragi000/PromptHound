@@ -318,6 +318,7 @@ function recordFromVersionData(
     civitaiModelId: modelId,
     civitaiVersionId: Number.isFinite(versionId) ? versionId : undefined,
     name,
+    versionName: typeof data.name === 'string' ? data.name : undefined,
     normalizedAlias: normalizedAlias || normalizeLoraName(name),
     hashSha256: hash ? normalizeHash(hash) : undefined,
     coverImageId: coverImage?.id ? String(coverImage.id) : undefined,

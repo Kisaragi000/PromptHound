@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import nodeFs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import {
   extractFromImageBuffer,
@@ -21,6 +20,8 @@ import {
 } from '../core/lora-cache.js';
 import { setRuntimeCivitaiApiKey } from '../core/lora-resolution.js';
 import type { ModelCatalogRecord } from '../core/types.js';
+import seedCatalog from '../core/data/lora-seed.json';
+import { createHash } from 'node:crypto';
 
 let loraDbInstance: any = null;
 
@@ -106,54 +107,70 @@ function initLoraDatabase(): void {
       END;
     `);
 
-    // Check if table is empty; if so, populate seed data
-    const countRow = db.prepare('SELECT COUNT(*) as count FROM lora_cache').get() as { count: number };
-    if (countRow.count === 0) {
-      const insertStmt = db.prepare(`
-        INSERT INTO lora_cache (
-          hashSha256, civitaiModelId, civitaiVersionId, name, normalizedAlias,
-          coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-      `);
-
-      try {
-        const seedPath = path.join(__dirname, '../core/data/lora-seed.json');
-        if (nodeFs.existsSync(seedPath)) {
-          const seedContent = nodeFs.readFileSync(seedPath, 'utf8');
-          const seedEntries = JSON.parse(seedContent);
-          if (Array.isArray(seedEntries)) {
-            for (const entry of seedEntries) {
-              insertStmt.run(
-                entry.hashSha256?.toLowerCase() || null,
-                entry.civitaiModelId || null,
-                entry.civitaiVersionId || null,
-                entry.name,
-                entry.normalizedAlias?.toLowerCase() || null,
-                entry.coverImageId || null,
-                entry.coverImageUrl || null,
-                JSON.stringify(entry.triggerWords || []),
-                entry.baseModel || null,
-                entry.source || 'civitai',
-                entry.modelUrl || null
-              );
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Could not load initial seed data into SQLite:', err);
-      }
-    }
-
     // Migrations for databases created by earlier versions
     const columns = db.prepare('PRAGMA table_info(lora_cache)').all() as Array<{ name: string }>;
     if (!columns.some((c) => c.name === 'nsfw')) {
       db.exec('ALTER TABLE lora_cache ADD COLUMN nsfw INTEGER');
     }
+    if (!columns.some((c) => c.name === 'versionName')) {
+      db.exec('ALTER TABLE lora_cache ADD COLUMN versionName TEXT');
+    }
     db.exec('CREATE INDEX IF NOT EXISTS idx_lora_version ON lora_cache(civitaiVersionId)');
+
+    syncSeedCatalog(db);
 
     loraDbInstance = db;
   } catch (err) {
     console.error('Failed to initialize SQLite LoRA database:', err);
+  }
+}
+
+/**
+ * Keeps the bundled offline catalog (seed rows, cachedAt = 0) in step with the app
+ * version. When the bundled catalog changes, old seed rows are replaced; records the
+ * user discovered or linked (cachedAt > 0) are kept.
+ */
+function syncSeedCatalog(db: any): void {
+  const entries: any[] = Array.isArray(seedCatalog) ? seedCatalog : [];
+  const signature = createHash('sha256').update(JSON.stringify(entries)).digest('hex');
+  const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get('seed_catalog_signature') as
+    | { value: string }
+    | undefined;
+  if (stored?.value === signature) return;
+
+  const insert = db.prepare(`
+    INSERT INTO lora_cache (
+      hashSha256, civitaiModelId, civitaiVersionId, name, versionName, normalizedAlias,
+      coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, nsfw, cachedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+  `);
+
+  try {
+    db.exec('BEGIN');
+    db.prepare('DELETE FROM lora_cache WHERE cachedAt = 0 OR cachedAt IS NULL').run();
+    for (const entry of entries) {
+      if (!entry || typeof entry.name !== 'string') continue;
+      insert.run(
+        entry.hashSha256 ? normalizeHash(entry.hashSha256) : null,
+        entry.civitaiModelId || null,
+        entry.civitaiVersionId || null,
+        entry.name,
+        entry.versionName || null,
+        entry.normalizedAlias ? entry.normalizedAlias.toLowerCase() : null,
+        entry.coverImageId || null,
+        entry.coverImageUrl || null,
+        JSON.stringify(entry.triggerWords || []),
+        entry.baseModel || null,
+        entry.source || 'civitai',
+        entry.modelUrl || null,
+        typeof entry.nsfw === 'boolean' ? (entry.nsfw ? 1 : 0) : null
+      );
+    }
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('seed_catalog_signature', signature);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    console.warn('Could not refresh the offline LoRA catalog in SQLite:', err);
   }
 }
 
@@ -169,6 +186,7 @@ function rowToRecord(row: any): ModelCatalogRecord | null {
     civitaiModelId: row.civitaiModelId ?? undefined,
     civitaiVersionId: row.civitaiVersionId ?? undefined,
     name: row.name,
+    versionName: row.versionName ?? undefined,
     normalizedAlias: row.normalizedAlias ?? '',
     hashSha256: row.hashSha256 ?? undefined,
     coverImageId: row.coverImageId ?? undefined,
@@ -234,15 +252,16 @@ const sqliteLoraPersistence: LoraPersistence = {
     loraDbInstance
       .prepare(`
         INSERT INTO lora_cache (
-          hashSha256, civitaiModelId, civitaiVersionId, name, normalizedAlias,
+          hashSha256, civitaiModelId, civitaiVersionId, name, versionName, normalizedAlias,
           coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt, nsfw
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         hash,
         record.civitaiModelId || null,
         record.civitaiVersionId || null,
         record.name,
+        record.versionName || null,
         alias,
         record.coverImageId || null,
         record.coverImageUrl || null,

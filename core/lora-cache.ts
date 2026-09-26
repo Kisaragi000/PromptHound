@@ -161,13 +161,15 @@ function loadSeedCache(): void {
         civitaiModelId: entry.civitaiModelId,
         civitaiVersionId: entry.civitaiVersionId,
         name: entry.name,
-        normalizedAlias: entry.normalizedAlias,
+        versionName: entry.versionName,
+        normalizedAlias: entry.normalizedAlias || '',
         hashSha256: entry.hashSha256 || undefined,
         coverImageId: entry.coverImageId,
         coverImageUrl: entry.coverImageUrl,
         triggerWords: entry.triggerWords || [],
         baseModel: entry.baseModel,
-        source: 'civitai',
+        nsfw: typeof entry.nsfw === 'boolean' ? entry.nsfw : undefined,
+        source: entry.source === 'local' ? 'local' : 'civitai',
         modelUrl: entry.modelUrl,
         cachedAt: 0, // 0 = seed data
       };
@@ -304,6 +306,7 @@ export function toResolvedLora(
     triggerWords: record.triggerWords,
     baseModel: record.baseModel,
     nsfw: record.nsfw,
+    ...(record.versionName ? { versionName: record.versionName } : {}),
     ...(matchedBy ? { matchedBy } : {}),
     ...(matchScore !== undefined ? { matchScore } : {}),
   };

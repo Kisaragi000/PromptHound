@@ -6,6 +6,7 @@ export interface ModelCatalogRecord {
   civitaiModelId?: number;
   civitaiVersionId?: number;
   name: string;
+  versionName?: string;
   normalizedAlias: string;
   hashSha256?: string;
   coverImageId?: string;

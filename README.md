@@ -147,6 +147,21 @@ Or use the development runner:
 node scripts/dev.mjs
 ```
 
+### Rebuilding the Offline LoRA Catalog
+
+`core/data/lora-seed.json` is the catalog PromptHound uses to identify LoRAs without a network connection. It is generated from Civitai's public API; never edit hashes, ids or trigger words by hand.
+
+```bash
+# Check the current catalog against Civitai (writes nothing; exits 1 on mismatches)
+npm run catalog:verify
+
+# Rebuild it: the 2,000 most-downloaded LoRA / LoCon / DoRA models, 3 versions each,
+# plus every version listed in scripts/catalog-includes.json
+CIVITAI_API_KEY=... npm run catalog:build -- --models 2000 --versions 3
+```
+
+Useful options: `--dry-run` (report only), `--extra file.json` (merge hand-made records, e.g. private models), `--all-covers` (keep cover images of any rating; PG-rated only by default). See the header of `scripts/build-lora-catalog.ts` for the full list. The desktop app replaces its stored copy of the catalog automatically when the bundled file changes; LoRAs users found or linked themselves are kept.
+
 ---
 
 ## 📄 License

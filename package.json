@@ -13,7 +13,8 @@
     "build:installer-assets": "node scripts/generate-installer-assets.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-electron release",
-    "seed:lora-db": "node scripts/seed-lora-db.mjs",
+    "catalog:build": "tsx scripts/build-lora-catalog.ts build",
+    "catalog:verify": "tsx scripts/build-lora-catalog.ts verify",
     "lint": "tsc --noEmit"
   },
   "build": {
