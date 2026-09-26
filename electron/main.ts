@@ -11,6 +11,16 @@ import {
   type ExtractionError,
 } from '../core/index.js';
 import { analyzeSafetensorsMetadata } from '../core/safetensors.js';
+import {
+  configureLoraPersistence,
+  upsertLoraRecord,
+  removeLoraRecord,
+  clearLoraCache,
+  normalizeHash,
+  type LoraPersistence,
+} from '../core/lora-cache.js';
+import { setRuntimeCivitaiApiKey } from '../core/lora-resolution.js';
+import type { ModelCatalogRecord } from '../core/types.js';
 
 let loraDbInstance: any = null;
 
@@ -134,77 +144,83 @@ function initLoraDatabase(): void {
       }
     }
 
+    // Migrations for databases created by earlier versions
+    const columns = db.prepare('PRAGMA table_info(lora_cache)').all() as Array<{ name: string }>;
+    if (!columns.some((c) => c.name === 'nsfw')) {
+      db.exec('ALTER TABLE lora_cache ADD COLUMN nsfw INTEGER');
+    }
+    db.exec('CREATE INDEX IF NOT EXISTS idx_lora_version ON lora_cache(civitaiVersionId)');
+
     loraDbInstance = db;
   } catch (err) {
     console.error('Failed to initialize SQLite LoRA database:', err);
   }
 }
 
-function registerSettingsHandlers(): void {
-  ipcMain.handle('settings:save-civitai-key', (_event, key: string) => {
-    if (!loraDbInstance) return;
-    const trimmed = (key || '').trim();
-    if (!trimmed) {
-      loraDbInstance.prepare('DELETE FROM settings WHERE key = ?').run('civitai_api_key');
-      return;
-    }
-    const encrypted = safeStorage.isEncryptionAvailable()
-      ? safeStorage.encryptString(trimmed).toString('base64')
-      : Buffer.from(trimmed).toString('base64');
-
-    loraDbInstance.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('civitai_api_key', encrypted);
-  });
-
-  ipcMain.handle('settings:get-civitai-key', () => {
-    if (!loraDbInstance) return null;
-    const row = loraDbInstance.prepare('SELECT value FROM settings WHERE key = ?').get('civitai_api_key') as { value: string } | undefined;
-    if (!row || !row.value) return null;
-    try {
-      return safeStorage.isEncryptionAvailable()
-        ? safeStorage.decryptString(Buffer.from(row.value, 'base64'))
-        : Buffer.from(row.value, 'base64').toString('utf8');
-    } catch {
-      return null;
-    }
-  });
+function rowToRecord(row: any): ModelCatalogRecord | null {
+  if (!row) return null;
+  let triggerWords: string[] = [];
+  try {
+    triggerWords = row.triggerWords ? JSON.parse(row.triggerWords) : [];
+  } catch {
+    // Keep an unreadable trigger list from hiding the rest of the record
+  }
+  return {
+    civitaiModelId: row.civitaiModelId ?? undefined,
+    civitaiVersionId: row.civitaiVersionId ?? undefined,
+    name: row.name,
+    normalizedAlias: row.normalizedAlias ?? '',
+    hashSha256: row.hashSha256 ?? undefined,
+    coverImageId: row.coverImageId ?? undefined,
+    coverImageUrl: row.coverImageUrl ?? undefined,
+    triggerWords,
+    baseModel: row.baseModel ?? undefined,
+    nsfw: row.nsfw === null || row.nsfw === undefined ? undefined : Boolean(row.nsfw),
+    source: row.source === 'local' ? 'local' : 'civitai',
+    modelUrl: row.modelUrl ?? '',
+    cachedAt: row.cachedAt ?? 0,
+  };
 }
 
-function registerLoraDbHandlers(): void {
-  ipcMain.handle('lora-db:get-by-hash', (_event, rawHash: string) => {
+/**
+ * SQLite storage for core/lora-cache in this (main) process. The renderer reaches the
+ * same table over IPC, so records found by either process are shared and survive restarts.
+ */
+const sqliteLoraPersistence: LoraPersistence = {
+  async getAll() {
+    if (!loraDbInstance) return [];
+    const rows = loraDbInstance.prepare('SELECT * FROM lora_cache ORDER BY cachedAt ASC').all();
+    return rows.map(rowToRecord).filter(Boolean) as ModelCatalogRecord[];
+  },
+  async getByHash(rawHash) {
     if (!loraDbInstance || !rawHash) return null;
-    const clean = rawHash.trim().toLowerCase();
-
-    // Direct exact match
-    let row = loraDbInstance.prepare('SELECT * FROM lora_cache WHERE hashSha256 = ? LIMIT 1').get(clean);
-
+    const clean = normalizeHash(rawHash);
+    let row = loraDbInstance.prepare('SELECT * FROM lora_cache WHERE hashSha256 = ? ORDER BY cachedAt DESC LIMIT 1').get(clean);
     // Prefix match for short AutoV1/AutoV2 hashes (>= 8 chars)
     if (!row && clean.length >= 8) {
-      row = loraDbInstance.prepare('SELECT * FROM lora_cache WHERE hashSha256 LIKE ? LIMIT 1').get(`${clean}%`);
+      row = loraDbInstance
+        .prepare('SELECT * FROM lora_cache WHERE hashSha256 LIKE ? ORDER BY cachedAt DESC LIMIT 1')
+        .get(`${clean}%`);
     }
-
-    if (!row) return null;
-    return {
-      ...row,
-      triggerWords: row.triggerWords ? JSON.parse(row.triggerWords) : [],
-    };
-  });
-
-  ipcMain.handle('lora-db:get-by-alias', (_event, rawAlias: string) => {
+    return rowToRecord(row);
+  },
+  async getByVersionId(versionId) {
+    if (!loraDbInstance || !Number.isFinite(versionId)) return null;
+    const row = loraDbInstance
+      .prepare('SELECT * FROM lora_cache WHERE civitaiVersionId = ? ORDER BY cachedAt DESC LIMIT 1')
+      .get(versionId);
+    return rowToRecord(row);
+  },
+  async getByAlias(rawAlias) {
     if (!loraDbInstance || !rawAlias) return null;
-    const clean = rawAlias.trim().toLowerCase();
-
-    // Exact alias match
-    const row = loraDbInstance.prepare('SELECT * FROM lora_cache WHERE normalizedAlias = ? LIMIT 1').get(clean);
-    if (!row) return null;
-    return {
-      ...row,
-      triggerWords: row.triggerWords ? JSON.parse(row.triggerWords) : [],
-    };
-  });
-
-  ipcMain.handle('lora-db:upsert', (_event, record: any) => {
+    const row = loraDbInstance
+      .prepare('SELECT * FROM lora_cache WHERE normalizedAlias = ? ORDER BY cachedAt DESC LIMIT 1')
+      .get(rawAlias.trim().toLowerCase());
+    return rowToRecord(row);
+  },
+  async upsert(record) {
     if (!loraDbInstance || !record || !record.name) return;
-    const hash = record.hashSha256 ? record.hashSha256.trim().toLowerCase() : null;
+    const hash = record.hashSha256 ? normalizeHash(record.hashSha256) : null;
     const alias = record.normalizedAlias ? record.normalizedAlias.trim().toLowerCase() : null;
 
     // Delete existing duplicate if hash or alias exists
@@ -215,38 +231,95 @@ function registerLoraDbHandlers(): void {
       loraDbInstance.prepare('DELETE FROM lora_cache WHERE normalizedAlias = ? AND cachedAt > 0').run(alias);
     }
 
-    const insertStmt = loraDbInstance.prepare(`
-      INSERT INTO lora_cache (
-        hashSha256, civitaiModelId, civitaiVersionId, name, normalizedAlias,
-        coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    loraDbInstance
+      .prepare(`
+        INSERT INTO lora_cache (
+          hashSha256, civitaiModelId, civitaiVersionId, name, normalizedAlias,
+          coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt, nsfw
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        hash,
+        record.civitaiModelId || null,
+        record.civitaiVersionId || null,
+        record.name,
+        alias,
+        record.coverImageId || null,
+        record.coverImageUrl || null,
+        JSON.stringify(record.triggerWords || []),
+        record.baseModel || null,
+        record.source || 'civitai',
+        record.modelUrl || null,
+        record.cachedAt || Date.now(),
+        record.nsfw === undefined ? null : record.nsfw ? 1 : 0
+      );
+  },
+  async remove(hashOrAlias) {
+    if (!loraDbInstance || !hashOrAlias) return;
+    const clean = normalizeHash(hashOrAlias);
+    loraDbInstance.prepare('DELETE FROM lora_cache WHERE hashSha256 = ? OR normalizedAlias = ?').run(clean, clean);
+  },
+  async clearUserRecords() {
+    if (!loraDbInstance) return;
+    loraDbInstance.prepare('DELETE FROM lora_cache WHERE cachedAt > 0').run();
+  },
+};
 
-    insertStmt.run(
-      hash,
-      record.civitaiModelId || null,
-      record.civitaiVersionId || null,
-      record.name,
-      alias,
-      record.coverImageId || null,
-      record.coverImageUrl || null,
-      JSON.stringify(record.triggerWords || []),
-      record.baseModel || null,
-      record.source || 'civitai',
-      record.modelUrl || null,
-      record.cachedAt || Date.now()
-    );
+function registerSettingsHandlers(): void {
+  ipcMain.handle('settings:save-civitai-key', (_event, key: string) => {
+    if (!loraDbInstance) return;
+    const trimmed = (key || '').trim();
+    if (!trimmed) {
+      loraDbInstance.prepare('DELETE FROM settings WHERE key = ?').run('civitai_api_key');
+      setRuntimeCivitaiApiKey(null);
+      return;
+    }
+    const encrypted = safeStorage.isEncryptionAvailable()
+      ? safeStorage.encryptString(trimmed).toString('base64')
+      : Buffer.from(trimmed).toString('base64');
+
+    loraDbInstance.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('civitai_api_key', encrypted);
+    setRuntimeCivitaiApiKey(trimmed);
+  });
+
+  ipcMain.handle('settings:get-civitai-key', () => readCivitaiKey());
+}
+
+function readCivitaiKey(): string | null {
+  if (!loraDbInstance) return null;
+  const row = loraDbInstance.prepare('SELECT value FROM settings WHERE key = ?').get('civitai_api_key') as { value: string } | undefined;
+  if (!row || !row.value) return null;
+  try {
+    return safeStorage.isEncryptionAvailable()
+      ? safeStorage.decryptString(Buffer.from(row.value, 'base64'))
+      : Buffer.from(row.value, 'base64').toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
+function registerLoraDbHandlers(): void {
+  // Reads go straight to SQLite; writes go through core/lora-cache so this process's
+  // in-memory index (used by main-process extraction) sees the renderer's changes too.
+  ipcMain.handle('lora-db:get-all', () => sqliteLoraPersistence.getAll());
+  ipcMain.handle('lora-db:get-by-hash', (_event, rawHash: string) => sqliteLoraPersistence.getByHash(rawHash));
+  ipcMain.handle('lora-db:get-by-version', (_event, versionId: number) =>
+    sqliteLoraPersistence.getByVersionId(Number(versionId))
+  );
+  ipcMain.handle('lora-db:get-by-alias', (_event, rawAlias: string) => sqliteLoraPersistence.getByAlias(rawAlias));
+
+  ipcMain.handle('lora-db:upsert', (_event, record: any) => {
+    if (!record || !record.name) return;
+    upsertLoraRecord(record);
   });
 
   ipcMain.handle('lora-db:remove', (_event, hashOrAlias: string) => {
-    if (!loraDbInstance || !hashOrAlias) return;
-    const clean = hashOrAlias.trim().toLowerCase();
-    loraDbInstance.prepare('DELETE FROM lora_cache WHERE hashSha256 = ? OR normalizedAlias = ?').run(clean, clean);
+    if (!hashOrAlias) return;
+    removeLoraRecord(hashOrAlias);
   });
 
   ipcMain.handle('lora-db:clear-user-records', () => {
-    if (!loraDbInstance) return;
-    loraDbInstance.prepare('DELETE FROM lora_cache WHERE cachedAt > 0').run();
+    clearLoraCache();
   });
 
   ipcMain.handle('lora-db:get-stats', () => {
@@ -554,6 +627,8 @@ function registerExtractionHandlers(): void {
 
 app.whenReady().then(() => {
   initLoraDatabase();
+  configureLoraPersistence(loraDbInstance ? sqliteLoraPersistence : null);
+  setRuntimeCivitaiApiKey(readCivitaiKey());
   registerLoraDbHandlers();
   registerSettingsHandlers();
   registerLibraryHandlers();

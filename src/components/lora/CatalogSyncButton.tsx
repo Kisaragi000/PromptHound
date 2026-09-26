@@ -27,7 +27,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
     try {
       // Simulate incremental fetch of trending/latest LoRAs
       const apiKey = localStorage.getItem('prompthound_civitai_key') || '';
-      const url = `https://civitai.com/api/v1/models?types=LORA&sort=Most%20Downloaded&limit=50`;
+      const url = `https://civitai.com/api/v1/models?types=LORA&types=LoCon&types=DoRA&sort=Most%20Downloaded&limit=50`;
 
       setProgress({ current: 30, total: 100 });
 

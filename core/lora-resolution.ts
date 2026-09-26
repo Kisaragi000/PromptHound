@@ -1,8 +1,9 @@
 import type { LoraReference, ModelCatalogRecord } from './types.js';
 import {
-  getCachedLoraByHash,
-  getCachedLoraByAlias,
-  getCachedLoraByVersionId,
+  findLoraByHash,
+  findLoraByAlias,
+  findLoraByVersionId,
+  normalizeHash,
   findMatchingSeedLorasInText,
   upsertLoraRecord,
   toResolvedLora,
@@ -214,26 +215,30 @@ function getCivitaiApiKey(): string | null {
 /**
  * Performs a live Civitai search and scores candidate models against query and target hash.
  */
+// Civitai lists LyCORIS as "LoCon" and DoRA separately from "LORA"; all load as LoRAs
+const LORA_MODEL_TYPES = ['LORA', 'LoCon', 'DoRA'];
+
 export async function searchCivitaiCandidates(
   query: string,
   targetHash?: string,
-  modelType: 'LORA' | 'Checkpoint' | 'all' = 'LORA'
+  modelType: 'LORA' | 'Checkpoint' | 'all' = 'LORA',
+  options: { skipHashLookup?: boolean } = {}
 ): Promise<CandidateMatchResult[]> {
   const cleanQuery = query.trim();
   if (!cleanQuery && !targetHash) return [];
 
   const apiKey = getCivitaiApiKey();
   const headers: Record<string, string> = {
-    'User-Agent': 'PromptHound/1.0.5 (Metadata-Extractor)',
+    'User-Agent': 'PromptHound/1.0.7 (Metadata-Extractor)',
     'Accept': 'application/json',
     ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
   };
 
   const results: CandidateModelItem[] = [];
 
-  // 1. Search by hash if provided
-  if (targetHash) {
-    const cleanHash = targetHash.trim().toLowerCase();
+  // 1. Search by hash if provided (callers that already queried by-hash skip this)
+  if (targetHash && !options.skipHashLookup) {
+    const cleanHash = normalizeHash(targetHash);
     try {
       const hashRes = await fetch(
         `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(cleanHash)}`,
@@ -257,7 +262,8 @@ export async function searchCivitaiCandidates(
   // 2. Search by query text
   if (cleanQuery.length >= 2) {
     try {
-      const typeParam = modelType === 'all' ? '' : `&types=${modelType}`;
+      const types = modelType === 'all' ? [] : modelType === 'LORA' ? LORA_MODEL_TYPES : [modelType];
+      const typeParam = types.map((t) => `&types=${encodeURIComponent(t)}`).join('');
       const searchRes = await fetch(
         `https://civitai.com/api/v1/models?query=${encodeURIComponent(cleanQuery)}${typeParam}&limit=10`,
         { headers }
@@ -281,7 +287,7 @@ export async function searchCivitaiCandidates(
 
   // Score all candidates
   const scored = results
-    .map((c) => scoreModelCandidate(cleanQuery, normalized, c, targetHash))
+    .map((c) => scoreModelCandidate(cleanQuery, normalized, c, targetHash ? normalizeHash(targetHash) : undefined))
     .sort((a, b) => b.score - a.score);
 
   return scored;
@@ -313,7 +319,7 @@ function recordFromVersionData(
     civitaiVersionId: Number.isFinite(versionId) ? versionId : undefined,
     name,
     normalizedAlias: normalizedAlias || normalizeLoraName(name),
-    hashSha256: hash ? hash.trim().toLowerCase() : undefined,
+    hashSha256: hash ? normalizeHash(hash) : undefined,
     coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
     coverImageUrl: coverImage?.url || undefined,
     triggerWords,
@@ -329,6 +335,7 @@ async function fetchVersionRecord(
   lora: LoraReference,
   normalizedAlias: string,
   headers: Record<string, string>,
+  matchedBy: 'hash' | 'civitai-version',
   hash?: string
 ): Promise<LoraReference | null> {
   try {
@@ -337,7 +344,7 @@ async function fetchVersionRecord(
     const record = recordFromVersionData(await response.json(), lora, normalizedAlias, hash);
     if (!record) return null;
     upsertLoraRecord(record);
-    return { ...lora, resolved: toResolvedLora({ ...record, cachedAt: Date.now() }) };
+    return { ...lora, resolved: toResolvedLora({ ...record, cachedAt: Date.now() }, matchedBy) };
   } catch {
     return null;
   }
@@ -357,18 +364,20 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
   const hasRealName = !CIVITAI_VERSION_PLACEHOLDER.test(lora.rawName);
   const normalizedAlias = hasRealName ? normalizeLoraName(lora.rawName) : '';
 
-  // 1. Tier 1: exact identifiers in the local cache
-  if (lora.hash) {
-    const cachedByHash = getCachedLoraByHash(lora.hash);
+  const hash = lora.hash ? normalizeHash(lora.hash) : undefined;
+
+  // 1. Tier 1: exact identifiers in the local cache (memory, then SQLite)
+  if (hash) {
+    const cachedByHash = await findLoraByHash(hash);
     if (cachedByHash) {
-      return { ...lora, resolved: toResolvedLora(cachedByHash) };
+      return { ...lora, resolved: toResolvedLora(cachedByHash, 'hash') };
     }
   }
 
   if (lora.civitaiVersionId !== undefined) {
-    const cachedByVersion = getCachedLoraByVersionId(lora.civitaiVersionId);
+    const cachedByVersion = await findLoraByVersionId(lora.civitaiVersionId);
     if (cachedByVersion) {
-      return { ...lora, resolved: toResolvedLora(cachedByVersion) };
+      return { ...lora, resolved: toResolvedLora(cachedByVersion, 'civitai-version') };
     }
   }
 
@@ -380,14 +389,14 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
   };
 
   // 2. Tier 2: exact identifiers online
-  if (lora.hash) {
-    const cleanHash = lora.hash.trim().toLowerCase();
+  if (hash) {
     const byHash = await fetchVersionRecord(
-      `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(cleanHash)}`,
+      `https://civitai.com/api/v1/model-versions/by-hash/${encodeURIComponent(hash)}`,
       lora,
       normalizedAlias,
       headers,
-      cleanHash
+      'hash',
+      hash
     );
     if (byHash) return byHash;
   }
@@ -398,7 +407,7 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
       lora,
       normalizedAlias,
       headers,
-      lora.hash
+      'civitai-version'
     );
     if (byVersion) return byVersion;
   }
@@ -408,9 +417,9 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
 
   // 3. Tier 1: cached alias
   if (normalizedAlias) {
-    const cachedByAlias = getCachedLoraByAlias(normalizedAlias);
+    const cachedByAlias = await findLoraByAlias(normalizedAlias);
     if (cachedByAlias) {
-      return { ...lora, resolved: toResolvedLora(cachedByAlias) };
+      return { ...lora, resolved: toResolvedLora(cachedByAlias, 'name-match') };
     }
   }
 
@@ -428,7 +437,8 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
 
       for (const q of uniqueQueries) {
         if (q.length < 2) continue;
-        const res = await searchCivitaiCandidates(q, lora.hash);
+        // by-hash was already queried in tier 2; the hash is still used to score file hashes
+        const res = await searchCivitaiCandidates(q, hash, 'LORA', { skipHashLookup: true });
         if (res.length > 0) {
           candidates = res;
           break;
@@ -456,13 +466,16 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
           ? matchedVersion.trainedWords
           : [];
         const isNsfw = Boolean(model.nsfw ?? (model.nsfwLevel && model.nsfwLevel > 1));
+        // Only a file-hash hit proves the hash; a name guess must not be cached under it,
+        // or later images with that hash would get the guess back as a "hash match"
+        const hashVerified = Boolean(hash) && topValid.matchReason.startsWith('Exact hash match');
 
         const catalogRecord: Omit<ModelCatalogRecord, 'cachedAt'> = {
           civitaiModelId: modelId,
           civitaiVersionId: versionId,
           name: model.name || lora.rawName,
           normalizedAlias: normalizedAlias || normalizeLoraName(model.name),
-          hashSha256: lora.hash ? lora.hash.trim().toLowerCase() : undefined,
+          hashSha256: hashVerified ? hash : undefined,
           coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
           coverImageUrl: coverImage?.url || undefined,
           triggerWords,
@@ -475,7 +488,14 @@ async function resolveSingleLora(lora: LoraReference): Promise<LoraReference> {
         // Auto-upsert verified candidate
         upsertLoraRecord(catalogRecord);
 
-        return { ...lora, resolved: toResolvedLora({ ...catalogRecord, cachedAt: Date.now() }) };
+        return {
+          ...lora,
+          resolved: toResolvedLora(
+            { ...catalogRecord, cachedAt: Date.now() },
+            hashVerified ? 'hash' : 'name-match',
+            hashVerified ? undefined : topValid.score
+          ),
+        };
       }
     } catch {
       // Network failure / offline
@@ -521,7 +541,7 @@ export async function resolveModelCheckpoint(
 
   // 1. Check local seed & cache
   if (modelHash) {
-    const cachedByHash = getCachedLoraByHash(modelHash);
+    const cachedByHash = await findLoraByHash(modelHash);
     if (cachedByHash) {
       return {
         name: cachedByHash.name,
@@ -536,7 +556,7 @@ export async function resolveModelCheckpoint(
   }
 
   if (normalized) {
-    const cachedByAlias = getCachedLoraByAlias(normalized);
+    const cachedByAlias = await findLoraByAlias(normalized);
     if (cachedByAlias) {
       return {
         name: cachedByAlias.name,

@@ -22,6 +22,8 @@ export interface PromptHoundAPI {
     openFileDialog: () => Promise<string | null>;
   };
   loraDb?: {
+    getAll?: () => Promise<any[]>;
+    getByVersionId?: (versionId: number) => Promise<any>;
     getByHash: (hash: string) => Promise<any>;
     getByAlias: (alias: string) => Promise<any>;
     upsert: (record: any) => Promise<void>;

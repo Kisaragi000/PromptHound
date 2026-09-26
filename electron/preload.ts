@@ -52,6 +52,8 @@ const extraction = {
 };
 
 const loraDb = {
+  getAll: () => ipcRenderer.invoke('lora-db:get-all'),
+  getByVersionId: (versionId: number) => ipcRenderer.invoke('lora-db:get-by-version', versionId),
   getByHash: (hash: string) => ipcRenderer.invoke('lora-db:get-by-hash', hash),
   getByAlias: (alias: string) => ipcRenderer.invoke('lora-db:get-by-alias', alias),
   upsert: (record: any) => ipcRenderer.invoke('lora-db:upsert', record),

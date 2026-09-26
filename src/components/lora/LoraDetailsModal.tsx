@@ -95,7 +95,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
 
     const updated: LoraReference = {
       ...lora,
-      resolved: toResolvedLora({ ...record, cachedAt: Date.now() }),
+      resolved: toResolvedLora({ ...record, cachedAt: Date.now() }, 'manual'),
     };
 
     onUpdateLora(updated);
@@ -142,7 +142,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
 
         const updated: LoraReference = {
           ...lora,
-          resolved: toResolvedLora({ ...record, cachedAt: Date.now() }),
+          resolved: toResolvedLora({ ...record, cachedAt: Date.now() }, 'local'),
         };
 
         onUpdateLora(updated);
