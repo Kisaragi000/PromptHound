@@ -5,6 +5,7 @@ import { diceCoefficient, extractMeaningfulTokens } from './similarity.js';
 // In-memory catalog maps for fast synchronous lookups & browser preview
 const hashIndex = new Map<string, ModelCatalogRecord>();
 const aliasIndex = new Map<string, ModelCatalogRecord>();
+const versionIndex = new Map<number, ModelCatalogRecord>();
 
 /**
  * Scans a text block (e.g. prompt or tags) for known LoRAs based on alias and trigger words
@@ -14,11 +15,15 @@ export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] 
   const lower = text.toLowerCase();
   const matched: ModelCatalogRecord[] = [];
 
+  // Whole-word only: a substring test turns "highly detailed" into a "detail" LoRA hit
+  const containsPhrase = (phrase: string): boolean => {
+    const escaped = phrase.toLowerCase().trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escaped.length > 0 && new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u').test(lower);
+  };
+
   for (const record of aliasIndex.values()) {
-    const aliasHit = record.normalizedAlias && lower.includes(record.normalizedAlias.toLowerCase());
-    const triggerHit = record.triggerWords?.some(
-      (tw) => tw.length > 3 && lower.includes(tw.toLowerCase())
-    );
+    const aliasHit = Boolean(record.normalizedAlias) && containsPhrase(record.normalizedAlias);
+    const triggerHit = record.triggerWords?.some((tw) => tw.length > 3 && containsPhrase(tw));
 
     if (aliasHit || triggerHit) {
       if (!matched.some((m) => m.civitaiModelId === record.civitaiModelId || m.name === record.name)) {
@@ -32,6 +37,7 @@ export function findMatchingSeedLorasInText(text: string): ModelCatalogRecord[] 
 function loadSeedCache(): void {
   hashIndex.clear();
   aliasIndex.clear();
+  versionIndex.clear();
 
   // 1. Seed with offline bundled master dataset (0ms cold start)
   if (Array.isArray(seedData)) {
@@ -56,6 +62,9 @@ function loadSeedCache(): void {
       }
       if (rec.normalizedAlias) {
         aliasIndex.set(rec.normalizedAlias.trim().toLowerCase(), rec);
+      }
+      if (rec.civitaiVersionId) {
+        versionIndex.set(rec.civitaiVersionId, rec);
       }
     });
   }
@@ -85,6 +94,13 @@ export function getCachedLoraByHash(sha256OrShort: string): ModelCatalogRecord |
   }
 
   return undefined;
+}
+
+/**
+ * Lookup by exact Civitai model-version id (Tier 1)
+ */
+export function getCachedLoraByVersionId(versionId: number): ModelCatalogRecord | undefined {
+  return versionIndex.get(versionId);
 }
 
 /**
@@ -142,6 +158,9 @@ export function upsertLoraRecord(record: Omit<ModelCatalogRecord, 'cachedAt'> & 
   if (fullRecord.normalizedAlias) {
     aliasIndex.set(fullRecord.normalizedAlias.trim().toLowerCase(), fullRecord);
   }
+  if (fullRecord.civitaiVersionId) {
+    versionIndex.set(fullRecord.civitaiVersionId, fullRecord);
+  }
 
   // Persist to native SQLite via Electron IPC if available
   if (typeof window !== 'undefined' && window.promptHound?.loraDb) {
@@ -156,8 +175,12 @@ export function upsertLoraRecord(record: Omit<ModelCatalogRecord, 'cachedAt'> & 
  */
 export function removeLoraRecord(hashOrAlias: string): void {
   const clean = hashOrAlias.trim().toLowerCase();
+  const removed = [hashIndex.get(clean), aliasIndex.get(clean)].filter(Boolean);
   hashIndex.delete(clean);
   aliasIndex.delete(clean);
+  for (const [versionId, record] of versionIndex.entries()) {
+    if (removed.includes(record)) versionIndex.delete(versionId);
+  }
 
   if (typeof window !== 'undefined' && window.promptHound?.loraDb) {
     window.promptHound.loraDb.remove(clean).catch((err) => {
@@ -185,7 +208,7 @@ export function toResolvedLora(record: ModelCatalogRecord): NonNullable<LoraRefe
  * Returns cache stats for Settings UI
  */
 export function getLoraCacheStats(): { count: number; userCount: number; lastUpdated?: number } {
-  const all = Array.from(new Set([...hashIndex.values(), ...aliasIndex.values()]));
+  const all = Array.from(new Set([...hashIndex.values(), ...aliasIndex.values(), ...versionIndex.values()]));
   const userRecords = all.filter((r) => (r.cachedAt || 0) > 0);
   const latest = userRecords.reduce((max, r) => Math.max(max, r.cachedAt || 0), 0);
 

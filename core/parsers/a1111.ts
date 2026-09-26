@@ -1,5 +1,4 @@
 import type { ExtractedMetadata, LoraReference } from '../types.js';
-import { findMatchingSeedLorasInText } from '../lora-cache.js';
 
 /**
  * Parses settings string into key-value pairs while respecting quotes.
@@ -143,32 +142,25 @@ function parseCivitaiResources(settings: Record<string, string>, loras: LoraRefe
       if (Array.isArray(parsed)) {
         for (const item of parsed) {
           if (item.type === 'lora' || item.kind === 'lora') {
-            const rawName = item.modelName || item.name || 'Unknown LoRA';
+            const rawVersionId = item.modelVersionId ?? item.id;
+            const versionId = rawVersionId != null && Number.isFinite(Number(rawVersionId)) ? Number(rawVersionId) : undefined;
+            const rawName = item.modelName || item.name || (versionId ? `Civitai model version ${versionId}` : 'Unknown LoRA');
             const weight = typeof item.weight === 'number' ? item.weight : 1.0;
-            const modelVersionId = item.modelVersionId || item.id;
-            const existing = loras.find((l) => l.rawName.toLowerCase() === rawName.toLowerCase());
+            const existing = loras.find(
+              (l) =>
+                (versionId !== undefined && l.civitaiVersionId === versionId) ||
+                l.rawName.toLowerCase() === rawName.toLowerCase()
+            );
 
+            // The version id is resolved against /model-versions/{id} in resolveLoras;
+            // it is not a model id, so no model URL is built from it here.
             if (existing) {
-              if (weight !== undefined) existing.strength = weight;
-              if (modelVersionId && !existing.resolved) {
-                existing.resolved = {
-                  name: rawName,
-                  source: 'civitai',
-                  modelUrl: `https://civitai.com/models/${modelVersionId}`,
-                };
+              existing.strength = weight;
+              if (versionId !== undefined && existing.civitaiVersionId === undefined) {
+                existing.civitaiVersionId = versionId;
               }
             } else {
-              loras.push({
-                rawName,
-                strength: weight,
-                resolved: modelVersionId
-                  ? {
-                      name: rawName,
-                      source: 'civitai',
-                      modelUrl: `https://civitai.com/models/${modelVersionId}`,
-                    }
-                  : undefined,
-              });
+              loras.push({ rawName, strength: weight, civitaiVersionId: versionId });
             }
           }
         }
@@ -264,30 +256,6 @@ export function parseA1111(
 
   // Parse Civitai Resources JSON
   parseCivitaiResources(settings, loras);
-
-  // Also check prompt for known LoRA tags / trigger words (e.g. CyberpunkInterior, YFG-Aarchy)
-  try {
-    const matchedRecords = findMatchingSeedLorasInText(rawPrompt);
-    for (const record of matchedRecords) {
-      if (!loras.some((l) => l.rawName.toLowerCase() === record.name.toLowerCase() || l.resolved?.modelUrl === record.modelUrl)) {
-        loras.push({
-          rawName: record.name,
-          strength: 1.0,
-          resolved: {
-            name: record.name,
-            source: 'civitai',
-            modelUrl: record.modelUrl,
-            coverImageUrl: record.coverImageUrl,
-            triggerWords: record.triggerWords,
-            baseModel: record.baseModel,
-            versionName: 'v1.0',
-          },
-        });
-      }
-    }
-  } catch {
-    // ignore
-  }
 
   // Parse Dimensions from Size: WxH
   let width = imageDimensions?.width;

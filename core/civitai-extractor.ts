@@ -136,34 +136,26 @@ export async function extractWithCivitaiPipeline(
     const normalizedResources = Array.isArray(normalized?.resources) ? normalized.resources : [];
     for (const res of normalizedResources) {
       if (res.kind === 'lora' || res.kind === 'other') {
-        const rawName = res.name || 'Unknown LoRA';
-        const existing = loras.find((l) => l.rawName.toLowerCase() === rawName.toLowerCase());
+        const versionId = typeof res.modelVersionId === 'number' ? res.modelVersionId : undefined;
+        const rawName = res.name || (versionId ? `Civitai model version ${versionId}` : 'Unknown LoRA');
+        const existing = loras.find(
+          (l) =>
+            (versionId !== undefined && l.civitaiVersionId === versionId) ||
+            l.rawName.toLowerCase() === rawName.toLowerCase()
+        );
         const strength = typeof res.weight === 'number' ? res.weight : 1.0;
         const hash = res.hash;
 
+        // The version id is resolved against /model-versions/{id} in resolveLoras;
+        // it is not a model id, so no model URL is built from it here.
         if (existing) {
           if (hash && !existing.hash) existing.hash = hash;
           if (strength !== undefined) existing.strength = strength;
-          if (res.modelVersionId && !existing.resolved) {
-            existing.resolved = {
-              name: rawName,
-              source: 'civitai',
-              modelUrl: `https://civitai.com/models/${res.modelVersionId}`,
-            };
+          if (versionId !== undefined && existing.civitaiVersionId === undefined) {
+            existing.civitaiVersionId = versionId;
           }
         } else {
-          loras.push({
-            rawName,
-            strength,
-            hash,
-            resolved: res.modelVersionId
-              ? {
-                  name: rawName,
-                  source: 'civitai',
-                  modelUrl: `https://civitai.com/models/${res.modelVersionId}`,
-                }
-              : undefined,
-          });
+          loras.push({ rawName, strength, hash, civitaiVersionId: versionId });
         }
       }
     }

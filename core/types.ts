@@ -22,6 +22,8 @@ export interface LoraReference {
   rawName: string;
   strength?: number;
   hash?: string;
+  /** Civitai model-version id when the metadata names one (on-site / "Civitai resources") */
+  civitaiVersionId?: number;
   resolved?: {
     name: string;
     source: 'civitai' | 'local';
