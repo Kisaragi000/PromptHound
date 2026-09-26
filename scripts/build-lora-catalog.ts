@@ -8,7 +8,10 @@
  * Options
  *   --models N        Most-downloaded LoRA / LoCon / DoRA models to fetch (default 2000)
  *   --versions N      Newest versions to keep per model (default 3)
- *   --compact-models N  Total models to cover (default 10000). Models beyond --models
+ *   --checkpoints N   Most-downloaded checkpoints with full records (newest version,
+ *                     cover image) for base-model identification (default 1000); their
+ *                     older versions go into the compact index
+ *   --compact-models N  Total LoRA models to cover (default 10000). Models beyond --models
  *                     go into the compact index only: name, ids and hash prefixes, so
  *                     images using them are still identified offline
  *   --include FILE    Model-version ids that must be in the catalog even if not in the
@@ -31,6 +34,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeLoraName } from '../core/lora-resolution.js';
+import { civitaiThumbnail } from '../core/civitai-images.js';
 
 interface CatalogRecord {
   civitaiModelId: number;
@@ -75,6 +79,7 @@ const option = (name: string, fallback: string) => {
 const MODEL_LIMIT = Number(option('models', '2000'));
 const VERSIONS_PER_MODEL = Number(option('versions', '3'));
 const COMPACT_LIMIT = Math.max(MODEL_LIMIT, Number(option('compact-models', '10000')));
+const CHECKPOINT_LIMIT = Number(option('checkpoints', '1000'));
 const INCLUDE_FILE = option('include', 'scripts/catalog-includes.json');
 const EXTRA_FILE = option('extra', '');
 const OUT_FILE = option('out', 'core/data/lora-seed.json');
@@ -140,7 +145,7 @@ function coverOf(version: any): string | undefined {
   const images: any[] = Array.isArray(version?.images) ? version.images : [];
   // nsfwLevel 1 = PG on Civitai; unrated images are skipped unless --all-covers
   const image = ALL_COVERS ? images[0] : images.find((i) => i?.nsfwLevel === 1);
-  return typeof image?.url === 'string' ? image.url : undefined;
+  return typeof image?.url === 'string' ? civitaiThumbnail(image.url) : undefined;
 }
 
 function triggerWordsOf(version: any): string[] {
@@ -193,12 +198,20 @@ const compactVersion = (model: any, version: any): CompactVersion => [
   autoV3Of(version) ?? '',
 ];
 
-async function fetchTopModels(): Promise<CatalogRecord[]> {
+async function fetchTopModels(
+  types: string[],
+  fullLimit: number,
+  compactLimit: number,
+  versionsPerModel: number
+): Promise<CatalogRecord[]> {
   const records: CatalogRecord[] = [];
-  const typeParams = LORA_TYPES.map((t) => `types=${t}`).join('&');
+  const typeParams = types.map((t) => `types=${t}`).join('&');
   let url: string | undefined =
     `${API_BASE}/models?${typeParams}&sort=Most%20Downloaded&period=AllTime&nsfw=true&limit=100`;
   let models = 0;
+  const MODEL_LIMIT = fullLimit;
+  const COMPACT_LIMIT = Math.max(fullLimit, compactLimit);
+  const VERSIONS_PER_MODEL = versionsPerModel;
 
   while (url && models < COMPACT_LIMIT) {
     const data = await fetchJson(url);
@@ -262,13 +275,15 @@ function readJson(file: string): any {
  * exactly as the app normalizes LoRA names. Earlier (more downloaded) models claim an
  * alias first; only the newest version of a model carries it.
  */
-const claimed = new Set<string>();
+// Aliases are claimed per kind: the app keeps separate name indexes for LoRAs and checkpoints
+const claimedByKind = { lora: new Set<string>(), checkpoint: new Set<string>() };
 
 function assignAliases(records: CatalogRecord[]): CatalogRecord[] {
   const seenModels = new Set<number>();
   const out: CatalogRecord[] = [];
 
   for (const record of records) {
+    const claimed = claimedByKind[record.modelType === 'Checkpoint' ? 'checkpoint' : 'lora'];
     const isNewestVersion = !seenModels.has(record.civitaiModelId);
     seenModels.add(record.civitaiModelId);
 
@@ -336,7 +351,13 @@ async function verify(): Promise<void> {
 
 async function build(): Promise<void> {
   console.log(`Fetching the ${COMPACT_LIMIT} most-downloaded ${LORA_TYPES.join('/')} models (top ${MODEL_LIMIT} with full records, ${VERSIONS_PER_MODEL} versions each)`);
-  const top = await fetchTopModels();
+  const topLoras = await fetchTopModels(LORA_TYPES, MODEL_LIMIT, COMPACT_LIMIT, VERSIONS_PER_MODEL);
+  let topCheckpoints: CatalogRecord[] = [];
+  if (CHECKPOINT_LIMIT > 0) {
+    console.log(`Fetching the ${CHECKPOINT_LIMIT} most-downloaded checkpoints (newest version with full records)`);
+    topCheckpoints = await fetchTopModels(['Checkpoint'], CHECKPOINT_LIMIT, CHECKPOINT_LIMIT, 1);
+  }
+  const top = [...topLoras, ...topCheckpoints];
 
   const includeIds: number[] = fs.existsSync(INCLUDE_FILE) ? readJson(INCLUDE_FILE).modelVersionIds || [] : [];
   const have = new Set(top.map((r) => r.civitaiVersionId));
@@ -354,6 +375,7 @@ async function build(): Promise<void> {
   let records = assignAliases([...top, ...included]);
   // Compact-tier models get a title alias only where no full-record model claimed it
   for (const model of compactModels) {
+    const claimed = claimedByKind[model[4] === 'Checkpoint' ? 'checkpoint' : 'lora'];
     const alias = titleAlias(model[1]);
     if (alias.length >= MIN_ALIAS_LENGTH && !claimed.has(alias)) {
       claimed.add(alias);

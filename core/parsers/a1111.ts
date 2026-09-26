@@ -367,6 +367,7 @@ export function parseA1111(
     seed: seedKey ? settings[seedKey] : undefined,
     model: modelKey ? settings[modelKey] : civitaiCheckpoint?.name,
     modelHash: modelHashKey ? settings[modelHashKey] : undefined,
+    modelVersionId: civitaiCheckpoint?.versionId,
     width,
     height,
     loras,

@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { ExtractionResult, ExtractionError, ExtractedMetadata } from '../../core/types.js';
+import { useNavigation } from '../navigation/NavigationContext.js';
 
 export type ExtractionStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -46,11 +47,16 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
     error: null,
   });
 
+  // Every new extraction leaves any library recipe that was being viewed, from
+  // whichever page it starts (Home drop, browse, URL, clipboard, result page)
+  const { clearRecipeView } = useNavigation();
+
   const [sessionImages, setSessionImages] = useState<SessionImageItem[]>([]);
   const [activeImageIndex, setActiveImageIndexState] = useState<number>(0);
 
   const runExtraction = useCallback(
     async (task: () => Promise<ExtractionResult | ExtractionError>) => {
+      clearRecipeView();
       setState({ status: 'loading', result: null, error: null });
       try {
         const outcome = await task();
@@ -70,7 +76,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         });
       }
     },
-    []
+    [clearRecipeView]
   );
 
   const setActiveImageIndex = useCallback(
@@ -119,6 +125,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         .slice(0, 10);
 
       if (files.length === 0) return;
+      clearRecipeView();
 
       const items: SessionImageItem[] = files.map((file, idx) => ({
         id: `img_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
@@ -163,7 +170,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         });
       });
     },
-    []
+    [clearRecipeView]
   );
 
   const addSessionImages = useCallback(
@@ -172,6 +179,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         (f) => /\.(png|webp|jpg|jpeg|jfif|avif)$/i.test(f.name) || f.type.startsWith('image/')
       );
       if (newFiles.length === 0) return;
+      clearRecipeView();
 
       setSessionImages((prev) => {
         const availableSlots = 10 - prev.length;
@@ -206,7 +214,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         return [...prev, ...newItems];
       });
     },
-    []
+    [clearRecipeView]
   );
 
   const removeSessionImage = useCallback(

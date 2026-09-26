@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.0.9
+
+### Fixed
+- Dropping an image after opening a Prompt Library, Favorites or Recent item showed
+  that saved item instead of the new extraction; it only corrected itself after a
+  second image. Every new extraction now leaves the saved-item view.
+- LoRA re-link / unlink edits no longer carry over to the next image, and they are
+  kept when saving to the library.
+- "Open Image" on the result page in the desktop app now extracts the chosen file.
+
+### Base model card
+- The checkpoint is identified the same way as LoRAs (file hash, Civitai version id,
+  AIR id, then name) and shown in a card with a preview image, version, base model and
+  how it was matched.
+- The offline catalog now also covers the 1,000 most-downloaded checkpoints. On 308
+  real Civitai images the base model was identified in 96% of cases online and 80%
+  offline.
+- Cover images are loaded as small thumbnails instead of full-size originals (about
+  100 KB instead of several MB), with an icon when a preview cannot be loaded.
+
 ## v1.0.8
 
 ### Prompt extraction

@@ -1,10 +1,11 @@
-import type { LoraReference, ModelCatalogRecord } from './types.js';
-import { applyAirIdentifier } from './metadata-merge.js';
+import type { ExtractedMetadata, LoraReference, ModelCatalogRecord } from './types.js';
+import { applyAirIdentifier, parseCivitaiAir } from './metadata-merge.js';
 import {
   findLoraByHash,
   findLoraByAlias,
   findLoraByVersionId,
   normalizeHash,
+  type CatalogKind,
   findMatchingSeedLorasInText,
   upsertLoraRecord,
   toResolvedLora,
@@ -221,7 +222,7 @@ function getCivitaiApiKey(): string | null {
 /**
  * Performs a live Civitai search and scores candidate models against query and target hash.
  */
-const USER_AGENT = 'PromptHound/1.0.8 (Metadata-Extractor)';
+const USER_AGENT = 'PromptHound/1.0.9 (Metadata-Extractor)';
 
 // Civitai lists LyCORIS as "LoCon" and DoRA separately from "LORA"; all load as LoRAs
 const LORA_MODEL_TYPES = ['LORA', 'LoCon', 'DoRA'];
@@ -328,6 +329,7 @@ function recordFromVersionData(
     name,
     versionName: typeof data.name === 'string' ? data.name : undefined,
     normalizedAlias: normalizedAlias || normalizeLoraName(name),
+    modelType: typeof data.model?.type === 'string' ? data.model.type : undefined,
     hashSha256: hash ? normalizeHash(hash) : undefined,
     coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
     coverImageUrl: coverImage?.url || undefined,
@@ -368,7 +370,7 @@ async function fetchVersionRecord(
  * Exact identifiers are checked before names so a similar-looking cached alias
  * can never override what the image itself states.
  */
-async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
+async function resolveSingleLora(input: LoraReference, kind: CatalogKind = 'lora'): Promise<LoraReference> {
   const lora = applyAirIdentifier(input);
   // Placeholder names ("Civitai model version 123") carry no searchable information
   const hasRealName = !CIVITAI_VERSION_PLACEHOLDER.test(lora.rawName);
@@ -427,7 +429,7 @@ async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
 
   // 3. Tier 1: cached alias
   if (normalizedAlias) {
-    const cachedByAlias = await findLoraByAlias(normalizedAlias);
+    const cachedByAlias = await findLoraByAlias(normalizedAlias, kind);
     // The bundled catalog holds the hash of every version of its models. When the image
     // gives a hash that none of them has, a same-name catalog model is a different file.
     const hashContradicts = Boolean(hash && hash.length >= 10) && cachedByAlias?.cachedAt === 0;
@@ -451,7 +453,9 @@ async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
       for (const q of uniqueQueries) {
         if (q.length < 2) continue;
         // by-hash was already queried in tier 2; the hash is still used to score file hashes
-        const res = await searchCivitaiCandidates(q, hash, 'LORA', { skipHashLookup: true });
+        const res = await searchCivitaiCandidates(q, hash, kind === 'checkpoint' ? 'Checkpoint' : 'LORA', {
+          skipHashLookup: true,
+        });
         if (res.length > 0) {
           candidates = res;
           break;
@@ -487,7 +491,9 @@ async function resolveSingleLora(input: LoraReference): Promise<LoraReference> {
           civitaiModelId: modelId,
           civitaiVersionId: versionId,
           name: model.name || lora.rawName,
+          versionName: matchedVersion?.name,
           normalizedAlias: normalizedAlias || normalizeLoraName(model.name),
+          modelType: (model as any).type,
           hashSha256: hashVerified ? hash : undefined,
           coverImageId: coverImage?.id ? String(coverImage.id) : undefined,
           coverImageUrl: coverImage?.url || undefined,
@@ -533,90 +539,21 @@ export async function resolveLoras(loras: LoraReference[]): Promise<LoraReferenc
 }
 
 /**
- * Resolves a base model checkpoint name or hash to its verified Civitai metadata
+ * Identifies the checkpoint (base model) the same way LoRAs are identified: hash,
+ * then Civitai version id (on-site images, AIR ids), then name.
  */
-export async function resolveModelCheckpoint(
-  rawModelName?: string,
-  modelHash?: string
-): Promise<{
-  name: string;
-  source?: 'civitai';
-  modelUrl?: string;
-  coverImageUrl?: string;
-  baseModel?: string;
-  versionName?: string;
-  civitaiModelId?: number;
-  civitaiVersionId?: number;
-} | null> {
-  if (!rawModelName && !modelHash) return null;
+export async function resolveBaseModel(
+  meta: Pick<ExtractedMetadata, 'model' | 'modelHash' | 'modelVersionId'>
+): Promise<NonNullable<LoraReference['resolved']> | undefined> {
+  const air = meta.model ? parseCivitaiAir(meta.model) : undefined;
+  const versionId = meta.modelVersionId ?? air?.versionId;
+  const name = meta.model && !air ? meta.model : versionId ? `Civitai model version ${versionId}` : '';
+  if (!name && !meta.modelHash) return undefined;
 
-  const normalized = rawModelName ? normalizeLoraName(rawModelName) : '';
-
-  // 1. Check local seed & cache
-  if (modelHash) {
-    const cachedByHash = await findLoraByHash(modelHash);
-    if (cachedByHash) {
-      return {
-        name: cachedByHash.name,
-        source: 'civitai',
-        modelUrl: cachedByHash.modelUrl,
-        coverImageUrl: cachedByHash.coverImageUrl,
-        baseModel: cachedByHash.baseModel,
-        civitaiModelId: cachedByHash.civitaiModelId,
-        civitaiVersionId: cachedByHash.civitaiVersionId,
-      };
-    }
-  }
-
-  if (normalized) {
-    const cachedByAlias = await findLoraByAlias(normalized);
-    if (cachedByAlias) {
-      return {
-        name: cachedByAlias.name,
-        source: 'civitai',
-        modelUrl: cachedByAlias.modelUrl,
-        coverImageUrl: cachedByAlias.coverImageUrl,
-        baseModel: cachedByAlias.baseModel,
-        civitaiModelId: cachedByAlias.civitaiModelId,
-        civitaiVersionId: cachedByAlias.civitaiVersionId,
-      };
-    }
-  }
-
-  // 2. Query Civitai Candidates (Checkpoint type)
-  try {
-    const candidates = await searchCivitaiCandidates(
-      normalized || rawModelName || '',
-      modelHash,
-      'Checkpoint'
-    );
-
-    const topMatch = candidates.find((c) => c.score >= 0.4);
-    if (topMatch) {
-      const model = topMatch.candidate;
-      const matchedVersion = topMatch.matchedVersionId
-        ? model.modelVersions?.find((v) => v.id === topMatch.matchedVersionId)
-        : model.modelVersions?.[0];
-
-      const modelId = Number(model.id);
-      const versionId = matchedVersion?.id ? Number(matchedVersion.id) : undefined;
-      const coverImage = matchedVersion?.images?.[0];
-      const isNsfw = Boolean(model.nsfw ?? (model.nsfwLevel && model.nsfwLevel > 1));
-
-      return {
-        name: model.name || rawModelName || '',
-        source: 'civitai',
-        modelUrl: buildCivitaiModelUrl(modelId, versionId, isNsfw),
-        coverImageUrl: coverImage?.url,
-        baseModel: matchedVersion?.baseModel,
-        versionName: matchedVersion?.name,
-        civitaiModelId: modelId,
-        civitaiVersionId: versionId,
-      };
-    }
-  } catch {
-    // ignore
-  }
-
-  return null;
+  const resolved = await resolveSingleLora(
+    // An empty name (hash only) skips the name tiers entirely
+    { rawName: name, hash: meta.modelHash, civitaiVersionId: versionId },
+    'checkpoint'
+  );
+  return resolved.resolved;
 }

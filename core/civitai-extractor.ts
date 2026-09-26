@@ -171,6 +171,7 @@ export async function readCivitaiLibraryMetadata(input: any): Promise<ExtractedM
     seed: seed !== undefined ? String(seed) : undefined,
     model: typeof model === 'string' ? model : undefined,
     modelHash: typeof modelHash === 'string' ? modelHash : undefined,
+    modelVersionId: typeof normalized?.model?.modelVersionId === 'number' ? normalized.model.modelVersionId : undefined,
     width: typeof width === 'number' ? width : undefined,
     height: typeof height === 'number' ? height : undefined,
     loras,

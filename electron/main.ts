@@ -115,6 +115,9 @@ function initLoraDatabase(): void {
     if (!columns.some((c) => c.name === 'versionName')) {
       db.exec('ALTER TABLE lora_cache ADD COLUMN versionName TEXT');
     }
+    if (!columns.some((c) => c.name === 'modelType')) {
+      db.exec('ALTER TABLE lora_cache ADD COLUMN modelType TEXT');
+    }
     db.exec('CREATE INDEX IF NOT EXISTS idx_lora_version ON lora_cache(civitaiVersionId)');
 
     syncSeedCatalog(db);
@@ -141,8 +144,8 @@ function syncSeedCatalog(db: any): void {
   const insert = db.prepare(`
     INSERT INTO lora_cache (
       hashSha256, civitaiModelId, civitaiVersionId, name, versionName, normalizedAlias,
-      coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, nsfw, cachedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, nsfw, modelType, cachedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
   `);
 
   try {
@@ -163,7 +166,8 @@ function syncSeedCatalog(db: any): void {
         entry.baseModel || null,
         entry.source || 'civitai',
         entry.modelUrl || null,
-        typeof entry.nsfw === 'boolean' ? (entry.nsfw ? 1 : 0) : null
+        typeof entry.nsfw === 'boolean' ? (entry.nsfw ? 1 : 0) : null,
+        entry.modelType || null
       );
     }
     db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('seed_catalog_signature', signature);
@@ -193,6 +197,7 @@ function rowToRecord(row: any): ModelCatalogRecord | null {
     coverImageUrl: row.coverImageUrl ?? undefined,
     triggerWords,
     baseModel: row.baseModel ?? undefined,
+    modelType: row.modelType ?? undefined,
     nsfw: row.nsfw === null || row.nsfw === undefined ? undefined : Boolean(row.nsfw),
     source: row.source === 'local' ? 'local' : 'civitai',
     modelUrl: row.modelUrl ?? '',
@@ -253,8 +258,8 @@ const sqliteLoraPersistence: LoraPersistence = {
       .prepare(`
         INSERT INTO lora_cache (
           hashSha256, civitaiModelId, civitaiVersionId, name, versionName, normalizedAlias,
-          coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt, nsfw
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          coverImageId, coverImageUrl, triggerWords, baseModel, source, modelUrl, cachedAt, nsfw, modelType
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
         hash,
@@ -270,7 +275,8 @@ const sqliteLoraPersistence: LoraPersistence = {
         record.source || 'civitai',
         record.modelUrl || null,
         record.cachedAt || Date.now(),
-        record.nsfw === undefined ? null : record.nsfw ? 1 : 0
+        record.nsfw === undefined ? null : record.nsfw ? 1 : 0,
+        record.modelType || null
       );
   },
   async remove(hashOrAlias) {

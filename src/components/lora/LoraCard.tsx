@@ -3,7 +3,7 @@ import type { LoraReference, LoraMatchMethod } from '../../../core/types.js';
 import { ExternalLinkIcon, CopyIcon, CheckIcon, LayersIcon, SearchIcon } from '../icons/Icons.js';
 import styles from './LoraCard.module.css';
 
-const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = {
+export const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = {
   hash: { label: 'Hash match', title: 'Identified by the file hash stored in the image metadata' },
   'civitai-version': { label: 'Civitai ID', title: 'The image names this exact Civitai model version' },
   'name-match': {
@@ -15,7 +15,7 @@ const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = 
 };
 
 // Name matches are guesses; tint them so they stand apart from exact identifications
-const NAME_MATCH_PILL_STYLE: React.CSSProperties = {
+export const NAME_MATCH_PILL_STYLE: React.CSSProperties = {
   background: 'rgba(245, 158, 11, 0.16)',
   borderColor: 'rgba(245, 158, 11, 0.4)',
   color: '#fcd34d',
@@ -29,6 +29,8 @@ interface LoraCardProps {
 
 export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect }) => {
   const [copiedTrigger, setCopiedTrigger] = useState<string | null>(null);
+  // Offline or a removed image: show the icon instead of broken-image alt text
+  const [failedCover, setFailedCover] = useState<string | null>(null);
 
   const strength = lora.strength ?? 1.0;
   const strengthPercent = Math.min(Math.max((strength / 1.5) * 100, 5), 100);
@@ -67,12 +69,13 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
       <div className={styles.mainRow}>
         {/* Thumbnail Preview */}
         <div className={styles.thumbWrapper}>
-          {coverImg ? (
+          {coverImg && coverImg !== failedCover ? (
             <img
               src={coverImg}
               alt={displayName}
               className={styles.thumbImg}
               loading="lazy"
+              onError={() => setFailedCover(coverImg)}
             />
           ) : (
             <div className={styles.thumbFallback}>

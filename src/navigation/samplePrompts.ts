@@ -27,6 +27,16 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
       cfgScale: 7,
       seed: '866389369',
       model: 'One obsession_Anima (v4.0)',
+      modelResolved: {
+        name: 'One obsession_Anima',
+        source: 'civitai',
+        modelUrl: 'https://civitai.com/models/2695493?modelVersionId=3301424',
+        coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/3144e0a7-a26b-4eef-93c1-2975285197f4/anim=false,width=256/141998270.jpeg',
+        baseModel: 'Anima',
+        nsfw: false,
+        versionName: 'v4.0',
+        matchedBy: 'civitai-version',
+      },
       width: 1216,
       height: 832,
       loras: [
@@ -38,8 +48,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: '【Anima】Landscape specialization lora',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/2625400?modelVersionId=2947634',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/e8e0a880-c719-419f-8dfa-245ea82b9b2f/original=true/130787319.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/e8e0a880-c719-419f-8dfa-245ea82b9b2f/anim=false,width=256/130787319.jpeg',
             baseModel: 'Anima',
             nsfw: false,
             versionName: 'v1.0',
@@ -54,8 +63,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: 'Anima Lighting Atmosphere Enhancer',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/2628200?modelVersionId=3082260',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/c2f927d2-884c-47e0-a6d1-35db44ee1b4c/original=true/135254753.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/c2f927d2-884c-47e0-a6d1-35db44ee1b4c/anim=false,width=256/135254753.jpeg',
             baseModel: 'Anima',
             nsfw: false,
             versionName: 'sliderv1',
@@ -100,6 +108,16 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
       cfgScale: 3.5,
       seed: '725812185',
       model: 'Wulver (Krea - 2) v0.1 Alpha (v0.1)',
+      modelResolved: {
+        name: 'Wulver (Krea - 2)',
+        source: 'civitai',
+        modelUrl: 'https://civitai.com/models/2881657?modelVersionId=3257037',
+        coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/5d95efc1-5a86-460a-9a47-ed8948e386c7/anim=false,width=256/141216422.jpeg',
+        baseModel: 'Krea 2',
+        nsfw: false,
+        versionName: 'v0.1',
+        matchedBy: 'civitai-version',
+      },
       width: 1376,
       height: 768,
       loras: [
@@ -111,8 +129,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: 'Cyberpunk Interior (Architecture) (Buildings) (Krea2) (AD)',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/2863043?modelVersionId=3234278',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/876483b3-7b13-42ea-8b9e-00176e33e19f/original=true/139943294.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/876483b3-7b13-42ea-8b9e-00176e33e19f/anim=false,width=256/139943294.jpeg',
             triggerWords: ['CyberpunkInterior'],
             baseModel: 'Krea 2',
             nsfw: false,
@@ -128,8 +145,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: 'Aesthetic Quality Modifiers - Masterpiece',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/929497?modelVersionId=3077110',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/b52ca5ee-60d0-4605-972e-1ec03a4b1fab/original=true/135097140.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/b52ca5ee-60d0-4605-972e-1ec03a4b1fab/anim=false,width=256/135097140.jpeg',
             triggerWords: ['masterpiece', 'very aesthetic'],
             baseModel: 'Krea 2',
             nsfw: false,
@@ -145,8 +161,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: 'YFG Aarchy [Flux | ZIT | Krea2]',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/1108935?modelVersionId=3098382',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a9e30873-0fd4-4620-8baa-2ba8e25820e7/original=true/135731005.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a9e30873-0fd4-4620-8baa-2ba8e25820e7/anim=false,width=256/135731005.jpeg',
             triggerWords: ['YFG-Aarchy'],
             baseModel: 'Krea 2',
             nsfw: false,
@@ -188,6 +203,16 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
       steps: 30,
       cfgScale: 7,
       model: 'Plant Milk 🌿 - Model Suite (Walnut)',
+      modelResolved: {
+        name: 'Plant Milk 🌿 - Model Suite',
+        source: 'civitai',
+        modelUrl: 'https://civitai.com/models/1162518?modelVersionId=1714002',
+        coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/20e1f277-0cb0-4745-a2dc-a71ad3749144/anim=false,width=256/76502870.jpeg',
+        baseModel: 'Illustrious',
+        nsfw: false,
+        versionName: 'Walnut',
+        matchedBy: 'manual',
+      },
       width: 1248,
       height: 1824,
       loras: [
@@ -199,8 +224,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: '[Illustrious XL] Chainsaw Man - The Movie: Reze Arc (劇場版 チェンソーマン レゼ篇) | Character Pack + Style',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/2384018?modelVersionId=2681478',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/652faf1f-a5f0-481d-aadd-9b0b1547ee23/original=true/120763768.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/652faf1f-a5f0-481d-aadd-9b0b1547ee23/anim=false,width=256/120763768.jpeg',
             triggerWords: [
               'chainsaw man movie style',
               'chainsaw man movie style, makima (chainsaw man), 1girl, red hair, long hair, alternate hairstyle, ringed eyes',
@@ -240,6 +264,16 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
       cfgScale: 7,
       seed: '1541505910',
       model: 'Hyphoria (v0.02)',
+      modelResolved: {
+        name: 'Hyphoria',
+        source: 'civitai',
+        modelUrl: 'https://civitai.com/models/1595884?modelVersionId=2862490',
+        coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/57818b9e-865a-449e-98ad-450e1474521d/anim=false,width=256/127747153.mp4',
+        baseModel: 'Illustrious',
+        nsfw: false,
+        versionName: 'v0.02',
+        matchedBy: 'civitai-version',
+      },
       width: 1024,
       height: 1024,
       loras: [
@@ -251,8 +285,7 @@ export const INITIAL_SAMPLE_PROMPTS: SavedPromptItem[] = [
             name: 'Watercolor/saturated | Illustrious Style Lora',
             source: 'civitai',
             modelUrl: 'https://civitai.com/models/1362657?modelVersionId=1714931',
-            coverImageUrl:
-              'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/4eaf3aff-1391-49b8-b957-07372601fab8/original=true/72630998.jpeg',
+            coverImageUrl: 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/4eaf3aff-1391-49b8-b957-07372601fab8/anim=false,width=256/72630998.jpeg',
             triggerWords: ['b3Jp, traditional media'],
             baseModel: 'Illustrious',
             nsfw: false,

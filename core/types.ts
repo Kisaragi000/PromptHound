@@ -15,6 +15,8 @@ export interface ModelCatalogRecord {
   coverImageUrl?: string;
   triggerWords: string[];
   baseModel?: string;
+  /** Civitai model type: LORA, LoCon, DoRA, Checkpoint, ... */
+  modelType?: string;
   nsfw?: boolean;
   source: 'civitai' | 'local';
   modelUrl: string;
@@ -62,6 +64,10 @@ export interface ExtractedMetadata {
   seed?: number | string;
   model?: string;
   modelHash?: string;
+  /** Civitai model-version id of the checkpoint, when the metadata names one */
+  modelVersionId?: number;
+  /** The checkpoint identified on Civitai / in the catalog, like a resolved LoRA */
+  modelResolved?: NonNullable<LoraReference['resolved']>;
   width?: number;
   height?: number;
   loras: LoraReference[];
