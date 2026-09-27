@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ExtractionResult, ExtractionError, ExtractedMetadata } from '../../core/types.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 
@@ -79,23 +79,43 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
     [clearRecipeView]
   );
 
-  const setActiveImageIndex = useCallback(
-    (index: number) => {
-      if (index < 0 || index >= sessionImages.length) return;
-      setActiveImageIndexState(index);
-      const target = sessionImages[index];
-      if (target) {
-        if (target.status === 'success' && target.result) {
-          setState({ status: 'success', result: target.result, error: null });
-        } else if (target.status === 'error' && target.error) {
-          setState({ status: 'error', result: null, error: target.error });
-        } else if (target.status === 'parsing' || target.status === 'pending') {
-          setState({ status: 'loading', result: null, error: null });
-        }
-      }
-    },
-    [sessionImages]
-  );
+  // The batch as last rendered and the id of the image on screen. Extractions finish
+  // asynchronously; each one updates the screen only if its image is still the active one.
+  const sessionRef = useRef<SessionImageItem[]>([]);
+  const activeIdRef = useRef<string | null>(null);
+
+  const commitSession = (items: SessionImageItem[]) => {
+    sessionRef.current = items;
+    setSessionImages(items);
+  };
+
+  const updateSessionItem = (id: string, updates: Partial<SessionImageItem>) => {
+    commitSession(sessionRef.current.map((it) => (it.id === id ? { ...it, ...updates } : it)));
+  };
+
+  const showItem = (item: SessionImageItem | undefined) => {
+    if (!item) {
+      setState({ status: 'idle', result: null, error: null });
+    } else if (item.status === 'success' && item.result) {
+      setState({ status: 'success', result: item.result, error: null });
+    } else if (item.status === 'error' && item.error) {
+      setState({ status: 'error', result: null, error: item.error });
+    } else {
+      setState({ status: 'loading', result: null, error: null });
+    }
+  };
+
+  const activate = (index: number) => {
+    const item = sessionRef.current[index];
+    activeIdRef.current = item?.id ?? null;
+    setActiveImageIndexState(Math.max(0, index));
+    showItem(item);
+  };
+
+  const setActiveImageIndex = useCallback((index: number) => {
+    if (index < 0 || index >= sessionRef.current.length) return;
+    activate(index);
+  }, []);
 
   const extractSingleBuffer = async (
     file: File,
@@ -118,137 +138,74 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
     }
   };
 
+  const toSessionItems = (files: File[]): SessionImageItem[] =>
+    files.map((file, idx) => ({
+      id: `img_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+      previewUrl: URL.createObjectURL(file),
+      label: file.name,
+      status: 'pending',
+      file,
+    }));
+
+  const runItem = async (item: SessionImageItem) => {
+    updateSessionItem(item.id, { status: 'parsing' });
+    const outcome = await extractSingleBuffer(item.file!, item.previewUrl);
+    const updates: Partial<SessionImageItem> = isError(outcome)
+      ? { status: 'error', error: outcome }
+      : { status: 'success', result: outcome };
+    updateSessionItem(item.id, updates);
+    if (activeIdRef.current === item.id) showItem({ ...item, ...updates });
+  };
+
+  const isImageFile = (f: File) =>
+    /\.(png|webp|jpg|jpeg|jfif|avif)$/i.test(f.name) || f.type.startsWith('image/');
+
   const extractMultipleFiles = useCallback(
     async (rawFiles: File[]) => {
-      const files = rawFiles
-        .filter((f) => /\.(png|webp|jpg|jpeg|jfif|avif)$/i.test(f.name) || f.type.startsWith('image/'))
-        .slice(0, 10);
-
+      const files = rawFiles.filter(isImageFile).slice(0, 10);
       if (files.length === 0) return;
       clearRecipeView();
 
-      const items: SessionImageItem[] = files.map((file, idx) => ({
-        id: `img_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
-        previewUrl: URL.createObjectURL(file),
-        label: file.name,
-        status: idx === 0 ? 'parsing' : 'pending',
-        file,
-      }));
-
-      setSessionImages(items);
-      setActiveImageIndexState(0);
-      setState({ status: 'loading', result: null, error: null });
-
-      // Process all files concurrently
-      items.forEach(async (item, idx) => {
-        setSessionImages((prev) =>
-          prev.map((it) => (it.id === item.id ? { ...it, status: 'parsing' } : it))
-        );
-
-        const outcome = await extractSingleBuffer(item.file!, item.previewUrl);
-
-        setSessionImages((prev) =>
-          prev.map((it) => {
-            if (it.id !== item.id) return it;
-            if (isError(outcome)) {
-              return { ...it, status: 'error', error: outcome };
-            }
-            return { ...it, status: 'success', result: outcome };
-          })
-        );
-
-        // If this is currently the active item, update the main state immediately
-        setActiveImageIndexState((currentActive) => {
-          if (currentActive === idx) {
-            if (isError(outcome)) {
-              setState({ status: 'error', result: null, error: outcome });
-            } else {
-              setState({ status: 'success', result: outcome, error: null });
-            }
-          }
-          return currentActive;
-        });
-      });
+      const items = toSessionItems(files);
+      commitSession(items);
+      activate(0);
+      await Promise.all(items.map(runItem));
     },
     [clearRecipeView]
   );
 
+  /**
+   * Adds images to the current batch and shows the first new one, so dropping a working
+   * image on top of a failed one shows its result instead of staying on the error.
+   */
   const addSessionImages = useCallback(
     async (rawFiles: File[]) => {
-      const newFiles = rawFiles.filter(
-        (f) => /\.(png|webp|jpg|jpeg|jfif|avif)$/i.test(f.name) || f.type.startsWith('image/')
-      );
-      if (newFiles.length === 0) return;
+      const available = 10 - sessionRef.current.length;
+      const files = rawFiles.filter(isImageFile).slice(0, Math.max(0, available));
+      if (files.length === 0) return;
       clearRecipeView();
 
-      setSessionImages((prev) => {
-        const availableSlots = 10 - prev.length;
-        if (availableSlots <= 0) return prev;
-        const filesToAdd = newFiles.slice(0, availableSlots);
-
-        const newItems: SessionImageItem[] = filesToAdd.map((file, idx) => ({
-          id: `img_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
-          previewUrl: URL.createObjectURL(file),
-          label: file.name,
-          status: 'pending',
-          file,
-        }));
-
-        // Fire extraction for new items
-        newItems.forEach(async (item) => {
-          setSessionImages((p) =>
-            p.map((it) => (it.id === item.id ? { ...it, status: 'parsing' } : it))
-          );
-          const outcome = await extractSingleBuffer(item.file!, item.previewUrl);
-          setSessionImages((p) =>
-            p.map((it) => {
-              if (it.id !== item.id) return it;
-              if (isError(outcome)) {
-                return { ...it, status: 'error', error: outcome };
-              }
-              return { ...it, status: 'success', result: outcome };
-            })
-          );
-        });
-
-        return [...prev, ...newItems];
-      });
+      const firstNewIndex = sessionRef.current.length;
+      const items = toSessionItems(files);
+      commitSession([...sessionRef.current, ...items]);
+      activate(firstNewIndex);
+      await Promise.all(items.map(runItem));
     },
     [clearRecipeView]
   );
 
-  const removeSessionImage = useCallback(
-    (id: string) => {
-      setSessionImages((prev) => {
-        const idxToRemove = prev.findIndex((it) => it.id === id);
-        if (idxToRemove === -1) return prev;
-        const nextList = prev.filter((it) => it.id !== id);
-
-        setActiveImageIndexState((currentActive) => {
-          let nextActive = currentActive;
-          if (nextActive >= nextList.length) {
-            nextActive = Math.max(0, nextList.length - 1);
-          }
-          const nextTarget = nextList[nextActive];
-          if (nextTarget) {
-            if (nextTarget.status === 'success' && nextTarget.result) {
-              setState({ status: 'success', result: nextTarget.result, error: null });
-            } else if (nextTarget.status === 'error' && nextTarget.error) {
-              setState({ status: 'error', result: null, error: nextTarget.error });
-            } else {
-              setState({ status: 'loading', result: null, error: null });
-            }
-          } else {
-            setState({ status: 'idle', result: null, error: null });
-          }
-          return nextActive;
-        });
-
-        return nextList;
-      });
-    },
-    []
-  );
+  const removeSessionImage = useCallback((id: string) => {
+    const current = sessionRef.current;
+    const removedIndex = current.findIndex((it) => it.id === id);
+    if (removedIndex === -1) return;
+    const next = current.filter((it) => it.id !== id);
+    commitSession(next);
+    if (activeIdRef.current === id) {
+      activate(Math.min(removedIndex, next.length - 1));
+    } else {
+      setActiveImageIndexState(Math.max(0, next.findIndex((it) => it.id === activeIdRef.current)));
+    }
+  }, []);
 
   const extractFromFilePath = useCallback(
     (filePath: string) => {
@@ -256,7 +213,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         return runExtraction(async () => {
           const res = await window.promptHound!.extraction.fromFilePath(filePath);
           if (!isError(res)) {
-            setSessionImages([
+            commitSession([
               {
                 id: `img_${Date.now()}`,
                 previewUrl: res.previewUrl || '',
@@ -265,6 +222,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
                 result: res,
               },
             ]);
+            activeIdRef.current = sessionRef.current[0]?.id ?? null;
             setActiveImageIndexState(0);
           }
           return res;
@@ -291,7 +249,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
       return runExtraction(async () => {
         const res = await window.promptHound!.extraction.fromClipboard();
         if (!isError(res)) {
-          setSessionImages([
+          commitSession([
             {
               id: `img_${Date.now()}`,
               previewUrl: res.previewUrl || '',
@@ -300,6 +258,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
               result: res,
             },
           ]);
+          activeIdRef.current = sessionRef.current[0]?.id ?? null;
           setActiveImageIndexState(0);
         }
         return res;
@@ -317,7 +276,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         return runExtraction(async () => {
           const res = await window.promptHound!.extraction.fromUrl(url);
           if (!isError(res)) {
-            setSessionImages([
+            commitSession([
               {
                 id: `img_${Date.now()}`,
                 previewUrl: res.previewUrl || url,
@@ -326,6 +285,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
                 result: res,
               },
             ]);
+            activeIdRef.current = sessionRef.current[0]?.id ?? null;
             setActiveImageIndexState(0);
           }
           return res;
@@ -337,7 +297,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
         const { extractFromUrl: coreExtractFromUrl } = await import('../../core/link-fetch.js');
         const res = await coreExtractFromUrl(url);
         if (!isError(res)) {
-          setSessionImages([
+          commitSession([
             {
               id: `img_${Date.now()}`,
               previewUrl: res.previewUrl || url,
@@ -346,6 +306,7 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
               result: res,
             },
           ]);
+          activeIdRef.current = sessionRef.current[0]?.id ?? null;
           setActiveImageIndexState(0);
         }
         return res;
@@ -356,7 +317,8 @@ export function ExtractionProvider({ children }: { children: ReactNode }): React
 
   const reset = useCallback(() => {
     setState({ status: 'idle', result: null, error: null });
-    setSessionImages([]);
+    commitSession([]);
+    activeIdRef.current = null;
     setActiveImageIndexState(0);
   }, []);
 

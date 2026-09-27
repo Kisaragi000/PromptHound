@@ -1,5 +1,11 @@
 import type { ExtractionResult, ExtractionError } from '../../core/types.js';
 
+export type UpdateStatus =
+  | { state: 'idle' | 'checking' | 'unsupported' }
+  | { state: 'available' | 'downloaded'; version: string }
+  | { state: 'downloading'; version?: string; percent: number }
+  | { state: 'error'; message: string };
+
 export interface PromptHoundAPI {
   appInfo: {
     name?: string;
@@ -14,12 +20,19 @@ export interface PromptHoundAPI {
     onMaximizedChange?: (callback: (isMaximized: boolean) => void) => () => void;
   };
   openExternal?: (url: string) => void;
+  updates?: {
+    getStatus: () => Promise<UpdateStatus>;
+    check: () => Promise<void>;
+    install: () => Promise<void>;
+    onStatus: (callback: (status: UpdateStatus) => void) => () => void;
+  };
   extraction: {
     fromFilePath: (filePath: string) => Promise<ExtractionResult | ExtractionError>;
     fromClipboard: () => Promise<ExtractionResult | ExtractionError>;
     fromUrl: (url: string) => Promise<ExtractionResult | ExtractionError>;
     getPathForFile: (file: File) => string;
     openFileDialog: () => Promise<string | null>;
+    readImageAsDataUrl?: (fileUrl: string) => Promise<string | null>;
   };
   loraDb?: {
     getAll?: () => Promise<any[]>;

@@ -48,9 +48,8 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "build")) { New-Item -ItemType Directory -Path "build" }
-          if (Test-Path "scripts/generate-installer-assets.mjs") {
-            node scripts/generate-installer-assets.mjs
-          }
+          # Installer artwork is committed (build/*.bmp); scripts/generate-installer-assets.mjs
+          # renders it on a dev machine
           if (!(Test-Path "build/icon.ico")) {
             if (Test-Path "public/favicon.ico") {
               Copy-Item "public/favicon.ico" "build/icon.ico"

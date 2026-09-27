@@ -49,6 +49,7 @@ const extraction = {
     }
   },
   openFileDialog: (): Promise<string | null> => ipcRenderer.invoke('dialog:open-image-file'),
+  readImageAsDataUrl: (fileUrl: string): Promise<string | null> => ipcRenderer.invoke('file:read-image-data-url', fileUrl),
 };
 
 const loraDb = {
@@ -80,6 +81,19 @@ const safetensors = {
   openFileDialog: (): Promise<string | null> => ipcRenderer.invoke('dialog:open-safetensors-file'),
 };
 
+const updates = {
+  getStatus: (): Promise<any> => ipcRenderer.invoke('update:get-status'),
+  check: (): Promise<void> => ipcRenderer.invoke('update:check'),
+  install: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  onStatus: (callback: (status: any) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: any): void => callback(status);
+    ipcRenderer.on('update:status', listener);
+    return () => {
+      ipcRenderer.removeListener('update:status', listener);
+    };
+  },
+};
+
 const promptHoundApi = {
   windowControls,
   appInfo,
@@ -88,6 +102,7 @@ const promptHoundApi = {
   settings,
   library,
   safetensors,
+  updates,
   openExternal: (url: string) => ipcRenderer.send('shell:openExternal', url),
 };
 

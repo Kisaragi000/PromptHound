@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.0.12
+
+### Updates and installer
+- Automatic updates: the installed app checks GitHub for a new version at start (and
+  every few hours), downloads it in the background and shows "Restart to update".
+  The update also installs by itself the next time the app is closed. Works from
+  1.0.12 on; install 1.0.12 once by hand. The portable build does not update itself.
+- Redesigned installer: new artwork, dark theme, welcome and finish pages. Running a
+  newer installer replaces the installed version in place; library and settings are kept.
+- Windows may still show a SmartScreen warning because the installer is not code-signed.
+
+### Fixed
+- Dropping a working image after one that failed kept showing the error; the new image
+  now opens, and the failed one stays in the image strip.
+- The saved image card showed black boxes instead of dropped images (and sometimes
+  model previews); all images are now embedded before the card is drawn.
+- Library items saved from dropped or pasted images lost their preview after a
+  restart; a small copy of the image is now stored with the item.
+- Favorites left an empty column on the right on wide windows.
+
+### Previews
+- The Prompt Library (grid, detail pane, table), Favorites and recent extractions use
+  one 4:3 frame and show the whole image instead of cropping it.
+
 ## v1.0.11
 
 ### Image card ("Save Image Card")
