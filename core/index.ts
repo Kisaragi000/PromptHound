@@ -9,3 +9,4 @@ export { resolveLoras } from './lora-resolution.js';
 export { extractFromImageBuffer, extractFromUrl, isDirectImageUrl } from './link-fetch.js';
 export { extractWithCivitaiPipeline } from './civitai-extractor.js';
 
+export { readContentCredentials } from './content-credentials.js';

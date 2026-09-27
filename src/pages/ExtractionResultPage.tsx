@@ -17,6 +17,7 @@ import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
 import { IconButton } from '../components/primitives/IconButton.js';
 import { EmptyStatePanel } from '../components/primitives/EmptyStatePanel.js';
 import { ExportCard } from '../components/ExportCard.js';
+import { ContentCredentialsPanel } from '../components/recipe/ContentCredentialsPanel.js';
 import { imageToDataUrl } from '../utils/images.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
@@ -126,6 +127,7 @@ export const ExtractionResultPage: React.FC = () => {
     extractMultipleFiles,
     addSessionImages,
     sessionImages,
+    activeImageIndex,
   } = useExtraction();
   const [activeTab, setActiveTab] = useState<'overview' | 'raw'>('overview');
   // Library item saved from this result; the button then shows it and opens it
@@ -313,6 +315,18 @@ export const ExtractionResultPage: React.FC = () => {
             <MultiImageSessionStrip />
           </div>
         )}
+        {error?.contentCredentials ? (
+          <ContentCredentialsPanel
+            credentials={error.contentCredentials}
+            previewUrl={sessionImages[activeImageIndex]?.previewUrl}
+            fileName={sessionImages[activeImageIndex]?.file?.name}
+            onSelectAnother={handleOpenImageClick}
+            onBackHome={() => {
+              reset();
+              navigate('home');
+            }}
+          />
+        ) : (
         <EmptyStatePanel
           icon={<LinkIcon size={28} />}
           title="Could Not Extract Metadata"
@@ -333,6 +347,7 @@ export const ExtractionResultPage: React.FC = () => {
             </div>
           }
         />
+        )}
       </div>
     );
   }

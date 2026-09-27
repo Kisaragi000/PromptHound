@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.14)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.15)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.14-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.14)
+[![Release](https://img.shields.io/badge/Release-v1.0.15-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.15)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.14](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.14)**
+📦 **[Download Latest Release v1.0.15](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.15)**
 
 ---
 
@@ -89,7 +89,11 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.14
+## 🆕 What's New in 1.0.15
+
+- **ChatGPT, Gemini and other AI services**: their images store no prompt, but they carry a Content Credentials (C2PA) or IPTC label. PromptHound now reads it and shows "Confirmed AI-generated image — Made with ChatGPT (OpenAI)" (or Google Gemini, Adobe Firefly, Microsoft, Meta…) with the model, date and signer, instead of "Could not extract metadata".
+
+### 1.0.14
 
 - **Prompt Library folders**: in Edit Library, click a folder to rename or delete it. Deleting asks first and keeps the prompts (they stay in All Prompts).
 - **Fixed**: "Launch PromptHound" on the installer's last page was invisible (black on dark).

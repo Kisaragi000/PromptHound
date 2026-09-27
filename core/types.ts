@@ -1,3 +1,4 @@
+import type { ContentCredentials } from './content-credentials.js';
 /**
  * PromptHound Normalized Extraction Contracts
  */
@@ -89,7 +90,14 @@ export interface ExtractionResult {
 export interface ExtractionError {
   code: 'no-metadata-found' | 'fetch-failed' | 'unsupported-format' | 'parse-error';
   message: string;
+  /**
+   * With no-metadata-found: the image's Content Credentials (C2PA / IPTC) label, e.g.
+   * "AI-generated, made with ChatGPT". Such services label images but store no prompt.
+   */
+  contentCredentials?: ContentCredentials;
 }
+
+export type { ContentCredentials };
 
 export function isExtractionError(
   result: ExtractionResult | ExtractionError
