@@ -243,6 +243,7 @@
 }
 
 .folderItem {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -859,4 +860,101 @@
 .toolbarSelect option {
   background: #141822;
   color: var(--color-text-primary);
+}
+
+/* Edit mode: rename / delete the selected folder */
+.folderEditBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(245, 154, 36, 0.05);
+  border: 1px solid rgba(245, 154, 36, 0.2);
+}
+
+.folderActions {
+  display: flex;
+  gap: 6px;
+}
+
+.folderActionBtn {
+  flex: 1;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.folderActionBtn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.folderActionBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.folderActionPrimary {
+  color: var(--color-amber-primary);
+  border-color: rgba(245, 154, 36, 0.4);
+}
+
+.folderActionDanger {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.folderActionDanger:hover {
+  color: #fecaca !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
+.folderRenameInput {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(245, 154, 36, 0.45);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.folderEditError {
+  font-size: 11px;
+  color: #f87171;
+  padding: 0 2px;
+}
+
+.modalText {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.modalDangerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  background: linear-gradient(180deg, #dc2626, #b91c1c);
+  color: #fff;
+  font-size: var(--font-size-button);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalDangerBtn:hover {
+  filter: brightness(1.08);
 }

@@ -36,6 +36,8 @@ export const PromptLibraryPage: React.FC = () => {
     saveToLibrary,
     updateLibraryItem,
     addFolder,
+    renameFolder,
+    deleteFolder,
     openRecipeInResult,
     libraryFocusId,
   } = useNavigation();
@@ -56,6 +58,10 @@ export const PromptLibraryPage: React.FC = () => {
   const [moveTarget, setMoveTarget] = useState('');
   const [moveNewFolderName, setMoveNewFolderName] = useState('');
   const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
+  // Edit mode: rename / delete the selected folder (not "All Prompts")
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   // View Layout mode: 'grid' or 'table'
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -159,6 +165,32 @@ export const PromptLibraryPage: React.FC = () => {
     setMoveNewFolderName('');
     setMoveFeedback(`Moved ${count} ${count === 1 ? 'item' : 'items'} to "${moveDestination}"`);
     setTimeout(() => setMoveFeedback(null), 2500);
+  };
+
+  const startRename = (folder: string) => {
+    setRenamingFolder(folder);
+    setRenameValue(folder);
+  };
+
+  const renameError =
+    renamingFolder && renameValue.trim() && renameValue.trim() !== renamingFolder && folders.includes(renameValue.trim())
+      ? 'A folder with this name already exists'
+      : null;
+
+  const commitRename = () => {
+    if (!renamingFolder || renameError) return;
+    const newName = renameValue.trim();
+    if (newName && renameFolder(renamingFolder, newName)) {
+      if (selectedFolder === renamingFolder) setSelectedFolder(newName);
+      setRenamingFolder(null);
+    }
+  };
+
+  const confirmDeleteFolder = () => {
+    if (!folderToDelete) return;
+    deleteFolder(folderToDelete);
+    if (selectedFolder === folderToDelete) setSelectedFolder('All Prompts');
+    setFolderToDelete(null);
   };
 
   const handleCreateFolder = (e: React.FormEvent) => {
@@ -293,9 +325,8 @@ export const PromptLibraryPage: React.FC = () => {
       {isEditMode && (
         <div className={styles.editModeToolbar}>
           <div className={styles.editModeToolbarLeft}>
-            <span className={styles.editModeBadge}>Edit Mode Active</span>
             <span className={styles.editModeHelp}>
-              {moveFeedback ?? 'Select items to move them to a folder or delete them.'}
+              {moveFeedback ?? 'Select items to move or delete them. Click a folder to rename or delete it.'}
             </span>
           </div>
           <div className={styles.editModeToolbarRight}>
@@ -359,19 +390,72 @@ export const PromptLibraryPage: React.FC = () => {
       <div className={styles.mainLayout}>
         {/* Column 1: Folder Sidebar */}
         <aside className={styles.folderRail}>
-          {folders.map((f) => (
-            <button
-              key={f}
-              className={`${styles.folderItem} ${selectedFolder === f ? styles.activeFolder : ''}`}
-              onClick={() => setSelectedFolder(f)}
-            >
-              <div className={styles.folderLeft}>
-                <FolderIcon size={16} />
-                <span>{f}</span>
+          {folders.map((f) => {
+            const editable = isEditMode && selectedFolder === f && f !== 'All Prompts';
+            if (editable && renamingFolder === f) {
+              return (
+                <div key={f} className={styles.folderEditBox}>
+                  <input
+                    className={styles.folderRenameInput}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename();
+                      if (e.key === 'Escape') setRenamingFolder(null);
+                    }}
+                    aria-label={`New name for ${f}`}
+                    autoFocus
+                  />
+                  {renameError && <span className={styles.folderEditError}>{renameError}</span>}
+                  <div className={styles.folderActions}>
+                    <button type="button" className={styles.folderActionBtn} onClick={() => setRenamingFolder(null)}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.folderActionBtn} ${styles.folderActionPrimary}`}
+                      disabled={!renameValue.trim() || Boolean(renameError)}
+                      onClick={commitRename}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={f} className={editable ? styles.folderEditBox : undefined}>
+                <button
+                  className={`${styles.folderItem} ${selectedFolder === f ? styles.activeFolder : ''}`}
+                  onClick={() => {
+                    setSelectedFolder(f);
+                    setRenamingFolder(null);
+                  }}
+                  title={isEditMode && f !== 'All Prompts' ? `Select ${f} to rename or delete it` : undefined}
+                >
+                  <div className={styles.folderLeft}>
+                    <FolderIcon size={16} />
+                    <span>{f}</span>
+                  </div>
+                  <span className={styles.folderCount}>{folderCounts[f] || 0}</span>
+                </button>
+                {editable && (
+                  <div className={styles.folderActions}>
+                    <button type="button" className={styles.folderActionBtn} onClick={() => startRename(f)}>
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.folderActionBtn} ${styles.folderActionDanger}`}
+                      onClick={() => setFolderToDelete(f)}
+                    >
+                      Delete folder
+                    </button>
+                  </div>
+                )}
               </div>
-              <span className={styles.folderCount}>{folderCounts[f] || 0}</span>
-            </button>
-          ))}
+            );
+          })}
         </aside>
 
         {/* Column 2: Prompt Card Grid OR Compact Table */}
@@ -599,7 +683,7 @@ export const PromptLibraryPage: React.FC = () => {
                   <div className={styles.cardBody}>
                     <div className={styles.cardTitle}>{item.title}</div>
                     <div className={styles.cardChipsRow}>
-                      <span className={styles.chip}>{item.folder}</span>
+                      {item.folder && <span className={styles.chip}>{item.folder}</span>}
                       <span className={styles.chip}>{item.source}</span>
                     </div>
                     <div className={styles.cardMetaRow}>
@@ -696,7 +780,7 @@ export const PromptLibraryPage: React.FC = () => {
               </div>
 
               <div className={styles.detailChips}>
-                <span className={styles.chip}>{activeItem.folder}</span>
+                {activeItem.folder && <span className={styles.chip}>{activeItem.folder}</span>}
                 <span className={styles.chip}>{activeItem.source}</span>
                 <span className={styles.chip}>{activeItem.model}</span>
               </div>
@@ -821,6 +905,36 @@ export const PromptLibraryPage: React.FC = () => {
       )}
 
       {/* New Folder Modal */}
+      {folderToDelete && (
+        <div className={styles.modalOverlay} onClick={() => setFolderToDelete(null)}>
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-labelledby="delete-folder-title"
+          >
+            <h3 id="delete-folder-title" className={styles.modalTitle}>
+              Delete folder "{folderToDelete}"?
+            </h3>
+            <p className={styles.modalText}>
+              {folderCounts[folderToDelete]
+                ? folderCounts[folderToDelete] === 1
+                  ? 'The saved prompt in it is not deleted; it stays in All Prompts.'
+                  : `The ${folderCounts[folderToDelete]} saved prompts in it are not deleted; they stay in All Prompts.`
+                : 'The folder is empty.'}
+            </p>
+            <div className={styles.modalActions}>
+              <SecondaryButton type="button" onClick={() => setFolderToDelete(null)} autoFocus>
+                Cancel
+              </SecondaryButton>
+              <button type="button" className={styles.modalDangerBtn} onClick={confirmDeleteFolder}>
+                <TrashIcon size={14} /> Delete folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isNewFolderOpen && (
         <div className={styles.modalOverlay} onClick={() => setIsNewFolderOpen(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>

@@ -26,7 +26,8 @@ function upgradeLegacySamples(items: SavedPromptItem[]): { items: SavedPromptIte
   return { items: [...INITIAL_SAMPLE_PROMPTS, ...kept], changed: true };
 }
 
-const INITIAL_FOLDERS = ['All Prompts', 'Portraits', 'Landscapes', 'Architecture', 'Illustrations', 'Anime', 'My Creations'];
+export const ALL_PROMPTS_FOLDER = 'All Prompts';
+const INITIAL_FOLDERS = [ALL_PROMPTS_FOLDER, 'Portraits', 'Landscapes', 'Architecture', 'Illustrations', 'Anime', 'My Creations'];
 
 interface NavigationContextType {
   currentRoute: RouteKey;
@@ -48,6 +49,10 @@ interface NavigationContextType {
   deleteFromLibrary: (id: string) => void;
   updateLibraryItem: (id: string, updates: Partial<SavedPromptItem>) => void;
   addFolder: (folderName: string) => void;
+  /** Renames a folder and moves its items along; false if the name is taken or invalid */
+  renameFolder: (oldName: string, newName: string) => boolean;
+  /** Removes a folder; its items are kept (they stay in All Prompts, unfiled) */
+  deleteFolder: (folderName: string) => void;
   toggleFavorite: (id: string) => void;
   openRecipeInResult: (item: SavedPromptItem) => void;
   /** Opens the Prompt Library with this item selected */
@@ -274,6 +279,35 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     setFolders((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
   };
 
+  /** Changes the folder of every item in `from`, persisting each changed item */
+  const reassignFolder = (from: string, to: string) => {
+    setLibraryItems((prev) =>
+      prev.map((item) => {
+        if (item.folder !== from) return item;
+        const updated = { ...item, folder: to };
+        window.promptHound?.library?.savePrompt?.(updated);
+        return updated;
+      })
+    );
+    setSelectedLibraryItem((prev) => (prev && prev.folder === from ? { ...prev, folder: to } : prev));
+  };
+
+  const renameFolder = (oldName: string, newName: string): boolean => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === ALL_PROMPTS_FOLDER || trimmed === ALL_PROMPTS_FOLDER) return false;
+    if (trimmed === oldName) return true;
+    if (folders.includes(trimmed)) return false;
+    setFolders((prev) => prev.map((f) => (f === oldName ? trimmed : f)));
+    reassignFolder(oldName, trimmed);
+    return true;
+  };
+
+  const deleteFolder = (folderName: string) => {
+    if (folderName === ALL_PROMPTS_FOLDER) return;
+    setFolders((prev) => prev.filter((f) => f !== folderName));
+    reassignFolder(folderName, '');
+  };
+
   const clearRecipeView = useCallback(() => {
     setSelectedLibraryItem(null);
     setActiveMetadata(null);
@@ -341,6 +375,8 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
         deleteFromLibrary,
         updateLibraryItem,
         addFolder,
+        renameFolder,
+        deleteFolder,
         toggleFavorite,
         openRecipeInResult,
         showInLibrary,

@@ -50,7 +50,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                 </div>
                 <div>
                   <h4 className={styles.itemTitle}>{itemA.title}</h4>
-                  <span className={styles.itemSub}>{itemA.folder} · {itemA.date}</span>
+                  <span className={styles.itemSub}>{itemA.folder || 'Unfiled'} · {itemA.date}</span>
                 </div>
               </div>
 
@@ -123,7 +123,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                 </div>
                 <div>
                   <h4 className={styles.itemTitle}>{itemB.title}</h4>
-                  <span className={styles.itemSub}>{itemB.folder} · {itemB.date}</span>
+                  <span className={styles.itemSub}>{itemB.folder || 'Unfiled'} · {itemB.date}</span>
                 </div>
               </div>
 
