@@ -9,6 +9,9 @@
 !define MUI_BGCOLOR "0B0E15"
 !define MUI_TEXTCOLOR "F2F3F5"
 !define MUI_BRANDINGTEXT "PromptHound ${VERSION}"
+; Windows' themed checkbox ignores the text color and drew "Launch PromptHound" in
+; black on the dark finish page; classic controls use MUI_TEXTCOLOR
+!define MUI_FORCECLASSICCONTROLS
 
 !macro customWelcomePage
   ; Updating over an existing install goes straight to installing

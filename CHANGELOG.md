@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.14
+
+### Prompt Library
+- Edit Library: click a folder to show Rename and Delete folder. Rename moves the
+  folder's prompts along; a name already in use is refused.
+- Delete folder asks for confirmation (with Cancel) and never deletes prompts: the
+  folder's prompts stay in All Prompts.
+- Removed the "Edit Mode Active" label from the edit toolbar.
+
+### Fixed
+- Installer: the "Launch PromptHound" checkbox text on the last page was drawn black
+  on the dark background and was unreadable.
+
 ## v1.0.13
 
 ### Save to Library

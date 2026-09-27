@@ -520,7 +520,7 @@ export const ExtractionResultPage: React.FC = () => {
           </div>
           <p className={styles.headerSubtitle}>
             {selectedLibraryItem
-              ? `${selectedLibraryItem.folder} · ${selectedLibraryItem.model} · Parameters & LoRAs`
+              ? `${selectedLibraryItem.folder || 'Unfiled'} · ${selectedLibraryItem.model} · Parameters & LoRAs`
               : 'Parameters and checkpoint models parsed from image metadata'}
           </p>
         </div>

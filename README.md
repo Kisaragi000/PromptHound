@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.13)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.14)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.13-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.13)
+[![Release](https://img.shields.io/badge/Release-v1.0.14-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.14)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.13](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.13)**
+📦 **[Download Latest Release v1.0.14](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.14)**
 
 ---
 
@@ -89,7 +89,12 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.13
+## 🆕 What's New in 1.0.14
+
+- **Prompt Library folders**: in Edit Library, click a folder to rename or delete it. Deleting asks first and keeps the prompts (they stay in All Prompts).
+- **Fixed**: "Launch PromptHound" on the installer's last page was invisible (black on dark).
+
+### 1.0.13
 
 - **Save to Library** turns green with a check once saved; clicking it again opens the saved item instead of saving a duplicate.
 - Saved items get a title from the first descriptive prompt tag instead of "score_9" or "masterpiece".
