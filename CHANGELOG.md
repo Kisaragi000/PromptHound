@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.15
+
+### AI labels (ChatGPT, Gemini and others)
+- Images from ChatGPT / OpenAI, Google Gemini, Adobe Firefly, Microsoft, Meta and other
+  services contain no prompt, but many carry a provenance label: C2PA Content
+  Credentials (PNG, JPEG, WebP) or an IPTC "AI-generated" source type in XMP.
+- When an image has no generation metadata but has such a label, the result page shows
+  "Confirmed AI-generated image" (or "AI-edited" for partly generated images), the
+  service, model, creation date, the app that wrote the label and the signer, and
+  explains that no prompt is available.
+- Images whose Content Credentials do not mark them as AI (e.g. camera photos) say so.
+- The label is read offline and shown as written; its signature is not verified.
+  Screenshots and most social media uploads remove it.
+
 ## v1.0.14
 
 ### Prompt Library

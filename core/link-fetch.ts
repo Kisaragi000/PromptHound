@@ -1,4 +1,5 @@
 import { readCivitaiLibraryMetadata, NO_METADATA_ERROR } from './civitai-extractor.js';
+import { readContentCredentials } from './content-credentials.js';
 import { readPngChunks, isPng } from './png.js';
 import { extractFromPngChunks } from './format-detect.js';
 import { isWebp, extractFromWebpBuffer } from './webp.js';
@@ -72,6 +73,17 @@ export async function extractFromImageBuffer(
   );
 
   if (!merged || !hasGenerationData(merged)) {
+    // No prompt, but the image may still say where it came from (ChatGPT, Gemini, ...)
+    const contentCredentials = readContentCredentials(uint8);
+    if (contentCredentials) {
+      return {
+        code: 'no-metadata-found',
+        message: contentCredentials.aiGenerated
+          ? 'This image is labeled as AI-generated, but it contains no prompt or generation settings.'
+          : 'This image has Content Credentials, but no AI generation metadata.',
+        contentCredentials,
+      };
+    }
     return libraryError ?? NO_METADATA_ERROR;
   }
 
