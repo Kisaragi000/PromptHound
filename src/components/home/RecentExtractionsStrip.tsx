@@ -41,10 +41,10 @@ export const RecentExtractionsStrip: React.FC<RecentExtractionsStripProps> = ({
             <div className={styles.cardInfo}>
               <div className={styles.cardTitle}>{item.title}</div>
               <div className={styles.cardSub}>
-                <span>{item.model || 'SDXL'}</span>
+                <span className={styles.modelName} title={item.model || undefined}>{item.model || 'Unknown model'}</span>
                 {item.metadata?.loras && item.metadata.loras.length > 0 && (
                   <span className={styles.loraBadge}>
-                    +{item.metadata.loras.length} LoRA
+                    +{item.metadata.loras.length} LoRA{item.metadata.loras.length === 1 ? '' : 's'}
                   </span>
                 )}
               </div>

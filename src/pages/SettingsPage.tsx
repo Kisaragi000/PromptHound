@@ -164,8 +164,8 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setCivitaiApiKey(e.target.value)}
             />
             {isKeyConfigured && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <StatusBadge label="Key configured (safeStorage encrypted)" status="success" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start' }}>
+                <StatusBadge label="Key saved (encrypted)" status="success" />
               </div>
             )}
           </div>
@@ -196,13 +196,13 @@ export const SettingsPage: React.FC = () => {
               }}
             >
               <option value="civitai.red" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                Civitai.red (Default - Full SFW & NSFW Catalog)
+                civitai.red (full catalog)
               </option>
               <option value="auto" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                Auto-Route (civitai.red for NSFW, civitai.com for SFW)
+                Automatic (by rating)
               </option>
               <option value="civitai.com" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                Civitai.com (Strict PG/SFW Domain)
+                civitai.com (SFW only)
               </option>
             </select>
           </div>

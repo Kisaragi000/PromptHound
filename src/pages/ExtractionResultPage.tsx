@@ -86,6 +86,21 @@ function LoraItemRow({ lora }: { lora: LoraReference }): React.ReactElement {
   );
 }
 
+// Quality / rating boilerplate that makes a poor title ("score_9", "masterpiece")
+const BOILERPLATE_TAG =
+  /^(score_\d+(_up)?|rating_\w+|source_\w+|masterpiece|best quality|(very |ultra |absurdly )?(high|good|amazing|best|normal|low|worst) quality|very aesthetic|aesthetic|(very )?awa|absurdres|highres|hires|ultra detailed|highly detailed|detailed|8k|4k|uhd|hdr|newest|photo|safe|sfw|nsfw|solo|\d+\+?(girl|boy|other)s?)$/i;
+
+/** A short title from the first descriptive prompt tag */
+function recipeTitle(prompt: string | undefined): string {
+  const tags = (prompt || '')
+    .replace(/<[^>]+>/g, ' ')
+    .split(/,|\n/)
+    .map((t) => t.replace(/[()[\]{}]/g, '').replace(/:\s*[\d.]+\s*$/, '').replace(/\\/g, '').trim())
+    .filter((t) => /\p{L}/u.test(t) && !BOILERPLATE_TAG.test(t));
+  const title = tags[0] || '';
+  return title.length > 40 ? `${title.slice(0, 38).trimEnd()}…` : title;
+}
+
 export const ExtractionResultPage: React.FC = () => {
   const {
     navigate,
@@ -98,6 +113,8 @@ export const ExtractionResultPage: React.FC = () => {
     selectedLibraryItem,
     setSelectedLibraryItem,
     saveToLibrary,
+    libraryItems,
+    showInLibrary,
   } = useNavigation();
   const {
     status,
@@ -111,7 +128,9 @@ export const ExtractionResultPage: React.FC = () => {
     sessionImages,
   } = useExtraction();
   const [activeTab, setActiveTab] = useState<'overview' | 'raw'>('overview');
-  const [isSaved, setIsSaved] = useState(false);
+  // Library item saved from this result; the button then shows it and opens it
+  const [savedItemId, setSavedItemId] = useState<string | null>(null);
+  const [savePulse, setSavePulse] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
@@ -146,6 +165,7 @@ export const ExtractionResultPage: React.FC = () => {
   // LoRA edits (re-link / unlink) belong to the image they were made on
   useEffect(() => {
     setCustomLoras(null);
+    setSavedItemId(null);
   }, [result, activeMetadata]);
 
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
@@ -360,14 +380,13 @@ export const ExtractionResultPage: React.FC = () => {
   }
 
   const handleSaveToLibrary = () => {
+    // Already saved: show it instead of saving a duplicate
+    if (savedItemId && libraryItems.some((i) => i.id === savedItemId)) {
+      showInLibrary(savedItemId);
+      return;
+    }
     // Generate clean descriptive title from prompt or model
-    const title =
-      metadata.prompt
-        ?.split(/,|\n/)[0]
-        ?.trim()
-        ?.slice(0, 36) ||
-      metadata.model ||
-      'AI Generation Recipe';
+    const title = recipeTitle(metadata.prompt) || metadata.model || 'AI Generation Recipe';
 
     const sourcePlatform: 'Civitai' | 'SeaArt' | 'Local File' | 'Clipboard' | 'Web' =
       sourceLabel.toLowerCase().includes('civitai')
@@ -383,7 +402,7 @@ export const ExtractionResultPage: React.FC = () => {
         ? `${metadata.width} × ${metadata.height}`
         : '1024 × 1024';
 
-    saveToLibrary({
+    const saved = saveToLibrary({
       title,
       folder: 'My Creations',
       source: sourcePlatform,
@@ -395,8 +414,9 @@ export const ExtractionResultPage: React.FC = () => {
       metadata: { ...metadata, loras: displayedLoras },
     });
 
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    setSavedItemId(saved.id);
+    setSavePulse(true);
+    setTimeout(() => setSavePulse(false), 700);
   };
 
   const handleCopyAll = async () => {
@@ -515,9 +535,19 @@ export const ExtractionResultPage: React.FC = () => {
           <SecondaryButton onClick={handleSaveImageCard} disabled={isExporting}>
             <ExportIcon size={16} /> {isExporting ? 'Saving…' : exportFeedback ?? 'Save Image Card'}
           </SecondaryButton>
-          <PrimaryButton onClick={handleSaveToLibrary}>
-            <BookmarkIcon size={16} /> {isSaved ? 'Saved to Library' : 'Save to Library'}
-          </PrimaryButton>
+          {savedItemId ? (
+            <PrimaryButton
+              onClick={handleSaveToLibrary}
+              className={`${styles.savedButton} ${savePulse ? styles.savedPulse : ''}`}
+              title="Saved to My Creations. Click to open it in the Prompt Library"
+            >
+              <CheckIcon size={16} /> Saved · View in Library
+            </PrimaryButton>
+          ) : (
+            <PrimaryButton onClick={handleSaveToLibrary}>
+              <BookmarkIcon size={16} /> Save to Library
+            </PrimaryButton>
+          )}
         </div>
       </div>
 

@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.12)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.13)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.12-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.12)
+[![Release](https://img.shields.io/badge/Release-v1.0.13-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.13)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.12](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.12)**
+📦 **[Download Latest Release v1.0.13](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.13)**
 
 ---
 
@@ -89,7 +89,13 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.12
+## 🆕 What's New in 1.0.13
+
+- **Save to Library** turns green with a check once saved; clicking it again opens the saved item instead of saving a duplicate.
+- Saved items get a title from the first descriptive prompt tag instead of "score_9" or "masterpiece".
+- **Fixed**: library previews shrank once the grid filled up; text overflowing in Recent Recipes, the Settings key badge and the platform list; button icons sitting above their labels.
+
+### 1.0.12
 
 - **Automatic updates**: new versions download in the background and replace the installed one when you restart (installer version; from 1.0.12 on).
 - **Redesigned installer** with a welcome and finish page; installing over an older version replaces it.

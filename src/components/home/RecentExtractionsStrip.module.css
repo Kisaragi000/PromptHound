@@ -10,6 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
   margin-bottom: 12px;
 }
 
@@ -109,6 +111,15 @@
   align-items: center;
   gap: 6px;
   margin-top: 2px;
+  min-width: 0;
+}
+
+.modelName {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .loraBadge {
@@ -118,4 +129,6 @@
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
