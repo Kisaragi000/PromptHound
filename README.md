@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.11)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.12)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.11-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.11)
+[![Release](https://img.shields.io/badge/Release-v1.0.12-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.12)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.11](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.11)**
+📦 **[Download Latest Release v1.0.12](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.12)**
 
 ---
 
@@ -89,7 +89,14 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.11
+## 🆕 What's New in 1.0.12
+
+- **Automatic updates**: new versions download in the background and replace the installed one when you restart (installer version; from 1.0.12 on).
+- **Redesigned installer** with a welcome and finish page; installing over an older version replaces it.
+- **Fixed**: the saved image card showed black boxes instead of dropped images; dropping a working image after a failed one kept showing the error; library items saved from dropped images lost their preview after a restart; empty space on the right of Favorites.
+- **Previews** in the Prompt Library and Favorites use one frame and show the whole image.
+
+### 1.0.11
 
 - **Image card**: "Save Image Card" now shows the base model and every LoRA with its preview image, version, base model and weight, laid out to suit wide and tall images.
 

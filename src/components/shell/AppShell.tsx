@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect } from 'react';
 import { TitleBar } from './TitleBar.js';
 import { Sidebar } from './Sidebar.js';
+import { UpdateBanner } from './UpdateBanner.js';
 import { useExtraction } from '../../extraction/ExtractionContext.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import styles from './AppShell.module.css';
@@ -109,6 +110,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           {children}
         </main>
       </div>
+      <UpdateBanner />
     </div>
   );
 };

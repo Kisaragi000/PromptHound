@@ -1,139 +1,167 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const buildDir = path.resolve(__dirname, '../build');
-
-if (!fs.existsSync(buildDir)) {
-  fs.mkdirSync(buildDir, { recursive: true });
-}
-
 /**
- * Generates an uncompressed 24-bit BMP buffer.
- * @param {number} width 
- * @param {number} height 
- * @param {(x: number, y: number) => [number, number, number]} pixelShader returns [r, g, b] (0-255)
+ * Renders the NSIS installer artwork (build/installerSidebar.bmp, build/installerHeader.bmp)
+ * from the app's hound logo. The BMPs are committed; re-run only when the artwork changes:
+ *
+ *   npm run build:installer-assets
+ *
+ * Needs Playwright with Chromium (dev machines only; CI uses the committed files).
+ * Colors match build/installer.nsh (MUI_BGCOLOR 0B0E15).
  */
-function createBmp(width, height, pixelShader) {
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const buildDir = path.join(root, 'build');
+fs.mkdirSync(buildDir, { recursive: true });
+
+// The hound mark, taken from the app's own icon so the installer always matches it
+const iconsSource = fs.readFileSync(path.join(root, 'src/components/icons/Icons.tsx'), 'utf8');
+const logoBlock = iconsSource.slice(iconsSource.indexOf('export const PromptHoundLogo'));
+const logoPaths = [...logoBlock.slice(0, logoBlock.indexOf('</svg>')).matchAll(/\sd="([^"]+)"/g)].map((m) => m[1]);
+if (logoPaths.length === 0) throw new Error('PromptHoundLogo paths not found in Icons.tsx');
+
+/** Uncompressed 24-bit BMP from RGBA pixels (top row first). */
+function encodeBmp(width, height, rgba) {
   const rowSize = Math.floor((24 * width + 31) / 32) * 4;
-  const imageSize = rowSize * height;
-  const fileSize = 54 + imageSize;
-
-  const buf = Buffer.alloc(fileSize);
-
-  // Bitmap File Header (14 bytes)
+  const buf = Buffer.alloc(54 + rowSize * height);
   buf.write('BM', 0);
-  buf.writeUInt32LE(fileSize, 2);
-  buf.writeUInt16LE(0, 6);
-  buf.writeUInt16LE(0, 8);
-  buf.writeUInt32LE(54, 10); // offset to image data
-
-  // DIB Header / BITMAPINFOHEADER (40 bytes)
-  buf.writeUInt32LE(40, 14); // header size
+  buf.writeUInt32LE(buf.length, 2);
+  buf.writeUInt32LE(54, 10);
+  buf.writeUInt32LE(40, 14);
   buf.writeInt32LE(width, 18);
-  buf.writeInt32LE(height, 22); // bottom-to-top
-  buf.writeUInt16LE(1, 26); // color planes
-  buf.writeUInt16LE(24, 28); // 24-bit RGB
-  buf.writeUInt32LE(0, 30); // compression BI_RGB
-  buf.writeUInt32LE(imageSize, 34);
-  buf.writeInt32LE(2835, 38); // 72 DPI (2835 ppm)
+  buf.writeInt32LE(height, 22);
+  buf.writeUInt16LE(1, 26);
+  buf.writeUInt16LE(24, 28);
+  buf.writeUInt32LE(rowSize * height, 34);
+  buf.writeInt32LE(2835, 38);
   buf.writeInt32LE(2835, 42);
-  buf.writeUInt32LE(0, 46);
-  buf.writeUInt32LE(0, 50);
-
-  // Pixels (from bottom row y = 0 to top row y = height - 1)
-  let offset = 54;
   for (let y = 0; y < height; y++) {
-    // In standard BMP bottom-to-top, y=0 is visual bottom, so visual Y is:
-    const visualY = (height - 1) - y;
+    const src = (height - 1 - y) * width * 4; // BMP rows run bottom to top
+    let offset = 54 + y * rowSize;
     for (let x = 0; x < width; x++) {
-      const [r, g, b] = pixelShader(x, visualY);
-      buf.writeUInt8(b, offset);
-      buf.writeUInt8(g, offset + 1);
-      buf.writeUInt8(r, offset + 2);
-      offset += 3;
-    }
-    // Padding
-    const padding = rowSize - (width * 3);
-    for (let p = 0; p < padding; p++) {
-      buf.writeUInt8(0, offset);
-      offset++;
+      const i = src + x * 4;
+      buf[offset++] = rgba[i + 2];
+      buf[offset++] = rgba[i + 1];
+      buf[offset++] = rgba[i];
     }
   }
-
   return buf;
 }
 
-// 1. Sidebar BMP (164x314) - Smoked Blue-Black with Orange Accents
-const sidebarBmp = createBmp(164, 314, (x, y) => {
-  // Background gradient from #0B0E15 (top) to #141822 (bottom)
-  const t = y / 314;
-  let r = Math.round(11 + t * 9);
-  let g = Math.round(14 + t * 10);
-  let b = Math.round(21 + t * 13);
+// Drawn in the page so text uses the app font (Inter)
+function draw({ kind, width, height, logoPaths }) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const AMBER = '#F59A24';
+  const logo = (x, y, size, color) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size / 256, size / 256);
+    ctx.fillStyle = color;
+    for (const d of logoPaths) ctx.fill(new Path2D(d));
+    ctx.restore();
+  };
+  const glow = (x, y, r, color) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, width, height);
+  };
 
-  // Soft atmospheric radial light at (82, 100)
-  const dx = x - 82;
-  const dy = y - 100;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist < 70) {
-    const factor = (1 - dist / 70) * 0.45;
-    r = Math.min(255, Math.round(r + 26 * factor));
-    g = Math.min(255, Math.round(g + 38 * factor));
-    b = Math.min(255, Math.round(b + 58 * factor));
+  if (kind === 'sidebar') {
+    const bg = ctx.createLinearGradient(0, 0, width * 0.4, height);
+    bg.addColorStop(0, '#141A28');
+    bg.addColorStop(0.55, '#0E121B');
+    bg.addColorStop(1, '#0B0E15');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+    glow(82, 108, 95, 'rgba(111,143,184,0.20)');
+    glow(82, 118, 60, 'rgba(245,154,36,0.16)');
+
+    // Fine dot grid, fading downward
+    for (let y = 10; y < height; y += 12) {
+      for (let x = 10; x < width; x += 12) {
+        ctx.fillStyle = `rgba(160,175,200,${0.07 * (1 - y / height)})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    logo(22, 42, 120, AMBER);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#F2F3F5';
+    ctx.font = '800 19px Inter';
+    ctx.fillText('PromptHound', 82, 196);
+
+    ctx.fillStyle = AMBER;
+    ctx.fillRect(66, 207, 32, 2);
+
+    ctx.fillStyle = '#8F9DB2';
+    ctx.font = '500 10.5px Inter';
+    ctx.fillText('Prompts, models and LoRAs', 82, 228);
+    ctx.fillText('from any AI image', 82, 243);
+
+    ctx.fillStyle = '#687386';
+    ctx.font = '600 8.5px Inter';
+    ctx.fillText('A1111 · FORGE · COMFYUI · CIVITAI', 82, 296);
+
+    // Right edge highlight against the page
+    ctx.fillStyle = 'rgba(245,154,36,0.35)';
+    ctx.fillRect(width - 1, 0, 1, height);
+  } else {
+    ctx.fillStyle = '#0B0E15';
+    ctx.fillRect(0, 0, width, height);
+    glow(120, 28, 48, 'rgba(245,154,36,0.14)');
+    logo(96, 1, 54, AMBER);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#F2F3F5';
+    ctx.font = '800 12px Inter';
+    ctx.fillText('Prompt', 96, 26);
+    ctx.fillStyle = AMBER;
+    ctx.fillText('Hound', 96, 40);
   }
+  return Array.from(ctx.getImageData(0, 0, width, height).data);
+}
 
-  // Hound orange glowing badge motif around (82, 90)
-  const odx = x - 82;
-  const ody = y - 90;
-  const odist = Math.sqrt(odx * odx + ody * ody);
-  if (odist < 22) {
-    const ofactor = (1 - odist / 22);
-    r = Math.min(255, Math.round(r + (245 - r) * ofactor));
-    g = Math.min(255, Math.round(g + (154 - g) * ofactor));
-    b = Math.min(255, Math.round(b + (36 - b) * ofactor));
-  } else if (odist < 38) {
-    const glow = (1 - (odist - 22) / 16) * 0.35;
-    r = Math.min(255, Math.round(r + 245 * glow));
-    g = Math.min(255, Math.round(g + 154 * glow));
-    b = Math.min(255, Math.round(b + 36 * glow));
+const require = createRequire(import.meta.url);
+let chromium;
+try {
+  ({ chromium } = require('playwright'));
+} catch {
+  ({ chromium } = require('/opt/node22/lib/node_modules/playwright'));
+}
+const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+const browser = await chromium.launch({ executablePath });
+try {
+  const page = await browser.newPage();
+  // Fetch Inter in Node (which honors the proxy settings) and hand it to the page inline
+  const cssResponse = await fetch('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800&display=block', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36' },
+  });
+  let css = await cssResponse.text();
+  for (const url of new Set(css.match(/https:\/\/fonts\.gstatic\.com\/[^)]+/g) ?? [])) {
+    const font = Buffer.from(await (await fetch(url)).arrayBuffer()).toString('base64');
+    css = css.split(url).join(`data:font/woff2;base64,${font}`);
   }
-
-  // Refined vertical glass border highlight on right edge (x = 163)
-  if (x === 163) {
-    r = Math.min(255, r + 40);
-    g = Math.min(255, g + 45);
-    b = Math.min(255, b + 55);
+  await page.setContent(`<style>${css}</style>`);
+  const loaded = await page.evaluate(async () => {
+    await Promise.all(['500', '600', '800'].map((w) => document.fonts.load(`${w} 12px Inter`)));
+    return document.fonts.check('800 12px Inter');
+  });
+  if (!loaded) throw new Error('Inter did not load');
+  for (const [kind, file, width, height] of [
+    ['sidebar', 'installerSidebar.bmp', 164, 314],
+    ['header', 'installerHeader.bmp', 150, 57],
+  ]) {
+    const rgba = await page.evaluate(draw, { kind, width, height, logoPaths });
+    fs.writeFileSync(path.join(buildDir, file), encodeBmp(width, height, rgba));
+    console.log(`Generated build/${file} (${width}x${height})`);
   }
-
-  return [r, g, b];
-});
-
-fs.writeFileSync(path.join(buildDir, 'installerSidebar.bmp'), sidebarBmp);
-console.log('Generated build/installerSidebar.bmp (164x314)');
-
-// 2. Header BMP (150x57) - Dark smoked glass header
-const headerBmp = createBmp(150, 57, (x, y) => {
-  const t = x / 150;
-  let r = Math.round(11 + t * 9);
-  let g = Math.round(14 + t * 10);
-  let b = Math.round(21 + t * 13);
-
-  // Soft subtle orange glow on right edge
-  const dx = x - 130;
-  const dy = y - 28;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist < 20) {
-    const glow = (1 - dist / 20) * 0.3;
-    r = Math.min(255, Math.round(r + 245 * glow));
-    g = Math.min(255, Math.round(g + 154 * glow));
-    b = Math.min(255, Math.round(b + 36 * glow));
-  }
-
-  return [r, g, b];
-});
-
-fs.writeFileSync(path.join(buildDir, 'installerHeader.bmp'), headerBmp);
-console.log('Generated build/installerHeader.bmp (150x57)');
+} finally {
+  await browser.close();
+}

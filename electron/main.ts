@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import {
   extractFromImageBuffer,
   extractFromUrl,
@@ -22,6 +22,7 @@ import { setRuntimeCivitaiApiKey } from '../core/lora-resolution.js';
 import type { ModelCatalogRecord } from '../core/types.js';
 import seedCatalog from '../core/data/lora-seed.json';
 import { createHash } from 'node:crypto';
+import { autoUpdater } from 'electron-updater';
 
 let loraDbInstance: any = null;
 
@@ -638,6 +639,25 @@ function registerExtractionHandlers(): void {
     }
   );
 
+  // Lets the renderer embed local images (exports, library thumbnails). Image files only.
+  ipcMain.handle('file:read-image-data-url', async (_event, fileUrl: string): Promise<string | null> => {
+    try {
+      const filePath = fileURLToPath(fileUrl);
+      const ext = path.extname(filePath).toLowerCase();
+      const mime: Record<string, string> = {
+        '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.jfif': 'image/jpeg',
+        '.webp': 'image/webp', '.avif': 'image/avif', '.gif': 'image/gif',
+      };
+      if (!mime[ext]) return null;
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile() || stat.size > 60 * 1024 * 1024) return null;
+      const data = await fs.readFile(filePath);
+      return `data:${mime[ext]};base64,${data.toString('base64')}`;
+    } catch {
+      return null;
+    }
+  });
+
   ipcMain.handle('dialog:open-image-file', async (): Promise<string | null> => {
     if (!mainWindow) return null;
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -650,6 +670,70 @@ function registerExtractionHandlers(): void {
   });
 }
 
+/**
+ * Automatic updates from GitHub Releases (latest.yml). The new version downloads in the
+ * background and replaces the installed one when the app quits, or at once when the
+ * user clicks "Restart to update". The portable build cannot update itself.
+ */
+type UpdateStatus =
+  | { state: 'idle' | 'checking' | 'unsupported' }
+  | { state: 'available' | 'downloaded'; version: string }
+  | { state: 'downloading'; version?: string; percent: number }
+  | { state: 'error'; message: string };
+
+let updateStatus: UpdateStatus = { state: 'idle' };
+let availableVersion: string | undefined;
+
+function sendUpdateStatus(status: UpdateStatus): void {
+  updateStatus = status;
+  mainWindow?.webContents.send('update:status', status);
+}
+
+function canAutoUpdate(): boolean {
+  return app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR;
+}
+
+function registerUpdateHandlers(): void {
+  ipcMain.handle('update:get-status', () => updateStatus);
+  ipcMain.handle('update:check', async () => {
+    if (!canAutoUpdate()) return sendUpdateStatus({ state: 'unsupported' });
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (err) {
+      sendUpdateStatus({ state: 'error', message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  ipcMain.handle('update:install', () => {
+    if (updateStatus.state !== 'downloaded') return;
+    // Silent reinstall into the same folder, then start the new version
+    setImmediate(() => autoUpdater.quitAndInstall(true, true));
+  });
+
+  if (!canAutoUpdate()) {
+    updateStatus = { state: 'unsupported' };
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
+  autoUpdater.on('update-available', (info) => {
+    availableVersion = info.version;
+    sendUpdateStatus({ state: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', () => sendUpdateStatus({ state: 'idle' }));
+  autoUpdater.on('download-progress', (progress) =>
+    sendUpdateStatus({ state: 'downloading', version: availableVersion, percent: Math.round(progress.percent) })
+  );
+  autoUpdater.on('update-downloaded', (info) => sendUpdateStatus({ state: 'downloaded', version: info.version }));
+  autoUpdater.on('error', (err) => sendUpdateStatus({ state: 'error', message: err?.message ?? String(err) }));
+
+  // Check shortly after start, then every 6 hours while the app stays open
+  const check = () => autoUpdater.checkForUpdates().catch(() => undefined);
+  setTimeout(check, 5000);
+  setInterval(check, 6 * 60 * 60 * 1000);
+}
+
 app.whenReady().then(() => {
   initLoraDatabase();
   configureLoraPersistence(loraDbInstance ? sqliteLoraPersistence : null);
@@ -660,6 +744,7 @@ app.whenReady().then(() => {
   registerSafetensorsHandlers();
   registerWindowControlHandlers();
   registerExtractionHandlers();
+  registerUpdateHandlers();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

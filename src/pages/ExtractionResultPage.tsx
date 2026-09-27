@@ -17,6 +17,7 @@ import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
 import { IconButton } from '../components/primitives/IconButton.js';
 import { EmptyStatePanel } from '../components/primitives/EmptyStatePanel.js';
 import { ExportCard } from '../components/ExportCard.js';
+import { imageToDataUrl } from '../utils/images.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
@@ -209,12 +210,33 @@ export const ExtractionResultPage: React.FC = () => {
     if (!exportCardRef.current || isExporting) return;
     try {
       setIsExporting(true);
-      const dataUrl = await toPng(exportCardRef.current, {
-        pixelRatio: 2,
-        cacheBust: true,
-        // A preview that cannot be fetched (offline) must not abort the export
-        imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
-      });
+      // Embed every image first: html-to-image cannot re-fetch blob: previews of dropped
+      // files (they rendered as black boxes), and its cache-busting query breaks them too.
+      const node = exportCardRef.current;
+      const images = Array.from(node.querySelectorAll('img'));
+      const originals = images.map((img) => img.getAttribute('src'));
+      await Promise.all(
+        images.map(async (img, i) => {
+          const embedded = await imageToDataUrl(originals[i]);
+          if (!embedded) return;
+          img.src = embedded;
+          await img.decode().catch(() => undefined);
+        })
+      );
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(node, {
+          pixelRatio: 2,
+          cacheBust: false,
+          // A preview that cannot be read (offline) must not abort the export
+          imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+        });
+      } finally {
+        images.forEach((img, i) => {
+          const original = originals[i];
+          if (original && img.getAttribute('src') !== original) img.src = original;
+        });
+      }
       const link = document.createElement('a');
       const baseFilename = metadata?.model
         ? `PromptHound-${metadata.model.replace(/[^a-z0-9]/gi, '_')}-Card.png`
@@ -265,6 +287,12 @@ export const ExtractionResultPage: React.FC = () => {
         >
           <ChevronLeftIcon size={16} /> Back to Home
         </button>
+        {/* Other images in this batch stay reachable from the error screen */}
+        {sessionImages.length > 1 && (
+          <div style={{ maxWidth: '380px' }}>
+            <MultiImageSessionStrip />
+          </div>
+        )}
         <EmptyStatePanel
           icon={<LinkIcon size={28} />}
           title="Could Not Extract Metadata"

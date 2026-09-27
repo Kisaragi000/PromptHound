@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ExtractedMetadata, ExtractionResult, SavedPromptItem } from '../../core/types.js';
 import { INITIAL_SAMPLE_PROMPTS, isLegacyPlaceholderSample } from './samplePrompts.js';
+import { isSessionOnlyUrl, makeThumbnail } from '../utils/images.js';
 
 export type RouteKey =
   | 'home'
@@ -217,6 +218,21 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
     if (window.promptHound?.library?.savePrompt) {
       window.promptHound.library.savePrompt(newItem);
+    }
+
+    // Previews of dropped files are blob: URLs that die with the session; store a small
+    // embedded copy instead (kept small: the library lives in localStorage)
+    if (isSessionOnlyUrl(newItem.thumbnailUrl)) {
+      void makeThumbnail(newItem.thumbnailUrl, 384).then((thumbnailUrl) => {
+        if (!thumbnailUrl) return;
+        setLibraryItems((prev) => {
+          const next = prev.map((item) => (item.id === id && item.thumbnailUrl === newItem.thumbnailUrl ? { ...item, thumbnailUrl } : item));
+          const updated = next.find((item) => item.id === id);
+          if (updated && window.promptHound?.library?.savePrompt) window.promptHound.library.savePrompt(updated);
+          return next;
+        });
+        setSelectedLibraryItem((prev) => (prev?.id === id ? { ...prev, thumbnailUrl } : prev));
+      });
     }
 
     return newItem;

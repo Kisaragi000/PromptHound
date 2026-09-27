@@ -35,7 +35,7 @@ export const FavoritesPage: React.FC = () => {
 
   if (favoriteItems.length === 0) {
     return (
-      <div className={styles.page}>
+      <div className={styles.page} style={{ maxWidth: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h1 className={styles.headerTitle}>Favorite Prompts</h1>
@@ -61,7 +61,7 @@ export const FavoritesPage: React.FC = () => {
   }
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} style={{ maxWidth: 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className={styles.headerTitle}>Favorite Prompts</h1>
@@ -74,7 +74,17 @@ export const FavoritesPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-      <div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          // auto-fit: a few favorites widen to fill the row instead of leaving empty columns
+          maxWidth: `${Math.max(favoriteItems.length, 2) * 400}px`,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '16px',
+        }}
+      >
         {favoriteItems.map((fav) => (
           <GlassCard
             key={fav.id}
@@ -92,12 +102,12 @@ export const FavoritesPage: React.FC = () => {
             onDoubleClick={() => openRecipeInResult(fav)}
             title={selectedId === fav.id ? `Click again to open ${fav.title}` : `Click to preview ${fav.title}`}
           >
-            <div style={{ width: '100%', height: '170px', borderRadius: 'var(--radius-control)', overflow: 'hidden', background: 'rgba(0,0,0,0.3)' }}>
+            <div style={{ width: '100%', aspectRatio: '4 / 3', borderRadius: 'var(--radius-control)', overflow: 'hidden', background: '#05080a' }}>
               {fav.thumbnailUrl ? (
                 <img
                   src={fav.thumbnailUrl}
                   alt={fav.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>
@@ -217,12 +227,12 @@ const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }
       <div
         onClick={onOpen}
         title="Open full result"
-        style={{ borderRadius: 'var(--radius-control)', overflow: 'hidden', background: 'rgba(0,0,0,0.3)', cursor: 'pointer' }}
+        style={{ width: '100%', aspectRatio: '4 / 3', flexShrink: 0, borderRadius: 'var(--radius-control)', overflow: 'hidden', background: '#05080a', cursor: 'pointer' }}
       >
         {fav.thumbnailUrl ? (
-          <img src={fav.thumbnailUrl} alt={fav.title} style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', display: 'block' }} />
+          <img src={fav.thumbnailUrl} alt={fav.title} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
-          <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
             No Preview
           </div>
         )}
