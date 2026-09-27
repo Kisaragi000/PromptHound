@@ -502,3 +502,20 @@
   color: var(--color-text-secondary);
   font-size: var(--font-size-body);
 }
+
+/* "Save to Library" after saving: stays green for this result, opens the saved item */
+.savedButton {
+  background: linear-gradient(180deg, #16a36f, #0f7f56) !important;
+  border-color: rgba(52, 211, 153, 0.55) !important;
+  color: #f2fff9 !important;
+}
+
+.savedPulse {
+  animation: savedPulse 0.7s ease-out;
+}
+
+@keyframes savedPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  35% { transform: scale(1.05); }
+  100% { transform: scale(1); box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
+}

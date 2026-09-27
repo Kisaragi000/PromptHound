@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.13
+
+### Save to Library
+- After saving, the button turns green with a check ("Saved · View in Library") and
+  stays that way for this image; clicking it again opens the item in the Prompt
+  Library instead of saving a duplicate.
+- Saved items are titled from the first descriptive prompt tag, skipping quality and
+  rating tags such as "score_9", "masterpiece" or "very awa".
+
+### Fixed
+- Prompt Library previews shrank to a thin strip once the grid had more rows than fit
+  the window; every card keeps the same 4:3 frame.
+- Recent Recipes: long model names pushed the LoRA badge out of its card; names are
+  now shortened with "…" and the badge stays on one line.
+- Settings: the "Key saved (encrypted)" badge and the Civitai platform list no longer
+  overflow their boxes.
+- Button icons sat above their labels instead of beside them.
+
 ## v1.0.12
 
 ### Updates and installer

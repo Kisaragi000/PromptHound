@@ -283,6 +283,8 @@
 .gridArea {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* Rows take their content height; otherwise a full grid squeezes the previews */
+  grid-auto-rows: max-content;
   gap: 16px;
   align-content: start;
   overflow-y: auto;
@@ -315,6 +317,7 @@
 .cardThumbWrap {
   width: 100%;
   aspect-ratio: 4 / 3;
+  flex-shrink: 0;
   position: relative;
   background: #05080a;
   overflow: hidden;

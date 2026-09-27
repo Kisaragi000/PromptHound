@@ -50,6 +50,10 @@ interface NavigationContextType {
   addFolder: (folderName: string) => void;
   toggleFavorite: (id: string) => void;
   openRecipeInResult: (item: SavedPromptItem) => void;
+  /** Opens the Prompt Library with this item selected */
+  showInLibrary: (id: string) => void;
+  /** Item the Prompt Library selects when it opens (set by showInLibrary) */
+  libraryFocusId: string | null;
   /** Leaves any library / batch recipe view so the next extraction result is shown */
   clearRecipeView: () => void;
 }
@@ -62,6 +66,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
   const [activeMetadata, setActiveMetadata] = useState<ExtractedMetadata | null>(null);
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
   const [selectedLibraryItem, setSelectedLibraryItem] = useState<SavedPromptItem | null>(null);
+  const [libraryFocusId, setLibraryFocusId] = useState<string | null>(null);
 
   // Persistent library items state
   const [libraryItems, setLibraryItems] = useState<SavedPromptItem[]>(() => {
@@ -311,6 +316,11 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     setCurrentRoute('result');
   };
 
+  const showInLibrary = (id: string) => {
+    setLibraryFocusId(id);
+    navigate('library');
+  };
+
   return (
     <NavigationContext.Provider
       value={{
@@ -333,6 +343,8 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
         addFolder,
         toggleFavorite,
         openRecipeInResult,
+        showInLibrary,
+        libraryFocusId,
         clearRecipeView,
       }}
     >

@@ -37,11 +37,15 @@ export const PromptLibraryPage: React.FC = () => {
     updateLibraryItem,
     addFolder,
     openRecipeInResult,
+    libraryFocusId,
   } = useNavigation();
 
   const [selectedFolder, setSelectedFolder] = useState('All Prompts');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(null);
+  // Opened via "Saved to Library": start with that item selected
+  const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(
+    () => libraryItems.find((i) => i.id === libraryFocusId) ?? null
+  );
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Edit Library mode for deletion management
