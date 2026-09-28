@@ -1,0 +1,45 @@
+.modal {
+  width: 620px;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+  font-size: 12px;
+  color: #6ee7b7;
+}
+
+.newFolderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.newFolderRow > :first-child {
+  flex: 1;
+}
+
+.linkBtn {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.linkBtn:hover {
+  color: var(--color-text-primary);
+}
+
+.error {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 12.5px;
+}

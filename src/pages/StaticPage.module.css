@@ -110,3 +110,8 @@ input:checked + .toggleSlider:before {
   transform: translateX(22px);
   background-color: #0B0E14;
 }
+
+.platformDropdown {
+  width: 100%;
+  max-width: 300px;
+}

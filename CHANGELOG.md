@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.0.16
+
+### Several images per prompt
+- New Prompt has an image area: drop, paste or browse up to 5 images, remove them or
+  pick the cover (the first image).
+- If an added image has generation data, the empty fields (title, prompt, negative
+  prompt, model, sampler, steps) are filled from it; what you typed is never replaced.
+  CFG, seed, size and LoRAs from the image are kept too.
+- Library cards and the detail pane show ‹ › arrows (on hover) and dots for items with
+  more than one image; the arrows never select or open the card. ← → switch images in
+  the detail pane, and clicking the image opens a full-size view.
+- "Edit images" / "Add images" in the detail pane adds, removes or reorders the images
+  of any saved prompt, including ones saved from an extraction.
+- Table view shows the cover with a "+N" badge.
+
+### Storage
+- The desktop app keeps library images as files in its data folder
+  (`library-images\<item>\`, original plus a small thumbnail) instead of inside the
+  library data; deleting a prompt deletes its images. Images of dropped files saved from
+  the result page are stored the same way.
+
+### Other
+- Themed dropdowns replace the Windows lists for the New Prompt folder, Edit Library's
+  "Move to folder…" and the Civitai platform setting (keyboard: arrows, Enter, Esc).
+- Prompts without a sampler, steps, CFG or seed show "—" instead of made-up defaults
+  ("Euler a", 30, 7); New Prompt no longer pre-fills "SDXL Base 1.0 / Euler a / 30".
+- Dropping or pasting images while a dialog is open no longer starts an extraction.
+
 ## v1.0.15
 
 ### AI labels (ChatGPT, Gemini and others)

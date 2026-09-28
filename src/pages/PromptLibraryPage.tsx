@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FolderIcon,
   SearchIcon,
@@ -25,6 +25,13 @@ import { PromptDiffModal } from '../components/library/PromptDiffModal.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { SavedPromptItem, LoraReference } from '../../core/types.js';
 import styles from './PromptLibraryPage.module.css';
+import { MAX_LIBRARY_IMAGES } from '../../core/types.js';
+import { ImageCarousel } from '../components/library/ImageCarousel.js';
+import { ImageLightbox } from '../components/library/ImageLightbox.js';
+import { ItemImagesEditor } from '../components/library/ItemImagesEditor.js';
+import { NewPromptModal } from '../components/library/NewPromptModal.js';
+import { Dropdown } from '../components/primitives/Dropdown.js';
+import { itemImages } from '../utils/libraryImages.js';
 
 export const PromptLibraryPage: React.FC = () => {
   const {
@@ -74,17 +81,10 @@ export const PromptLibraryPage: React.FC = () => {
   const [isNewPromptOpen, setIsNewPromptOpen] = useState(false);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [newPromptForm, setNewPromptForm] = useState({
-    title: '',
-    folder: 'My Creations',
-    prompt: '',
-    negativePrompt: '',
-    model: 'SDXL Base 1.0',
-    sampler: 'Euler a',
-    steps: 30,
-    cfgScale: 7.0,
-    seed: '',
-  });
+  // Detail pane: current image, full-size view, image editing
+  const [detailImageIndex, setDetailImageIndex] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [isEditingImages, setIsEditingImages] = useState(false);
 
   // Calculate folder counts dynamically
   const folderCounts = folders.reduce<Record<string, number>>((acc, f) => {
@@ -110,6 +110,13 @@ export const PromptLibraryPage: React.FC = () => {
     selectedItem && filteredItems.some((i) => i.id === selectedItem.id)
       ? filteredItems.find((i) => i.id === selectedItem.id)!
       : filteredItems[0] || null;
+
+  // Another item starts at its cover, with image editing closed
+  const activeItemId = activeItem?.id;
+  useEffect(() => {
+    setDetailImageIndex(0);
+    setIsEditingImages(false);
+  }, [activeItemId]);
 
   const copyText = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -203,43 +210,6 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
-  const handleCreatePrompt = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPromptForm.title.trim()) return;
-
-    saveToLibrary({
-      title: newPromptForm.title.trim(),
-      folder: newPromptForm.folder,
-      source: 'Local File',
-      model: newPromptForm.model,
-      dimensions: '1024 × 1024',
-      isFavorite: false,
-      thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
-      metadata: {
-        prompt: newPromptForm.prompt,
-        negativePrompt: newPromptForm.negativePrompt,
-        model: newPromptForm.model,
-        sampler: newPromptForm.sampler,
-        steps: newPromptForm.steps,
-        cfgScale: newPromptForm.cfgScale,
-        seed: newPromptForm.seed ? parseInt(newPromptForm.seed, 10) : undefined,
-      },
-    });
-
-    setIsNewPromptOpen(false);
-    setNewPromptForm({
-      title: '',
-      folder: 'My Creations',
-      prompt: '',
-      negativePrompt: '',
-      model: 'SDXL Base 1.0',
-      sampler: 'Euler a',
-      steps: 30,
-      cfgScale: 7.0,
-      seed: '',
-    });
-  };
-
   const handleDeleteItem = (id: string) => {
     deleteFromLibrary(id);
     setCompareSelection((prev) => prev.filter((i) => i !== id));
@@ -330,22 +300,21 @@ export const PromptLibraryPage: React.FC = () => {
             </span>
           </div>
           <div className={styles.editModeToolbarRight}>
-            <select
-              className={styles.toolbarSelect}
+            <Dropdown
+              size="sm"
+              className={styles.toolbarDropdown}
               value={moveTarget}
-              onChange={(e) => setMoveTarget(e.target.value)}
+              placeholder="Move to folder…"
               title="Folder to move the selected items to"
-            >
-              <option value="">Move to folder…</option>
-              {folders
-                .filter((f) => f !== 'All Prompts')
-                .map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              <option value={NEW_FOLDER_OPTION}>+ New folder…</option>
-            </select>
+              ariaLabel="Move selected items to folder"
+              options={[
+                ...folders
+                  .filter((f) => f !== 'All Prompts')
+                  .map((f) => ({ value: f, label: f, icon: <FolderIcon size={13} /> })),
+                { value: NEW_FOLDER_OPTION, label: 'New folder…', icon: <PlusIcon size={13} />, isAction: true },
+              ]}
+              onChange={setMoveTarget}
+            />
             {moveTarget === NEW_FOLDER_OPTION && (
               <input
                 className={styles.toolbarInput}
@@ -532,7 +501,12 @@ export const PromptLibraryPage: React.FC = () => {
                           )}
                         </td>
                         <td>
-                          <img src={item.thumbnailUrl} alt={item.title} className={styles.tableThumb} />
+                          <div className={styles.tableThumbWrap}>
+                            <img src={item.thumbnailUrl} alt={item.title} className={styles.tableThumb} />
+                            {itemImages(item).length > 1 && (
+                              <span className={styles.tableThumbCount}>+{itemImages(item).length - 1}</span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div className={styles.tableTitle}>{item.title}</div>
@@ -542,7 +516,7 @@ export const PromptLibraryPage: React.FC = () => {
                         </td>
                         <td className={styles.tableModel}>{item.model || 'SDXL'}</td>
                         <td className={styles.tableParams}>
-                          {item.metadata?.sampler || 'Euler a'} · {item.metadata?.steps ?? 30}s
+                          {item.metadata?.sampler || '—'}{item.metadata?.steps ? ` · ${item.metadata.steps}s` : ''}
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className={styles.tableActions}>
@@ -622,7 +596,7 @@ export const PromptLibraryPage: React.FC = () => {
                   }
                 >
                   <div className={styles.cardThumbWrap}>
-                    <img src={item.thumbnailUrl} alt={item.title} className={styles.cardThumb} />
+                    <ImageCarousel images={itemImages(item)} alt={item.title} imageClassName={styles.cardThumb} />
 
                     {isEditMode ? (
                       <>
@@ -746,16 +720,16 @@ export const PromptLibraryPage: React.FC = () => {
           <aside className={styles.detailPane}>
             <div
               className={styles.detailImageWrap}
-              onClick={() => {
-                if (!isEditMode) openRecipeInResult(activeItem);
-              }}
-              style={{ cursor: isEditMode ? 'default' : 'pointer' }}
-              title={isEditMode ? undefined : 'Click to open full scan results'}
+              onClick={() => setLightboxIndex(detailImageIndex)}
+              style={{ cursor: itemImages(activeItem).length ? 'zoom-in' : 'default' }}
+              title="Click to view full size"
             >
-              <img
-                src={activeItem.thumbnailUrl}
+              <ImageCarousel
+                images={itemImages(activeItem)}
                 alt={activeItem.title}
-                className={styles.detailImage}
+                keyboard={!isEditingImages}
+                imageClassName={styles.detailImage}
+                onIndexChange={setDetailImageIndex}
               />
               <button
                 className={styles.detailFavBtn}
@@ -767,6 +741,18 @@ export const PromptLibraryPage: React.FC = () => {
                 <StarIcon size={20} filled={favorites.includes(activeItem.id)} />
               </button>
             </div>
+
+            <div className={styles.detailImagesBar}>
+              <span>
+                {itemImages(activeItem).length} / {MAX_LIBRARY_IMAGES} images
+              </span>
+              <button type="button" className={styles.detailImagesBtn} onClick={() => setIsEditingImages((v) => !v)}>
+                {isEditingImages ? 'Done' : itemImages(activeItem).length ? 'Edit images' : 'Add images'}
+              </button>
+            </div>
+            {isEditingImages && (
+              <ItemImagesEditor item={activeItem} onChange={(updates) => updateLibraryItem(activeItem.id, updates)} />
+            )}
 
             <div className={styles.detailContent}>
               <div className={styles.detailTitleRow}>
@@ -843,19 +829,19 @@ export const PromptLibraryPage: React.FC = () => {
                 <div className={styles.paramGrid}>
                   <div className={styles.paramCard}>
                     <span className={styles.paramLabel}>Sampler</span>
-                    <span className={styles.paramVal}>{activeItem.metadata?.sampler || 'Euler a'}</span>
+                    <span className={styles.paramVal}>{activeItem.metadata?.sampler || '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
                     <span className={styles.paramLabel}>Steps</span>
-                    <span className={styles.paramVal}>{activeItem.metadata?.steps ?? 30}</span>
+                    <span className={styles.paramVal}>{activeItem.metadata?.steps ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
                     <span className={styles.paramLabel}>CFG Scale</span>
-                    <span className={styles.paramVal}>{activeItem.metadata?.cfgScale ?? 7.0}</span>
+                    <span className={styles.paramVal}>{activeItem.metadata?.cfgScale ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
                     <span className={styles.paramLabel}>Seed</span>
-                    <span className={styles.paramVal}>{activeItem.metadata?.seed ?? 'Random'}</span>
+                    <span className={styles.paramVal}>{activeItem.metadata?.seed ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
                     <span className={styles.paramLabel}>Dimensions</span>
@@ -961,114 +947,23 @@ export const PromptLibraryPage: React.FC = () => {
 
       {/* New Prompt Recipe Modal */}
       {isNewPromptOpen && (
-        <div className={styles.modalOverlay} onClick={() => setIsNewPromptOpen(false)}>
-          <div className={styles.modalCardLarge} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Save Custom Prompt Recipe</h3>
-            <form onSubmit={handleCreatePrompt} className={styles.modalForm}>
-              <div className={styles.formRow}>
-                <div className={styles.formField}>
-                  <label className={styles.label}>Recipe Title *</label>
-                  <GlassInput
-                    value={newPromptForm.title}
-                    onChange={(e) =>
-                      setNewPromptForm((prev) => ({ ...prev, title: e.target.value }))
-                    }
-                    placeholder="e.g., Neon Samurai Portrait"
-                    autoFocus
-                    required
-                  />
-                </div>
-                <div className={styles.formField}>
-                  <label className={styles.label}>Folder</label>
-                  <select
-                    className={styles.selectInput}
-                    value={newPromptForm.folder}
-                    onChange={(e) =>
-                      setNewPromptForm((prev) => ({ ...prev, folder: e.target.value }))
-                    }
-                  >
-                    {folders
-                      .filter((f) => f !== 'All Prompts')
-                      .map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
+        <NewPromptModal
+          defaultFolder={selectedFolder}
+          onClose={() => setIsNewPromptOpen(false)}
+          onSaved={(item) => {
+            setIsNewPromptOpen(false);
+            setSelectedItem(item);
+          }}
+        />
+      )}
 
-              <div className={styles.formField}>
-                <label className={styles.label}>Positive Prompt</label>
-                <textarea
-                  className={styles.textarea}
-                  rows={3}
-                  value={newPromptForm.prompt}
-                  onChange={(e) =>
-                    setNewPromptForm((prev) => ({ ...prev, prompt: e.target.value }))
-                  }
-                  placeholder="Masterpiece, 8k portrait of..."
-                />
-              </div>
-
-              <div className={styles.formField}>
-                <label className={styles.label}>Negative Prompt</label>
-                <textarea
-                  className={styles.textarea}
-                  rows={2}
-                  value={newPromptForm.negativePrompt}
-                  onChange={(e) =>
-                    setNewPromptForm((prev) => ({ ...prev, negativePrompt: e.target.value }))
-                  }
-                  placeholder="low quality, blurry, deformed..."
-                />
-              </div>
-
-              <div className={styles.formRow3}>
-                <div className={styles.formField}>
-                  <label className={styles.label}>Model Checkpoint</label>
-                  <GlassInput
-                    value={newPromptForm.model}
-                    onChange={(e) =>
-                      setNewPromptForm((prev) => ({ ...prev, model: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className={styles.formField}>
-                  <label className={styles.label}>Sampler</label>
-                  <GlassInput
-                    value={newPromptForm.sampler}
-                    onChange={(e) =>
-                      setNewPromptForm((prev) => ({ ...prev, sampler: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className={styles.formField}>
-                  <label className={styles.label}>Steps</label>
-                  <GlassInput
-                    type="number"
-                    value={newPromptForm.steps}
-                    onChange={(e) =>
-                      setNewPromptForm((prev) => ({
-                        ...prev,
-                        steps: parseInt(e.target.value, 10) || 30,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className={styles.modalActions}>
-                <SecondaryButton type="button" onClick={() => setIsNewPromptOpen(false)}>
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton type="submit" disabled={!newPromptForm.title.trim()}>
-                  Save Recipe
-                </PrimaryButton>
-              </div>
-            </form>
-          </div>
-        </div>
+      {lightboxIndex !== null && activeItem && (
+        <ImageLightbox
+          images={itemImages(activeItem)}
+          startIndex={lightboxIndex}
+          title={activeItem.title}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   );

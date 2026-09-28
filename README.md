@@ -1,8 +1,8 @@
 # PromptHound
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.15)
+> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.16)
 
-[![Release](https://img.shields.io/badge/Release-v1.0.15-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.15)
+[![Release](https://img.shields.io/badge/Release-v1.0.16-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.16)
 [![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
@@ -11,7 +11,7 @@
 
 PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
 
-📦 **[Download Latest Release v1.0.15](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.15)**
+📦 **[Download Latest Release v1.0.16](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.16)**
 
 ---
 
@@ -89,7 +89,14 @@ PromptHound/
 
 ---
 
-## 🆕 What's New in 1.0.15
+## 🆕 What's New in 1.0.16
+
+- **Up to 5 images per prompt**: add images in New Prompt (drop, paste or browse) or later with "Edit images" in the Library. Cards and the detail pane show ‹ › arrows and dots; click the image for a full-size view.
+- **New Prompt fills itself in**: if an added image has generation data, empty fields (title, prompt, model, sampler, steps) are filled from it.
+- **Images are kept as files** in the app's data folder (original + thumbnail), so large libraries stay fast.
+- **Themed dropdowns** for folders and settings instead of the Windows list.
+
+### 1.0.15
 
 - **ChatGPT, Gemini and other AI services**: their images store no prompt, but they carry a Content Credentials (C2PA) or IPTC label. PromptHound now reads it and shows "Confirmed AI-generated image — Made with ChatGPT (OpenAI)" (or Google Gemini, Adobe Firefly, Microsoft, Meta…) with the model, date and signer, instead of "Could not extract metadata".
 

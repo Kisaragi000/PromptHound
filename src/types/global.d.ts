@@ -49,6 +49,15 @@ export interface PromptHoundAPI {
     getCivitaiKey: () => Promise<string | null>;
   };
   library?: {
+    storeImage?: (
+      itemId: string,
+      original: Uint8Array,
+      extension: string,
+      thumbnail: Uint8Array,
+      name?: string
+    ) => Promise<{ url: string; thumbUrl: string; name?: string }>;
+    deleteImage?: (urls: string[]) => Promise<void>;
+    deleteItemImages?: (itemId: string) => Promise<void>;
     savePrompt: (item: any) => Promise<void>;
     getAll: () => Promise<any[]>;
     deletePrompt: (uuid: string) => Promise<void>;

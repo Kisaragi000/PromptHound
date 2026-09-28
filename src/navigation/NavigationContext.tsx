@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ExtractedMetadata, ExtractionResult, SavedPromptItem } from '../../core/types.js';
 import { INITIAL_SAMPLE_PROMPTS, isLegacyPlaceholderSample } from './samplePrompts.js';
-import { isSessionOnlyUrl, makeThumbnail } from '../utils/images.js';
+import { isSessionOnlyUrl } from '../utils/images.js';
+import { storeLibraryImageFromUrl, itemImages } from '../utils/libraryImages.js';
 
 export type RouteKey =
   | 'home'
@@ -230,18 +231,20 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
       window.promptHound.library.savePrompt(newItem);
     }
 
-    // Previews of dropped files are blob: URLs that die with the session; store a small
-    // embedded copy instead (kept small: the library lives in localStorage)
-    if (isSessionOnlyUrl(newItem.thumbnailUrl)) {
-      void makeThumbnail(newItem.thumbnailUrl, 384).then((thumbnailUrl) => {
-        if (!thumbnailUrl) return;
+    // Previews of dropped files are blob: URLs that die with the session; keep the file
+    // (desktop app: original + thumbnail on disk; web preview: small embedded copies)
+    if (isSessionOnlyUrl(newItem.thumbnailUrl) && !newItem.images?.length) {
+      const sessionUrl = newItem.thumbnailUrl;
+      void storeLibraryImageFromUrl(id, sessionUrl).then((image) => {
+        if (!image) return;
+        const updates = { thumbnailUrl: image.thumbUrl, images: [image] };
         setLibraryItems((prev) => {
-          const next = prev.map((item) => (item.id === id && item.thumbnailUrl === newItem.thumbnailUrl ? { ...item, thumbnailUrl } : item));
+          const next = prev.map((item) => (item.id === id && item.thumbnailUrl === sessionUrl ? { ...item, ...updates } : item));
           const updated = next.find((item) => item.id === id);
           if (updated && window.promptHound?.library?.savePrompt) window.promptHound.library.savePrompt(updated);
           return next;
         });
-        setSelectedLibraryItem((prev) => (prev?.id === id ? { ...prev, thumbnailUrl } : prev));
+        setSelectedLibraryItem((prev) => (prev?.id === id ? { ...prev, ...updates } : prev));
       });
     }
 
@@ -249,6 +252,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const deleteFromLibrary = (id: string) => {
+    void window.promptHound?.library?.deleteItemImages?.(id);
     setLibraryItems((prev) => prev.filter((item) => item.id !== id));
     setFavorites((prev) => prev.filter((item) => item !== id));
     if (selectedLibraryItem?.id === id) {
@@ -328,9 +332,9 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     const meta: ExtractedMetadata = {
       prompt: item.metadata?.prompt || '',
       negativePrompt: item.metadata?.negativePrompt,
-      sampler: item.metadata?.sampler || (item.metadata as any)?.generation?.sampler || 'Euler a',
-      steps: item.metadata?.steps || (item.metadata as any)?.generation?.steps || 30,
-      cfgScale: item.metadata?.cfgScale || (item.metadata as any)?.generation?.cfgScale || 7.0,
+      sampler: item.metadata?.sampler || (item.metadata as any)?.generation?.sampler || undefined,
+      steps: item.metadata?.steps || (item.metadata as any)?.generation?.steps || undefined,
+      cfgScale: item.metadata?.cfgScale || (item.metadata as any)?.generation?.cfgScale || undefined,
       seed: item.metadata?.seed || (item.metadata as any)?.generation?.seed,
       model: item.metadata?.model || (item.metadata as any)?.generation?.model || item.model || 'SDXL Base 1.0',
       modelHash: item.metadata?.modelHash,
@@ -345,7 +349,8 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setSelectedLibraryItem(item);
     setActiveMetadata(meta);
-    setActivePreviewUrl(item.thumbnailUrl || (item.metadata as any)?.image?.url || null);
+    // Full-size cover when the item has stored images
+    setActivePreviewUrl(itemImages(item)[0]?.url || (item.metadata as any)?.image?.url || null);
     setPreviousRoute(currentRoute);
     setCurrentRoute('result');
   };

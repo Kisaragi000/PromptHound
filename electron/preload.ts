@@ -74,6 +74,10 @@ const library = {
   deletePrompt: (uuid: string): Promise<void> => ipcRenderer.invoke('library:delete-prompt', uuid),
   searchFts: (query: string): Promise<any[]> => ipcRenderer.invoke('library:search-fts', query),
   toggleFavorite: (uuid: string, isFav: boolean): Promise<void> => ipcRenderer.invoke('library:toggle-favorite', uuid, isFav),
+  storeImage: (itemId: string, original: Uint8Array, extension: string, thumbnail: Uint8Array, name?: string) =>
+    ipcRenderer.invoke('library:store-image', itemId, original, extension, thumbnail, name),
+  deleteImage: (urls: string[]): Promise<void> => ipcRenderer.invoke('library:delete-image', urls),
+  deleteItemImages: (itemId: string): Promise<void> => ipcRenderer.invoke('library:delete-item-images', itemId),
 };
 
 const safetensors = {
