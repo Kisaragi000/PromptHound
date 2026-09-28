@@ -115,8 +115,21 @@ export interface SavedPromptItem {
   model: string;
   dimensions: string;
   isFavorite: boolean;
+  /** Cover image shown in lists (the first image's thumbnail when `images` is set) */
   thumbnailUrl: string;
+  /** Images of this prompt, cover first (at most MAX_LIBRARY_IMAGES) */
+  images?: LibraryImage[];
   metadata: any;
 }
+
+/** One image of a library item: the original file and a small copy for grids */
+export interface LibraryImage {
+  url: string;
+  thumbUrl: string;
+  name?: string;
+}
+
+/** Most images one library item can hold */
+export const MAX_LIBRARY_IMAGES = 5;
 
 export type SupportedPlatform = 'Civitai' | 'SeaArt' | 'A1111' | 'ComfyUI' | 'Unknown';

@@ -18,8 +18,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     e.preventDefault();
   };
 
+  // Dialogs (e.g. New Prompt) handle their own drops and pastes
+  const dialogOpen = () => Boolean(document.querySelector('[role="dialog"], [role="alertdialog"]'));
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    if (dialogOpen()) return;
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files).filter(
         (f) => /\.(png|webp|jpg|jpeg|jfif|avif)$/i.test(f.name) || f.type.startsWith('image/')
@@ -42,6 +46,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   // Global clipboard paste support (Ctrl+V with multiple images)
   useEffect(() => {
     const handleGlobalPaste = async (e: ClipboardEvent) => {
+      if (dialogOpen()) return;
       // Don't intercept if typing in text inputs or textareas
       const target = document.activeElement;
       if (

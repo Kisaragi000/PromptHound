@@ -9,6 +9,7 @@ import {
   setPreferredCivitaiDomain,
   type CivitaiDomainPreference,
 } from '../../core/lora-resolution.js';
+import { Dropdown } from '../components/primitives/Dropdown.js';
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
@@ -179,32 +180,17 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
           <div className={styles.settingControl}>
-            <select
+            <Dropdown
               value={civitaiDomain}
-              onChange={(e) => setCivitaiDomain(e.target.value as CivitaiDomainPreference)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '8px',
-                color: '#f1f5f9',
-                padding: '8px 12px',
-                fontSize: '13px',
-                outline: 'none',
-                cursor: 'pointer',
-                width: '100%',
-                maxWidth: '300px',
-              }}
-            >
-              <option value="civitai.red" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                civitai.red (full catalog)
-              </option>
-              <option value="auto" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                Automatic (by rating)
-              </option>
-              <option value="civitai.com" style={{ background: '#1e293b', color: '#f1f5f9' }}>
-                civitai.com (SFW only)
-              </option>
-            </select>
+              ariaLabel="Preferred Civitai platform"
+              className={styles.platformDropdown}
+              onChange={(v) => setCivitaiDomain(v as CivitaiDomainPreference)}
+              options={[
+                { value: 'civitai.red', label: 'civitai.red (full catalog)' },
+                { value: 'auto', label: 'Automatic (by rating)' },
+                { value: 'civitai.com', label: 'civitai.com (SFW only)' },
+              ]}
+            />
           </div>
         </div>
       </div>

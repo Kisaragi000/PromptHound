@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage } from 'electron';
+import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage, protocol, net } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -23,6 +23,32 @@ import type { ModelCatalogRecord } from '../core/types.js';
 import seedCatalog from '../core/data/lora-seed.json';
 import { createHash } from 'node:crypto';
 import { autoUpdater } from 'electron-updater';
+
+/**
+ * Library images live in <userData>/library-images/<item id>/ and reach the UI as
+ * ph-image://library/<item id>/<file>. The scheme must be registered before app ready.
+ */
+const IMAGE_SCHEME = 'ph-image';
+protocol.registerSchemesAsPrivileged([
+  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
+]);
+
+const libraryImagesDir = () => path.join(app.getPath('userData'), 'library-images');
+const SAFE_SEGMENT = /^[\w.-]{1,120}$/;
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'jfif', 'webp', 'avif', 'gif']);
+
+/** Absolute path of a ph-image URL, or null when it points outside the images folder */
+function libraryImagePath(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== `${IMAGE_SCHEME}:` || parsed.hostname !== 'library') return null;
+    const [itemId, file, ...rest] = parsed.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    if (rest.length || !itemId || !file || !SAFE_SEGMENT.test(itemId) || !SAFE_SEGMENT.test(file) || file.startsWith('.')) return null;
+    return path.join(libraryImagesDir(), itemId, file);
+  } catch {
+    return null;
+  }
+}
 
 let loraDbInstance: any = null;
 
@@ -734,6 +760,49 @@ function registerUpdateHandlers(): void {
   setInterval(check, 6 * 60 * 60 * 1000);
 }
 
+function registerLibraryImageHandlers(): void {
+  protocol.handle(IMAGE_SCHEME, async (request) => {
+    const filePath = libraryImagePath(request.url);
+    if (!filePath) return new Response('Not found', { status: 404 });
+    try {
+      return await net.fetch(pathToFileURL(filePath).toString());
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+
+  /** Saves one image (original bytes + JPEG thumbnail) for a library item */
+  ipcMain.handle(
+    'library:store-image',
+    async (_event, itemId: string, original: Uint8Array, extension: string, thumbnail: Uint8Array, name?: string) => {
+      const ext = String(extension || '').toLowerCase().replace(/^\./, '');
+      if (!SAFE_SEGMENT.test(itemId) || !IMAGE_EXTENSIONS.has(ext)) throw new Error('Unsupported image');
+      if (original.byteLength > 60 * 1024 * 1024) throw new Error('Image is larger than 60 MB');
+      const dir = path.join(libraryImagesDir(), itemId);
+      await fs.mkdir(dir, { recursive: true });
+      const base = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      await fs.writeFile(path.join(dir, `${base}.${ext}`), Buffer.from(original));
+      await fs.writeFile(path.join(dir, `${base}.thumb.jpg`), Buffer.from(thumbnail));
+      const urlFor = (file: string) => `${IMAGE_SCHEME}://library/${encodeURIComponent(itemId)}/${encodeURIComponent(file)}`;
+      return { url: urlFor(`${base}.${ext}`), thumbUrl: urlFor(`${base}.thumb.jpg`), name };
+    }
+  );
+
+  /** Removes the files of one stored image (original and thumbnail) */
+  ipcMain.handle('library:delete-image', async (_event, urls: string[]) => {
+    for (const url of Array.isArray(urls) ? urls : []) {
+      const filePath = libraryImagePath(url);
+      if (filePath) await fs.rm(filePath, { force: true }).catch(() => undefined);
+    }
+  });
+
+  /** Removes every stored image of a library item */
+  ipcMain.handle('library:delete-item-images', async (_event, itemId: string) => {
+    if (!SAFE_SEGMENT.test(itemId)) return;
+    await fs.rm(path.join(libraryImagesDir(), itemId), { recursive: true, force: true }).catch(() => undefined);
+  });
+}
+
 app.whenReady().then(() => {
   initLoraDatabase();
   configureLoraPersistence(loraDbInstance ? sqliteLoraPersistence : null);
@@ -745,6 +814,7 @@ app.whenReady().then(() => {
   registerWindowControlHandlers();
   registerExtractionHandlers();
   registerUpdateHandlers();
+  registerLibraryImageHandlers();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
