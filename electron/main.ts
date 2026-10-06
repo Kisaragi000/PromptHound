@@ -671,6 +671,12 @@ function createWindow(): void {
     });
   }
 
+  // Links with target="_blank" open in the browser instead of a bare app window
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   mainWindow.on('maximize', () => {
     mainWindow?.webContents.send('window:maximized-change', true);
   });

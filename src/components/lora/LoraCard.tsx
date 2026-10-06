@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { LoraReference, LoraMatchMethod } from '../../../core/types.js';
 import { ExternalLinkIcon, CopyIcon, CheckIcon, LayersIcon, SearchIcon } from '../icons/Icons.js';
 import styles from './LoraCard.module.css';
+import { seaartSearchUrl } from '../../../core/seaart.js';
 
 export const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = {
   hash: { label: 'Hash match', title: 'Identified by the file hash stored in the image metadata' },
@@ -53,6 +54,7 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
   };
 
   const displayName = lora.resolved?.name || lora.rawName;
+  const seaartUrl = seaartSearchUrl(displayName);
   const coverImg = lora.resolved?.coverImageUrl;
   const triggerWords = lora.resolved?.triggerWords || [];
   const matchedBy = lora.resolved?.matchedBy;
@@ -136,6 +138,21 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
                   <SearchIcon size={10} />
                   {lora.resolved ? 'Inspect' : 'Link'}
                 </button>
+              )}
+              {seaartUrl && (
+                <a
+                  href={seaartUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.seaartLink}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLinkClick(e, seaartUrl);
+                  }}
+                  title={`Search SeaArt for "${displayName}"`}
+                >
+                  SeaArt
+                </a>
               )}
               <div className={styles.weightBadge}>
                 {strength !== undefined ? strength.toFixed(2).replace(/\.00$/, '') : '1'}

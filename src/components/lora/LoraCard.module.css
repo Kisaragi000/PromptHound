@@ -202,3 +202,19 @@
   border-color: rgba(137, 169, 208, 0.6);
   color: #ffffff;
 }
+
+/* "SeaArt" search link next to Inspect, styled like it */
+.seaartLink {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  font-size: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.seaartLink:hover {
+  color: var(--color-text-primary, #f3f4f6);
+}
