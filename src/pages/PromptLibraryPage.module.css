@@ -1007,3 +1007,36 @@
 .toolbarDropdown {
   width: 180px;
 }
+
+/* Model / LoRA filters above the results; spans every grid column */
+.filterBar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterDropdown {
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.filterCount {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.filterClear {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-amber-primary);
+  cursor: pointer;
+}
+
+.filterClear:hover {
+  text-decoration: underline;
+}

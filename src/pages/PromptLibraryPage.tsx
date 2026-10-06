@@ -32,6 +32,7 @@ import { ItemImagesEditor } from '../components/library/ItemImagesEditor.js';
 import { NewPromptModal } from '../components/library/NewPromptModal.js';
 import { Dropdown } from '../components/primitives/Dropdown.js';
 import { itemImages } from '../utils/libraryImages.js';
+import { filterLibraryItems, libraryFacets } from '../utils/librarySearch.js';
 
 export const PromptLibraryPage: React.FC = () => {
   const {
@@ -51,6 +52,8 @@ export const PromptLibraryPage: React.FC = () => {
 
   const [selectedFolder, setSelectedFolder] = useState('All Prompts');
   const [searchQuery, setSearchQuery] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
+  const [loraFilter, setLoraFilter] = useState('');
   // Opened via "Saved to Library": start with that item selected
   const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(
     () => libraryItems.find((i) => i.id === libraryFocusId) ?? null
@@ -96,15 +99,24 @@ export const PromptLibraryPage: React.FC = () => {
     return acc;
   }, {});
 
-  const filteredItems = libraryItems.filter((item) => {
-    const matchesFolder =
-      selectedFolder === 'All Prompts' || item.folder === selectedFolder;
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.metadata?.prompt && item.metadata.prompt.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.model && item.model.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesFolder && matchesSearch;
+  const folderItems = libraryItems.filter(
+    (item) => selectedFolder === 'All Prompts' || item.folder === selectedFolder
+  );
+  const facets = libraryFacets(folderItems);
+  // A filter for a model or LoRA no longer in this folder stops applying
+  const activeModelFilter = facets.models.some(([name]) => name === modelFilter) ? modelFilter : '';
+  const activeLoraFilter = facets.loras.some(([name]) => name === loraFilter) ? loraFilter : '';
+  const filteredItems = filterLibraryItems(folderItems, {
+    query: searchQuery,
+    model: activeModelFilter,
+    lora: activeLoraFilter,
   });
+  const isFiltering = Boolean(searchQuery.trim() || activeModelFilter || activeLoraFilter);
+  const clearFilters = () => {
+    setSearchQuery('');
+    setModelFilter('');
+    setLoraFilter('');
+  };
 
   const activeItem =
     selectedItem && filteredItems.some((i) => i.id === selectedItem.id)
@@ -246,7 +258,8 @@ export const PromptLibraryPage: React.FC = () => {
             <GlassInput
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search prompts, models, tags..."
+              placeholder="Search prompts, models, LoRAs"
+              title={'Every word must match. Use "quotes" for a phrase and -word to leave items out.'}
               icon={<SearchIcon size={16} />}
             />
           </div>
@@ -429,9 +442,51 @@ export const PromptLibraryPage: React.FC = () => {
 
         {/* Column 2: Prompt Card Grid OR Compact Table */}
         <div className={styles.gridArea}>
+          {(facets.models.length > 0 || facets.loras.length > 0) && (
+            <div className={styles.filterBar}>
+              {facets.models.length > 0 && (
+                <Dropdown
+                  size="sm"
+                  ariaLabel="Filter by model"
+                  className={styles.filterDropdown}
+                  value={activeModelFilter}
+                  onChange={setModelFilter}
+                  options={[
+                    { value: '', label: 'All models' },
+                    ...facets.models.map(([name, count]) => ({ value: name, label: `${name} (${count})` })),
+                  ]}
+                />
+              )}
+              {facets.loras.length > 0 && (
+                <Dropdown
+                  size="sm"
+                  ariaLabel="Filter by LoRA"
+                  className={styles.filterDropdown}
+                  value={activeLoraFilter}
+                  onChange={setLoraFilter}
+                  options={[
+                    { value: '', label: 'All LoRAs' },
+                    ...facets.loras.map(([name, count]) => ({ value: name, label: `${name} (${count})` })),
+                  ]}
+                />
+              )}
+              {isFiltering && (
+                <>
+                  <span className={styles.filterCount}>
+                    {filteredItems.length} of {folderItems.length}
+                  </span>
+                  <button type="button" className={styles.filterClear} onClick={clearFilters}>
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           {filteredItems.length === 0 ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              No prompts found in {selectedFolder}. Add one or extract an image to save!
+              {isFiltering
+                ? 'No prompts match your search and filters.'
+                : `No prompts found in ${selectedFolder}. Add one or extract an image to save!`}
             </div>
           ) : viewMode === 'table' ? (
             <div className={styles.tableWrapper}>
