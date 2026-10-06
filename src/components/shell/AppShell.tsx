@@ -12,12 +12,38 @@ function mimeForName(name: string): string {
   return ext ? `image/${ext}` : '';
 }
 
+const IMAGE_PATH = /\.(png|webp|jpe?g|jfif|avif)$/i;
+
+function isHttpUrl(text: string): boolean {
+  if (!/^https?:\/\/\S+$/i.test(text)) return false;
+  try {
+    new URL(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Address of the image a browser copied ("Copy image" adds <img src> as HTML) */
+export function copiedImageUrl(html: string): string | null {
+  if (!html) return null;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const src = doc.querySelector('img')?.getAttribute('src')?.trim();
+  return src && isHttpUrl(src) ? src : null;
+}
+
+/** A local image path, as Explorer's "Copy as path" writes it (in quotes) */
+export function copiedImagePath(text: string): string | null {
+  const unquoted = text.replace(/^"(.*)"$/, '$1');
+  return /^(?:[a-z]:\\|\\\\)[^\r\n"*?<>|]+$/i.test(unquoted) && IMAGE_PATH.test(unquoted) ? unquoted : null;
+}
+
 interface AppShellProps {
   children: ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
-  const { extractFromFile, extractMultipleFiles, addSessionImages, sessionImages } = useExtraction();
+  const { extractFromFile, extractMultipleFiles, addSessionImages, extractFromUrl, extractFromFilePath } = useExtraction();
   const { navigate, currentRoute } = useNavigation();
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -43,6 +69,30 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   };
   const openImageFilesRef = useRef(openImageFiles);
   openImageFilesRef.current = openImageFiles;
+
+  /**
+   * Pastes that carry more than pixels. "Copy image" in a browser puts a re-encoded
+   * bitmap on the clipboard (the prompt is gone) next to the image's address, so the
+   * original file is fetched from that address instead. A copied link or an Explorer
+   * "Copy as path" opens the same way. Returns false when the paste is none of these.
+   */
+  const openPastedSource = (html: string, text: string): boolean => {
+    const source = copiedImageUrl(html) ?? (isHttpUrl(text) ? text : null);
+    if (source) {
+      navigate('result');
+      void extractFromUrl(source);
+      return true;
+    }
+    const filePath = copiedImagePath(text);
+    if (filePath && window.promptHound?.extraction) {
+      navigate('result');
+      void extractFromFilePath(filePath);
+      return true;
+    }
+    return false;
+  };
+  const openPastedSourceRef = useRef(openPastedSource);
+  openPastedSourceRef.current = openPastedSource;
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
@@ -85,6 +135,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       }
 
       if (e.clipboardData && e.clipboardData.items) {
+        if (openPastedSourceRef.current(e.clipboardData.getData('text/html'), e.clipboardData.getData('text/plain').trim())) {
+          e.preventDefault();
+          return;
+        }
+
         const imageFiles: File[] = [];
 
         // Check clipboard items
