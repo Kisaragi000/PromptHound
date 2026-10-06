@@ -551,6 +551,34 @@ function registerLibraryHandlers(): void {
     }
   });
 
+  /** Writes a library backup zip where the user chooses; returns the path, or null if cancelled */
+  ipcMain.handle('library:save-backup', async (_event, bytes: Uint8Array, defaultName: string): Promise<string | null> => {
+    if (!mainWindow) return null;
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Prompt Library',
+      defaultPath: path.join(app.getPath('documents'), path.basename(String(defaultName || 'PromptHound-Library.zip'))),
+      filters: [{ name: 'PromptHound library backup', extensions: ['zip'] }],
+    });
+    if (result.canceled || !result.filePath) return null;
+    await fs.writeFile(result.filePath, Buffer.from(bytes));
+    return result.filePath;
+  });
+
+  /** Reads a library backup zip the user picks; null if cancelled */
+  ipcMain.handle('library:open-backup', async (): Promise<{ name: string; bytes: Uint8Array } | null> => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Prompt Library',
+      properties: ['openFile'],
+      filters: [{ name: 'PromptHound library backup', extensions: ['zip'] }],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    const stat = await fs.stat(filePath);
+    if (stat.size > 2 * 1024 * 1024 * 1024) throw new Error('Backups larger than 2 GB are not supported.');
+    return { name: path.basename(filePath), bytes: new Uint8Array(await fs.readFile(filePath)) };
+  });
+
   ipcMain.handle('library:toggle-favorite', (_event, uuid: string, isFav: boolean) => {
     if (!loraDbInstance || !uuid) return;
     loraDbInstance.prepare('UPDATE saved_prompts SET is_favorite = ? WHERE uuid = ?').run(isFav ? 1 : 0, uuid);

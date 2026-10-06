@@ -10,6 +10,7 @@ import {
   type CivitaiDomainPreference,
 } from '../../core/lora-resolution.js';
 import { Dropdown } from '../components/primitives/Dropdown.js';
+import { LibraryBackupControls } from '../components/library/LibraryBackupControls.js';
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
@@ -18,9 +19,6 @@ export const SettingsPage: React.FC = () => {
   });
   const [resolveLoras, setResolveLoras] = useState(() => {
     return localStorage.getItem('prompthound_resolve_loras') !== 'false';
-  });
-  const [downloadFolder, setDownloadFolder] = useState(() => {
-    return localStorage.getItem('prompthound_download_folder') || 'C:\\Users\\Artist\\Pictures\\PromptHound';
   });
   const [civitaiDomain, setCivitaiDomain] = useState<CivitaiDomainPreference>(() => {
     return getPreferredCivitaiDomain();
@@ -65,7 +63,6 @@ export const SettingsPage: React.FC = () => {
     try {
       localStorage.setItem('prompthound_auto_clipboard', String(autoExtractClipboard));
       localStorage.setItem('prompthound_resolve_loras', String(resolveLoras));
-      localStorage.setItem('prompthound_download_folder', downloadFolder);
       localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
       setPreferredCivitaiDomain(civitaiDomain);
 
@@ -237,16 +234,14 @@ export const SettingsPage: React.FC = () => {
         <div className={styles.sectionTitle}>STORAGE & EXPORTS</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Default Archive Directory</div>
+            <div className={styles.settingLabel}>Prompt Library Backup</div>
             <div className={styles.settingDesc}>
-              Target folder for visual archives and JSON exports.
+              Save every prompt, folder, favorite and image to one .zip file, to keep as a backup, move to
+              another PC or share. Importing adds the prompts you don't have yet and keeps the ones you do.
             </div>
           </div>
           <div className={styles.settingControl}>
-            <GlassInput
-              value={downloadFolder}
-              onChange={(e) => setDownloadFolder(e.target.value)}
-            />
+            <LibraryBackupControls />
           </div>
         </div>
       </div>

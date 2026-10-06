@@ -58,6 +58,8 @@ export interface PromptHoundAPI {
     ) => Promise<{ url: string; thumbUrl: string; name?: string }>;
     deleteImage?: (urls: string[]) => Promise<void>;
     deleteItemImages?: (itemId: string) => Promise<void>;
+    saveBackup?: (bytes: Uint8Array, defaultName: string) => Promise<string | null>;
+    openBackup?: () => Promise<{ name: string; bytes: Uint8Array } | null>;
     savePrompt: (item: any) => Promise<void>;
     getAll: () => Promise<any[]>;
     deletePrompt: (uuid: string) => Promise<void>;

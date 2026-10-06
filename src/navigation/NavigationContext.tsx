@@ -55,6 +55,8 @@ interface NavigationContextType {
   /** Removes a folder; its items are kept (they stay in All Prompts, unfiled) */
   deleteFolder: (folderName: string) => void;
   toggleFavorite: (id: string) => void;
+  /** Adds items restored from a backup (ids not already in the library) and their folders */
+  importLibraryItems: (items: SavedPromptItem[], folders: string[]) => void;
   openRecipeInResult: (item: SavedPromptItem) => void;
   /** Opens the Prompt Library with this item selected */
   showInLibrary: (id: string) => void;
@@ -312,6 +314,19 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     reassignFolder(folderName, '');
   };
 
+  const importLibraryItems = (items: SavedPromptItem[], importedFolders: string[]) => {
+    const folderNames = [...importedFolders, ...items.map((i) => i.folder)]
+      .map((f) => (typeof f === 'string' ? f.trim() : ''))
+      .filter((f) => f && f !== ALL_PROMPTS_FOLDER);
+    setFolders((prev) => [...prev, ...folderNames.filter((f, i) => !prev.includes(f) && folderNames.indexOf(f) === i)]);
+    setLibraryItems((prev) => {
+      const known = new Set(prev.map((i) => i.id));
+      return [...items.filter((i) => !known.has(i.id)), ...prev];
+    });
+    setFavorites((prev) => [...prev, ...items.filter((i) => i.isFavorite && !prev.includes(i.id)).map((i) => i.id)]);
+    for (const item of items) window.promptHound?.library?.savePrompt(item);
+  };
+
   const clearRecipeView = useCallback(() => {
     setSelectedLibraryItem(null);
     setActiveMetadata(null);
@@ -383,6 +398,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
         renameFolder,
         deleteFolder,
         toggleFavorite,
+        importLibraryItems,
         openRecipeInResult,
         showInLibrary,
         libraryFocusId,

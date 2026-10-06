@@ -78,6 +78,9 @@ const library = {
     ipcRenderer.invoke('library:store-image', itemId, original, extension, thumbnail, name),
   deleteImage: (urls: string[]): Promise<void> => ipcRenderer.invoke('library:delete-image', urls),
   deleteItemImages: (itemId: string): Promise<void> => ipcRenderer.invoke('library:delete-item-images', itemId),
+  saveBackup: (bytes: Uint8Array, defaultName: string): Promise<string | null> =>
+    ipcRenderer.invoke('library:save-backup', bytes, defaultName),
+  openBackup: (): Promise<{ name: string; bytes: Uint8Array } | null> => ipcRenderer.invoke('library:open-backup'),
 };
 
 const safetensors = {
