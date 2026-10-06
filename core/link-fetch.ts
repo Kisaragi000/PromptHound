@@ -5,6 +5,7 @@ import { extractFromPngChunks } from './format-detect.js';
 import { isWebp, extractFromWebpBuffer } from './webp.js';
 import { isJpeg, extractFromJpegBuffer } from './jpeg.js';
 import { scrapePageMetadata } from './page-json.js';
+import { civitaiOriginal } from './civitai-images.js';
 import { resolveLoras, resolveBaseModel } from './lora-resolution.js';
 import { mergeExtractedMetadata } from './metadata-merge.js';
 import { isExtractionError } from './types.js';
@@ -99,7 +100,7 @@ export async function extractFromUrl(url: string): Promise<ExtractionResult | Ex
 
   try {
     if (isDirectImageUrl(cleanUrl)) {
-      const response = await fetch(cleanUrl);
+      const response = await fetch(civitaiOriginal(cleanUrl));
       if (!response.ok) {
         return {
           code: 'fetch-failed',
@@ -126,6 +127,12 @@ export async function extractFromUrl(url: string): Promise<ExtractionResult | Ex
         code: 'fetch-failed',
         message: `Failed to fetch page: HTTP ${pageResponse.status} ${pageResponse.statusText}`,
       };
+    }
+
+    // Image addresses without a file extension (a browser's "Copy image" on some sites)
+    if (/^image\//i.test(pageResponse.headers.get('content-type') ?? '')) {
+      const uint8 = new Uint8Array(await pageResponse.arrayBuffer());
+      return extractFromImageBuffer(uint8, { kind: 'direct-image-url', label: cleanUrl }, cleanUrl);
     }
 
     const html = await pageResponse.text();

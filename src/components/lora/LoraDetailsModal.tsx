@@ -21,6 +21,7 @@ import {
   toResolvedLora,
 } from '../../../core/lora-cache.js';
 import type { CandidateMatchResult } from '../../../core/similarity.js';
+import { seaartSearchUrl } from '../../../core/seaart.js';
 
 interface LoraDetailsModalProps {
   lora: LoraReference;
@@ -255,6 +256,16 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   style={{ fontSize: '12px', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
                 >
                   View on {lora.resolved.modelUrl.includes('civitai.red') ? 'Civitai.red' : 'Civitai'} <ExternalLinkIcon size={12} />
+                </a>
+              )}
+              {seaartSearchUrl(lora.resolved?.name || lora.rawName) && (
+                <a
+                  href={seaartSearchUrl(lora.resolved?.name || lora.rawName)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '12px', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', marginLeft: lora.resolved?.modelUrl ? '12px' : 0 }}
+                >
+                  Search on SeaArt <ExternalLinkIcon size={12} />
                 </a>
               )}
             </div>

@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Explorer right-click menu**: "Extract with PromptHound" on PNG, JPEG, WebP and AVIF
+  files (Settings > Windows Integration, or the setup wizard). Images opened from it go
+  to the running window; selecting several opens them as one batch.
+- **Library backup**: Settings > Prompt Library Backup exports every prompt, folder,
+  favorite and image to one .zip, and imports one on this or another PC. Prompts already
+  in the library are kept as they are.
+- **Paste keeps the prompt**: pasting an image copied in a browser fetches the original
+  file (Civitai's resized copies are swapped for the original upload). Pasting an image
+  link or an Explorer "Copy as path" path opens it too.
+- **Library search** matches every word across title, prompts, model, LoRAs and trigger
+  words, sampler and folder; `"phrases"` and `-word` work. New model and LoRA filters.
+- **SeaArt links**: every LoRA card and the LoRA details dialog link to a SeaArt search.
+
+### Fixed
+- Sampler names keep their scheduler ("DPM++ 2M Karras" showed as "DPM++ 2M"), including
+  A1111 1.9+'s separate "Schedule type".
+- NovelAI samplers show as labels ("Euler a" instead of "k_euler_ancestral").
+- Web links opened from the app go to the default browser instead of an app window.
+- The desktop app no longer stores the Civitai API key in plain text next to the
+  encrypted copy; an existing plain copy is moved and deleted.
+
+### Removed
+- Settings toggles that had no effect (Clipboard Auto-Detection, Resolve Remote LoRAs,
+  Default Archive Directory) and the setup wizard's drag and hotkey options.
+
+### Project
+- Tests (`npm test`) and a CI workflow (typecheck, tests, build) on every push and pull
+  request; the typecheck now covers the Electron main process.
+- Removed unused dependencies and leftover AI Studio files; archived old planning docs;
+  added the MIT LICENSE file the README refers to.
+
 ## v1.0.16
 
 ### Several images per prompt

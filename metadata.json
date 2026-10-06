@@ -1,6 +1,0 @@
-{
-  "name": "PromptHound",
-  "description": "AI prompt and metadata extractor for AI-generated images with structured display, LoRA resolution, and prompt library.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

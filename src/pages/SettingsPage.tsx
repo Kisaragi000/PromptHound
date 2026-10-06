@@ -10,18 +10,10 @@ import {
   type CivitaiDomainPreference,
 } from '../../core/lora-resolution.js';
 import { Dropdown } from '../components/primitives/Dropdown.js';
+import { LibraryBackupControls } from '../components/library/LibraryBackupControls.js';
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
-  const [autoExtractClipboard, setAutoExtractClipboard] = useState(() => {
-    return localStorage.getItem('prompthound_auto_clipboard') !== 'false';
-  });
-  const [resolveLoras, setResolveLoras] = useState(() => {
-    return localStorage.getItem('prompthound_resolve_loras') !== 'false';
-  });
-  const [downloadFolder, setDownloadFolder] = useState(() => {
-    return localStorage.getItem('prompthound_download_folder') || 'C:\\Users\\Artist\\Pictures\\PromptHound';
-  });
   const [civitaiDomain, setCivitaiDomain] = useState<CivitaiDomainPreference>(() => {
     return getPreferredCivitaiDomain();
   });
@@ -31,11 +23,16 @@ export const SettingsPage: React.FC = () => {
     count: 0,
     userCount: 0,
   });
+  const [explorerMenu, setExplorerMenu] = useState<{ supported: boolean; enabled: boolean; busy?: boolean; error?: string }>({
+    supported: false,
+    enabled: false,
+  });
   const [saved, setSaved] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
 
   useEffect(() => {
     setCacheStats(getLoraCacheStats());
+    window.promptHound?.shellIntegration?.get().then(setExplorerMenu).catch(() => undefined);
 
     // Load Civitai key from native safeStorage if available
     if (window.promptHound?.settings?.getCivitaiKey) {
@@ -58,10 +55,8 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = () => {
     try {
-      localStorage.setItem('prompthound_auto_clipboard', String(autoExtractClipboard));
-      localStorage.setItem('prompthound_resolve_loras', String(resolveLoras));
-      localStorage.setItem('prompthound_download_folder', downloadFolder);
-      localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
+      // The desktop app stores the key encrypted below; only the web preview keeps it here
+      if (!window.promptHound?.settings) localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
       setPreferredCivitaiDomain(civitaiDomain);
 
       setRuntimeCivitaiApiKey(civitaiApiKey.trim() || null);
@@ -76,6 +71,18 @@ export const SettingsPage: React.FC = () => {
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  // Applies at once: the menu is added to or removed from Explorer when toggled
+  const handleExplorerMenuChange = async (enabled: boolean) => {
+    const integration = window.promptHound?.shellIntegration;
+    if (!integration) return;
+    setExplorerMenu((s) => ({ ...s, busy: true, error: undefined }));
+    try {
+      setExplorerMenu(await integration.set(enabled));
+    } catch {
+      setExplorerMenu((s) => ({ ...s, busy: false, error: 'Windows did not accept the change. Try again.' }));
+    }
   };
 
   const handleOpenCivitaiAccount = (e: React.MouseEvent) => {
@@ -100,41 +107,28 @@ export const SettingsPage: React.FC = () => {
       <div>
         <h1 className={styles.headerTitle}>Preferences & Settings</h1>
         <p className={styles.headerSubtitle}>
-          Configure metadata extraction, network resolvers, and storage directories.
+          Windows integration, Civitai access, library backups and the model cache.
         </p>
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>AUTOMATION</div>
+        <div className={styles.sectionTitle}>WINDOWS INTEGRATION</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Clipboard Auto-Detection</div>
+            <div className={styles.settingLabel}>Explorer Right-Click Menu</div>
             <div className={styles.settingDesc}>
-              Automatically detect image URLs or file paths copied to the clipboard.
+              {explorerMenu.supported
+                ? 'Adds "Extract with PromptHound" when you right-click a PNG, JPEG, WebP or AVIF file in Windows Explorer.'
+                : 'Available in the installed Windows app.'}
+              {explorerMenu.error && <div style={{ marginTop: '4px', color: '#f87171' }}>{explorerMenu.error}</div>}
             </div>
           </div>
           <label className={styles.toggleSwitch}>
             <input
               type="checkbox"
-              checked={autoExtractClipboard}
-              onChange={(e) => setAutoExtractClipboard(e.target.checked)}
-            />
-            <span className={styles.toggleSlider} />
-          </label>
-        </div>
-
-        <div className={styles.settingRow}>
-          <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Resolve Remote LoRAs</div>
-            <div className={styles.settingDesc}>
-              Query Civitai and remote databases for friendly names, thumbnails, and model pages.
-            </div>
-          </div>
-          <label className={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={resolveLoras}
-              onChange={(e) => setResolveLoras(e.target.checked)}
+              checked={explorerMenu.enabled}
+              disabled={!explorerMenu.supported || explorerMenu.busy}
+              onChange={(e) => void handleExplorerMenuChange(e.target.checked)}
             />
             <span className={styles.toggleSlider} />
           </label>
@@ -199,16 +193,14 @@ export const SettingsPage: React.FC = () => {
         <div className={styles.sectionTitle}>STORAGE & EXPORTS</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Default Archive Directory</div>
+            <div className={styles.settingLabel}>Prompt Library Backup</div>
             <div className={styles.settingDesc}>
-              Target folder for visual archives and JSON exports.
+              Save every prompt, folder, favorite and image to one .zip file, to keep as a backup, move to
+              another PC or share. Importing adds the prompts you don't have yet and keeps the ones you do.
             </div>
           </div>
           <div className={styles.settingControl}>
-            <GlassInput
-              value={downloadFolder}
-              onChange={(e) => setDownloadFolder(e.target.value)}
-            />
+            <LibraryBackupControls />
           </div>
         </div>
       </div>

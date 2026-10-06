@@ -15,3 +15,17 @@ export function civitaiThumbnail(url: string | undefined, width = 256): string |
   else parts.splice(parts.length - 1, 0, transform);
   return parts.join('/');
 }
+
+/**
+ * The original upload behind a Civitai image URL. Images on the site (and so a browser's
+ * "Copy image") use resized copies, which have no generation metadata.
+ */
+export function civitaiOriginal(url: string): string {
+  if (!/^https:\/\/image\.civitai\.com\//.test(url)) return url;
+  const parts = url.split('/');
+  if (parts.length < 6) return url;
+  const segment = parts[parts.length - 2];
+  if (/=/.test(segment)) parts[parts.length - 2] = 'original=true';
+  else parts.splice(parts.length - 1, 0, 'original=true');
+  return parts.join('/');
+}

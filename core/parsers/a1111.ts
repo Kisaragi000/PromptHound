@@ -1,5 +1,5 @@
 import type { ExtractedMetadata, LoraReference } from '../types.js';
-import { samplerLabel } from '../sampler-names.js';
+import { samplerLabel, withScheduler } from '../sampler-names.js';
 import { diceCoefficient } from '../similarity.js';
 import { INLINE_LORA_TAG } from '../metadata-merge.js';
 
@@ -354,6 +354,7 @@ export function parseA1111(
   const cfgScale = cfgKey && settings[cfgKey] ? parseFloat(settings[cfgKey]) : undefined;
 
   const samplerKey = Object.keys(settings).find((k) => /^Sampler$/i.test(k));
+  const scheduleTypeKey = Object.keys(settings).find((k) => /^Schedule type$/i.test(k));
   const seedKey = Object.keys(settings).find((k) => /^Seed$/i.test(k));
   const modelKey = Object.keys(settings).find((k) => /^Model$/i.test(k));
   const modelHashKey = Object.keys(settings).find((k) => /^Model hash$/i.test(k));
@@ -361,7 +362,12 @@ export function parseA1111(
   return {
     prompt: cleanPrompt,
     negativePrompt: rawNegativePrompt || undefined,
-    sampler: samplerKey ? samplerLabel(settings[samplerKey], extraScheduler(settings)) : undefined,
+    sampler: samplerKey
+      ? withScheduler(
+          samplerLabel(settings[samplerKey], extraScheduler(settings)),
+          scheduleTypeKey ? settings[scheduleTypeKey] : undefined
+        )
+      : undefined,
     steps: Number.isFinite(steps) ? steps : undefined,
     cfgScale: Number.isFinite(cfgScale) ? cfgScale : undefined,
     seed: seedKey ? settings[seedKey] : undefined,

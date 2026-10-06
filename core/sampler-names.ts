@@ -66,3 +66,15 @@ export function samplerLabel(sampler?: string, scheduler?: string): string | und
   if (!/^[a-z0-9_]+$/.test(sampler)) return sampler;
   return normalizeSampler(sampler, scheduler);
 }
+
+/**
+ * Adds a scheduler to a sampler label ("DPM++ 2M" + "karras" -> "DPM++ 2M Karras"), as
+ * A1111 1.9+ ("Schedule type: Karras") and Civitai's normalizer store them apart.
+ * Default schedulers are left out, and a label that already names it is kept as it is.
+ */
+export function withScheduler(samplerLabelText?: string, scheduler?: string): string | undefined {
+  if (!samplerLabelText || !scheduler || /^(normal|simple|automatic)$/i.test(scheduler.trim())) return samplerLabelText;
+  const key = Object.keys(SCHEDULER_NAMES).find((k) => k.toLowerCase() === scheduler.trim().toLowerCase());
+  const label = key ? SCHEDULER_NAMES[key] : scheduler.trim().charAt(0).toUpperCase() + scheduler.trim().slice(1);
+  return samplerLabelText.toLowerCase().includes(label.toLowerCase()) ? samplerLabelText : `${samplerLabelText} ${label}`;
+}

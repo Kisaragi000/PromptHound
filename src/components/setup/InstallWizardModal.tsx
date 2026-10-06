@@ -65,8 +65,6 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
 
   // Step 4: Desktop & Explorer Integration
   const [enableContextMenu, setEnableContextMenu] = useState(true);
-  const [enableClipboardWatch, setEnableClipboardWatch] = useState(true);
-  const [enableHotkeys, setEnableHotkeys] = useState(true);
 
   if (!isOpen) return null;
 
@@ -107,10 +105,15 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
     localStorage.setItem('prompthound_workflow_profile', workflowProfile);
     localStorage.setItem('prompthound_lora_directory', loraDirectory);
     localStorage.setItem('prompthound_download_folder', outputDirectory);
-    localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
-    localStorage.setItem('prompthound_context_menu', String(enableContextMenu));
-    localStorage.setItem('prompthound_clipboard_watch', String(enableClipboardWatch));
-    localStorage.setItem('prompthound_hotkeys_enabled', String(enableHotkeys));
+    if (window.promptHound?.settings) {
+      void window.promptHound.settings.saveCivitaiKey(civitaiApiKey.trim());
+    } else {
+      localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
+    }
+    void window.promptHound?.shellIntegration
+      ?.get()
+      .then((state) => (state.supported ? window.promptHound?.shellIntegration?.set(enableContextMenu) : undefined))
+      .catch(() => undefined);
 
     setPreferredCivitaiDomain(civitaiDomain);
     setRuntimeCivitaiApiKey(civitaiApiKey.trim() || null);
@@ -311,15 +314,15 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             </div>
           )}
 
-          {/* STEP 4: Desktop Shell & Hotkeys */}
+          {/* STEP 4: Windows Explorer integration */}
           {step === 4 && (
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <LightningIcon size={20} />
-                <h3>Desktop Integrations & Hotkeys</h3>
+                <h3>Windows Integration</h3>
               </div>
               <p className={styles.sectionDesc}>
-                Enable native convenience shortcuts for rapid generation inspection while you create.
+                Open images in PromptHound straight from Windows Explorer.
               </p>
 
               <div className={styles.toggleList}>
@@ -327,7 +330,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   <div className={styles.toggleInfo}>
                     <span className={styles.toggleTitle}>Windows Explorer Right-Click Menu</span>
                     <span className={styles.toggleDesc}>
-                      Add &quot;Extract with PromptHound&quot; to right-click menus for .png, .webp, and .jpg files.
+                      Add &quot;Extract with PromptHound&quot; to the right-click menu of PNG, JPEG, WebP and AVIF files. You can change this later in Settings.
                     </span>
                   </div>
                   <input
@@ -338,35 +341,6 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   />
                 </label>
 
-                <label className={styles.toggleRow}>
-                  <div className={styles.toggleInfo}>
-                    <span className={styles.toggleTitle}>Auto-Detect Dragged Images</span>
-                    <span className={styles.toggleDesc}>
-                      Instantly parses files dropped anywhere onto the PromptHound window (up to 10 at once).
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={enableClipboardWatch}
-                    onChange={(e) => setEnableClipboardWatch(e.target.checked)}
-                    className={styles.checkbox}
-                  />
-                </label>
-
-                <label className={styles.toggleRow}>
-                  <div className={styles.toggleInfo}>
-                    <span className={styles.toggleTitle}>Global Quick-Inspect Hotkey (Win + Shift + H)</span>
-                    <span className={styles.toggleDesc}>
-                      Press hotkey anywhere in Windows to inspect the image currently on your clipboard.
-                    </span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={enableHotkeys}
-                    onChange={(e) => setEnableHotkeys(e.target.checked)}
-                    className={styles.checkbox}
-                  />
-                </label>
               </div>
             </div>
           )}

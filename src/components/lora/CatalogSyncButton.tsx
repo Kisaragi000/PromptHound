@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RefreshIcon, CheckIcon } from '../icons/Icons.js';
 import { getLoraCacheStats, upsertLoraRecord } from '../../../core/lora-cache.js';
 import { normalizeLoraName } from '../../../core/lora-resolution.js';
+import { getCivitaiApiKey } from '../../../core/lora-resolution.js';
 
 interface CatalogSyncButtonProps {
   variant?: 'compact' | 'full' | 'sidebar';
@@ -27,7 +28,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
 
     try {
       // Simulate incremental fetch of trending/latest LoRAs
-      const apiKey = localStorage.getItem('prompthound_civitai_key') || '';
+      const apiKey = getCivitaiApiKey() || '';
       const url = `https://civitai.com/api/v1/models?types=LORA&types=LoCon&types=DoRA&sort=Most%20Downloaded&limit=50`;
 
       setProgress({ current: 30, total: 100 });

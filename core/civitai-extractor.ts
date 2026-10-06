@@ -4,6 +4,7 @@ import type { ExtractedMetadata, ExtractionResult, ExtractionError, LoraReferenc
 import { resolveLoras } from './lora-resolution.js';
 import { extractFromRawText } from './format-detect.js';
 import { extractInlineLoras } from './parsers/a1111.js';
+import { withScheduler } from './sampler-names.js';
 
 /**
  * Reads generation metadata with Civitai's generation-metadata engine, without
@@ -30,7 +31,9 @@ export async function readCivitaiLibraryMetadata(input: any): Promise<ExtractedM
     civitaiData?.generation?.negativePrompt ||
     undefined;
 
-  let sampler = normalized?.sampler || raw.sampler || civitaiData?.generation?.sampler;
+  // The normalizer splits "DPM++ 2M Karras" into sampler and scheduler; keep both
+  let sampler =
+    withScheduler(normalized?.sampler, normalized?.scheduler) || raw.sampler || civitaiData?.generation?.sampler;
   let steps = normalized?.steps ?? (raw.steps ? Number(raw.steps) : undefined);
   let cfgScale = normalized?.cfgScale ?? (raw.cfgScale ? Number(raw.cfgScale) : undefined);
   let seed = normalized?.seed ?? raw.seed ?? civitaiData?.generation?.seed;
