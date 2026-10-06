@@ -40,3 +40,16 @@
   !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
   !insertmacro MUI_PAGE_FINISH
 !macroend
+
+; Removes the "Extract with PromptHound" Explorer menu (Settings > Explorer Right-Click
+; Menu). Updates keep it: the new version re-registers it on start.
+!macro customUnInstall
+  ${ifNot} ${isUpdated}
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.png\shell\PromptHound"
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.jpg\shell\PromptHound"
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.jpeg\shell\PromptHound"
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.jfif\shell\PromptHound"
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.webp\shell\PromptHound"
+    DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\.avif\shell\PromptHound"
+  ${endIf}
+!macroend

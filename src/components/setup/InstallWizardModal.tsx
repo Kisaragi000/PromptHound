@@ -108,7 +108,10 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
     localStorage.setItem('prompthound_lora_directory', loraDirectory);
     localStorage.setItem('prompthound_download_folder', outputDirectory);
     localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
-    localStorage.setItem('prompthound_context_menu', String(enableContextMenu));
+    void window.promptHound?.shellIntegration
+      ?.get()
+      .then((state) => (state.supported ? window.promptHound?.shellIntegration?.set(enableContextMenu) : undefined))
+      .catch(() => undefined);
     localStorage.setItem('prompthound_clipboard_watch', String(enableClipboardWatch));
     localStorage.setItem('prompthound_hotkeys_enabled', String(enableHotkeys));
 

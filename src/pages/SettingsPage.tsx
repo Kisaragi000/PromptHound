@@ -31,11 +31,16 @@ export const SettingsPage: React.FC = () => {
     count: 0,
     userCount: 0,
   });
+  const [explorerMenu, setExplorerMenu] = useState<{ supported: boolean; enabled: boolean; busy?: boolean; error?: string }>({
+    supported: false,
+    enabled: false,
+  });
   const [saved, setSaved] = useState(false);
   const [cacheCleared, setCacheCleared] = useState(false);
 
   useEffect(() => {
     setCacheStats(getLoraCacheStats());
+    window.promptHound?.shellIntegration?.get().then(setExplorerMenu).catch(() => undefined);
 
     // Load Civitai key from native safeStorage if available
     if (window.promptHound?.settings?.getCivitaiKey) {
@@ -78,6 +83,18 @@ export const SettingsPage: React.FC = () => {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  // Applies at once: the menu is added to or removed from Explorer when toggled
+  const handleExplorerMenuChange = async (enabled: boolean) => {
+    const integration = window.promptHound?.shellIntegration;
+    if (!integration) return;
+    setExplorerMenu((s) => ({ ...s, busy: true, error: undefined }));
+    try {
+      setExplorerMenu(await integration.set(enabled));
+    } catch {
+      setExplorerMenu((s) => ({ ...s, busy: false, error: 'Windows did not accept the change. Try again.' }));
+    }
+  };
+
   const handleOpenCivitaiAccount = (e: React.MouseEvent) => {
     e.preventDefault();
     const url = 'https://civitai.com/user/account';
@@ -118,6 +135,27 @@ export const SettingsPage: React.FC = () => {
               type="checkbox"
               checked={autoExtractClipboard}
               onChange={(e) => setAutoExtractClipboard(e.target.checked)}
+            />
+            <span className={styles.toggleSlider} />
+          </label>
+        </div>
+
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>Explorer Right-Click Menu</div>
+            <div className={styles.settingDesc}>
+              {explorerMenu.supported
+                ? 'Adds "Extract with PromptHound" when you right-click a PNG, JPEG, WebP or AVIF file in Windows Explorer.'
+                : 'Available in the installed Windows app.'}
+              {explorerMenu.error && <div style={{ marginTop: '4px', color: '#f87171' }}>{explorerMenu.error}</div>}
+            </div>
+          </div>
+          <label className={styles.toggleSwitch}>
+            <input
+              type="checkbox"
+              checked={explorerMenu.enabled}
+              disabled={!explorerMenu.supported || explorerMenu.busy}
+              onChange={(e) => void handleExplorerMenuChange(e.target.checked)}
             />
             <span className={styles.toggleSlider} />
           </label>

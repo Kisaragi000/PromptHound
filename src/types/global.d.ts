@@ -64,6 +64,12 @@ export interface PromptHoundAPI {
     searchFts: (query: string) => Promise<any[]>;
     toggleFavorite: (uuid: string, isFav: boolean) => Promise<void>;
   };
+  shellIntegration?: {
+    get: () => Promise<{ supported: boolean; enabled: boolean }>;
+    set: (enabled: boolean) => Promise<{ supported: boolean; enabled: boolean }>;
+    takeOpenedFiles: () => Promise<Array<{ name: string; bytes: Uint8Array }>>;
+    onFilesOpened: (callback: () => void) => () => void;
+  };
   safetensors?: {
     readFile: (filePath: string) => Promise<any>;
     openFileDialog: () => Promise<string | null>;

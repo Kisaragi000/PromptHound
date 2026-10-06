@@ -98,6 +98,21 @@ const updates = {
   },
 };
 
+const shellIntegration = {
+  get: (): Promise<{ supported: boolean; enabled: boolean }> => ipcRenderer.invoke('shell-integration:get'),
+  set: (enabled: boolean): Promise<{ supported: boolean; enabled: boolean }> =>
+    ipcRenderer.invoke('shell-integration:set', enabled),
+  /** Image files opened from Explorer ("Extract with PromptHound"), each taken once */
+  takeOpenedFiles: (): Promise<Array<{ name: string; bytes: Uint8Array }>> => ipcRenderer.invoke('app:take-opened-files'),
+  onFilesOpened: (callback: () => void): (() => void) => {
+    const listener = (): void => callback();
+    ipcRenderer.on('app:files-opened', listener);
+    return () => {
+      ipcRenderer.removeListener('app:files-opened', listener);
+    };
+  },
+};
+
 const promptHoundApi = {
   windowControls,
   appInfo,
@@ -107,6 +122,7 @@ const promptHoundApi = {
   library,
   safetensors,
   updates,
+  shellIntegration,
   openExternal: (url: string) => ipcRenderer.send('shell:openExternal', url),
 };
 

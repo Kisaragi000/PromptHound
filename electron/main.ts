@@ -23,6 +23,18 @@ import type { ModelCatalogRecord } from '../core/types.js';
 import seedCatalog from '../core/data/lora-seed.json';
 import { createHash } from 'node:crypto';
 import { autoUpdater } from 'electron-updater';
+import {
+  isShellIntegrationSupported,
+  registerContextMenu,
+  unregisterContextMenu,
+  imagePathsFromArgv,
+  queueOpenedPaths,
+  takeOpenedFiles,
+} from './shell-integration.js';
+
+// One window: images opened from Explorer while the app runs go to that window
+const isPrimaryInstance = app.requestSingleInstanceLock();
+if (!isPrimaryInstance) app.quit();
 
 /**
  * Library images live in <userData>/library-images/<item id>/ and reach the UI as
@@ -349,6 +361,56 @@ function readCivitaiKey(): string | null {
     return null;
   }
 }
+
+function readSetting(key: string): string | null {
+  if (!loraDbInstance) return null;
+  const row = loraDbInstance.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+function writeSetting(key: string, value: string): void {
+  loraDbInstance?.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+}
+
+const CONTEXT_MENU_SETTING = 'explorer_context_menu';
+
+function registerShellIntegrationHandlers(): void {
+  ipcMain.handle('shell-integration:get', () => ({
+    supported: isShellIntegrationSupported(),
+    enabled: readSetting(CONTEXT_MENU_SETTING) === 'true',
+  }));
+
+  ipcMain.handle('shell-integration:set', async (_event, enabled: boolean) => {
+    if (!isShellIntegrationSupported()) return { supported: false, enabled: false };
+    if (enabled) {
+      await registerContextMenu();
+    } else {
+      await unregisterContextMenu();
+    }
+    writeSetting(CONTEXT_MENU_SETTING, String(Boolean(enabled)));
+    return { supported: true, enabled: Boolean(enabled) };
+  });
+
+  ipcMain.handle('app:take-opened-files', () => takeOpenedFiles());
+
+  // The install folder (or the portable exe) can move between versions; point the menu
+  // at the exe that is running now
+  if (isShellIntegrationSupported() && readSetting(CONTEXT_MENU_SETTING) === 'true') {
+    registerContextMenu().catch((err) => console.warn('Could not refresh the Explorer menu:', err));
+  }
+}
+
+function notifyOpenedFiles(): void {
+  mainWindow?.webContents.send('app:files-opened');
+}
+
+app.on('second-instance', (_event, argv) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+  queueOpenedPaths(imagePathsFromArgv(argv), notifyOpenedFiles);
+});
 
 function registerLoraDbHandlers(): void {
   // Reads go straight to SQLite; writes go through core/lora-cache so this process's
@@ -803,7 +865,11 @@ function registerLibraryImageHandlers(): void {
   });
 }
 
+// The window asks for these once it has loaded
+queueOpenedPaths(imagePathsFromArgv(process.argv), notifyOpenedFiles);
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return;
   initLoraDatabase();
   configureLoraPersistence(loraDbInstance ? sqliteLoraPersistence : null);
   setRuntimeCivitaiApiKey(readCivitaiKey());
@@ -815,6 +881,7 @@ app.whenReady().then(() => {
   registerExtractionHandlers();
   registerUpdateHandlers();
   registerLibraryImageHandlers();
+  registerShellIntegrationHandlers();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
