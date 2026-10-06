@@ -23,68 +23,33 @@ PromptHound is built with a bespoke **Dark Forest Glassmorphism** design system 
 
 ```text
 PromptHound/
-├── .github/                     # GitHub workflows and release automation
-├── core/                        # Framework-agnostic parsing & resolution engine
-│   ├── formatDetector.ts        # Heuristic detection for A1111, ComfyUI, Civitai, SeaArt
-│   ├── parser.ts                # Metadata normalization and regex chunk extraction
-│   ├── loraResolver.ts          # Civitai & remote LoRA lookup & metadata enrichment
-│   ├── types.ts                 # Shared TypeScript domain contracts
-│   └── README.md                # Core package architectural notes
-├── docs/                        # Complete design & specification documents
-│   ├── BLUEPRINT.md             # Engineering roadmap & Phase 1 requirements
-│   ├── UI_SPEC.md               # Visual design tokens & interface specifications
-│   ├── PROJECT_STATE.md         # Current status & milestones checklist
-│   └── HANDOFF_NOTES.md         # Handoff notes & architectural overview
-├── electron/                    # Electron Windows Desktop shell
-│   ├── main.ts                  # Main process: native menus, IPC handlers, window controls
-│   ├── preload.ts               # Secure contextBridge API for IPC communication
-│   └── tsconfig.json            # Electron TypeScript build config
-├── scripts/                     # Tooling & dev runners
-│   └── dev.mjs                  # Development orchestrator (tsc + vite + electron)
+├── .github/workflows/           # ci.yml (typecheck, tests, build) and release.yml (Windows installer)
+├── build/                       # Installer artwork, icon and NSIS script (installer.nsh)
+├── core/                        # Extraction engine shared by the app and the main process
+│   ├── link-fetch.ts            # Entry points: extract from image bytes or a link
+│   ├── png.ts, jpeg.ts, webp.ts # Metadata chunk readers
+│   ├── format-detect.ts         # A1111 / ComfyUI / NovelAI / SwarmUI detection
+│   ├── parsers/                 # A1111 settings parser and ComfyUI graph tracing
+│   ├── civitai-extractor.ts     # Civitai generation-metadata engine, merged with the native readers
+│   ├── content-credentials.ts   # C2PA / IPTC "AI-generated" labels (ChatGPT, Gemini, ...)
+│   ├── lora-resolution.ts       # LoRA and checkpoint identification (catalog, then Civitai)
+│   ├── lora-cache.ts            # In-memory and SQLite catalog of known models
+│   ├── seaart.ts                # SeaArt search links
+│   └── data/                    # Generated offline catalog (see below)
+├── docs/                        # Blueprint, UI spec and archived planning notes
+├── electron/
+│   ├── main.ts                  # Window, IPC, SQLite library, updates, file dialogs
+│   ├── shell-integration.ts     # Explorer right-click menu and opening files from it
+│   └── preload.ts               # window.promptHound bridge for the UI
+├── public/samples/              # Example images shown in a new Prompt Library
+├── scripts/                     # Dev runner, catalog builder, LoRA benchmark
 ├── src/                         # React UI (Vite + TypeScript)
-│   ├── components/
-│   │   ├── icons/Icons.tsx      # Inline vector icons (Hound mark, window controls, etc.)
-│   │   ├── home/                # Batch extraction queue & recent extractions strip
-│   │   ├── setup/               # 4-step setup & install wizard
-│   │   ├── recipe/              # Prompt format selector & interactive LoRA mixer
-│   │   ├── library/             # Side-by-side prompt difference modal
-│   │   ├── primitives/          # Atomic UI components
-│   │   │   ├── GlassPanel.tsx
-│   │   │   ├── GlassCard.tsx
-│   │   │   ├── PrimaryButton.tsx
-│   │   │   ├── SecondaryButton.tsx
-│   │   │   ├── IconButton.tsx
-│   │   │   ├── GlassInput.tsx
-│   │   │   ├── StatusBadge.tsx
-│   │   │   └── EmptyStatePanel.tsx
-│   │   └── shell/               # App layout & frame components
-│   │       ├── AppShell.tsx     # Framing container with radial gradient backdrop
-│   │       ├── TitleBar.tsx     # Custom frameless title bar with drag region & status
-│   │       └── Sidebar.tsx      # Navigation rail with route buttons and utility card
-│   ├── navigation/
-│   │   ├── NavigationContext.tsx# Route management and state sharing
-│   │   └── RouteView.tsx        # View switcher
-│   ├── pages/
-│   │   ├── HomePage.tsx         # Batch queue, Paste URL, Drag & Drop, Library hero
-│   │   ├── ExtractionResultPage.tsx # 3-zone metadata inspection, LoRA mixer, format converter
-│   │   ├── PromptLibraryPage.tsx    # Folder rail, grid/table view, diff modal, detail pane
-│   │   ├── VisualArchivePage.tsx    # Canvas visual archive compiler
-│   │   ├── FavoritesPage.tsx        # Starred prompt bookmarker
-│   │   ├── SettingsPage.tsx         # Automation, API key & storage configurations
-│   │   └── AboutPage.tsx            # Version specifications & software credits
-│   ├── styles/
-│   │   ├── tokens.css           # Design tokens (colors, spacing, typography, radii)
-│   │   └── global.css           # Global resets and scrollbar styling
-│   ├── types/
-│   │   └── global.d.ts          # Window.promptHound Electron bridge types
-│   ├── App.tsx                  # Root React component
-│   ├── index.css                # Tailwind + global styles entry
-│   └── main.tsx                 # DOM entry point
-├── index.html                   # HTML entry point with Plus Jakarta Sans font imports
-├── metadata.json                # Project descriptor
-├── package.json                 # Dependencies & build scripts
-├── tsconfig.json                # TypeScript project configuration
-└── vite.config.ts               # Vite bundler configuration
+│   ├── components/              # Shell, primitives, library, LoRA cards, recipe panels, setup wizard
+│   ├── extraction/              # Extraction state (single images and batches)
+│   ├── navigation/              # Routing and the Prompt Library state
+│   ├── pages/                   # Home, Result, Library, Favorites, Settings, About
+│   └── utils/                   # Images, library backup and search, paste handling
+└── tests/                       # npm test: extraction, search, backup and link tests
 ```
 
 ---
@@ -144,29 +109,14 @@ See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ## ⚡ Features
 
-1. **Batch Extraction Queue (10-File Limit)**:
-   - Drag & drop or browse up to 10 images concurrently.
-   - Individual status cards showing progress spinner, success checkmarks, extracted model, and LoRA counts.
-   - 1-click **"Save All Extracted to Library"** and click-to-inspect.
-
-2. **First-Run Install & Configuration Wizard**:
-   - 4-step wizard for configuring workflow profile (A1111/Forge, ComfyUI, SD.Next, Fooocus), model directories, Civitai API key, and shell context menu integration.
-
-3. **LoRA Mixer & Trigger Words Copier**:
-   - Live weight sliders ($0.00$ – $2.00$), trigger word toggles, and instant stack copying.
-
-4. **Prompt Syntax Transformer**:
-   - Instant 1-click conversion between Automatic1111/Forge syntax (`<lora:name:0.8>`), ComfyUI node clip text, and Clean Plaintext.
-
-5. **Prompt Library with Diffing & Dual View**:
-   - Visual card grid and compact table view.
-   - Side-by-side prompt diffing with parameter comparison.
-
-6. **Visual Archive Compiler**:
-   - Dynamic HTML5 Canvas rendering composite recipe sheet for export and archival.
-   - **Prompt Library**: 3-column layout (Folder Rail with count badges, Fluid Prompt Cards Grid with favorite toggles, and Selected Prompt Detail Pane).
-   - **Visual Archive Compiler**: Dynamic HTML5 Canvas generator rendering high-resolution composite record sheets embedding prompt, parameters, seed, and LoRAs into an exportable PNG.
-   - **Favorites & Preferences**: Starred prompts organizer, settings panel with Civitai API key entry and storage directories, and About screen.
+1. **Extract from anything**: drop or browse up to 10 images, paste with Ctrl+V, paste a Civitai / SeaArt / image link, or right-click an image in Windows Explorer and choose **Extract with PromptHound** (Settings > Windows Integration). Pasting an image copied in a browser fetches the original file, so the prompt is kept.
+2. **Formats**: A1111 / Forge, ComfyUI (graph tracing), SwarmUI, Fooocus, NovelAI and Civitai on-site images in PNG, JPEG and WebP, plus Content Credentials labels from ChatGPT, Gemini, Firefly and others.
+3. **LoRA and checkpoint identification**: hashes, Civitai version ids and AIR ids against an offline catalog of the top 10,000 models, then Civitai; every LoRA also links to a SeaArt search.
+4. **LoRA mixer and prompt formats**: weight sliders, trigger word chips, and conversion between A1111 syntax, ComfyUI text and plain text.
+5. **Prompt Library**: folders, favorites, up to 5 images per prompt, grid and table views, side-by-side diff, search across prompts, models and LoRAs (`"phrase"`, `-word`) with model and LoRA filters.
+6. **Library backup**: Settings > Prompt Library Backup exports everything to one .zip and imports it on this or another PC.
+7. **Image card**: a shareable PNG of the image with its prompt, settings, base model and LoRAs.
+8. **Automatic updates** for the installed version.
 
 ---
 
@@ -185,20 +135,27 @@ npm install
 
 ### Running in Development
 
-**Web Preview Mode:**
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-**Electron Desktop App:**
-```bash
-npm run electron:dev
-```
-Or use the development runner:
+**Desktop app** (Vite, the Electron main process and Electron together):
 ```bash
 node scripts/dev.mjs
 ```
+
+**Web preview** (the UI in a browser; no file access, Explorer menu or encrypted settings):
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000).
+
+**Windows installer**: `npm run package:win` (on Windows). Releases are built by `.github/workflows/release.yml` from a `v*` tag.
+
+### Checks
+
+```bash
+npm run lint   # typecheck the UI, core and Electron main process
+npm test       # extraction, library search, backup and link tests (offline)
+```
+
+CI runs both, plus `npm run build`, on every push and pull request.
 
 ### Rebuilding the Offline LoRA Catalog
 
