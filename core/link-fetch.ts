@@ -1,7 +1,8 @@
 import { readCivitaiLibraryMetadata, NO_METADATA_ERROR } from './civitai-extractor.js';
 import { readContentCredentials } from './content-credentials.js';
 import { readPngChunks, isPng } from './png.js';
-import { extractFromPngChunks } from './format-detect.js';
+import { extractFromPngChunks, extractFromRawText } from './format-detect.js';
+import { readStealthPngInfo } from './png-stealth.js';
 import { isWebp, extractFromWebpBuffer } from './webp.js';
 import { isJpeg, extractFromJpegBuffer } from './jpeg.js';
 import { scrapePageMetadata } from './page-json.js';
@@ -20,13 +21,33 @@ export function isDirectImageUrl(url: string): boolean {
  */
 function readNativeMetadata(uint8: Uint8Array): ExtractedMetadata | null {
   try {
-    if (isPng(uint8)) return extractFromPngChunks(readPngChunks(uint8));
+    if (isPng(uint8)) {
+      const chunks = readPngChunks(uint8);
+      return extractFromPngChunks(chunks) ?? extractFromStealthPng(uint8, { width: chunks.width, height: chunks.height });
+    }
     if (isWebp(uint8)) return extractFromWebpBuffer(uint8);
     if (isJpeg(uint8)) return extractFromJpegBuffer(uint8);
   } catch {
     // A malformed file must not hide what the Civitai engine found
   }
   return null;
+}
+
+/**
+ * Parameters hidden in the pixels (NovelAI, A1111 stealth-pnginfo), for PNGs whose
+ * text chunks were stripped or never written.
+ */
+function extractFromStealthPng(uint8: Uint8Array, dims: { width?: number; height?: number }): ExtractedMetadata | null {
+  const hidden = readStealthPngInfo(uint8);
+  if (!hidden) return null;
+  // NovelAI hides its PNG text chunks as JSON; the parameters are in Comment
+  try {
+    const obj = JSON.parse(hidden);
+    if (obj && typeof obj.Comment === 'string') return extractFromRawText(obj.Comment, dims);
+  } catch {
+    // Not JSON: A1111 parameters text
+  }
+  return extractFromRawText(hidden, dims);
 }
 
 function hasGenerationData(meta: ExtractedMetadata): boolean {

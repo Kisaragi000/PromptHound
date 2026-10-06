@@ -78,10 +78,11 @@ export const FavoritesPage: React.FC = () => {
         style={{
           flex: 1,
           minWidth: 0,
-          // auto-fit: a few favorites widen to fill the row instead of leaving empty columns
-          maxWidth: `${Math.max(favoriteItems.length, 2) * 400}px`,
+          // auto-fill, as in the Prompt Library: one or two favorites keep the normal card size
+          // instead of stretching across the whole row
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+          gridAutoRows: 'max-content',
           gap: '16px',
         }}
       >

@@ -3,6 +3,8 @@ import type { ExtractedMetadata, LoraReference } from './types.js';
 import { parseA1111, extractInlineLoras } from './parsers/a1111.js';
 import { parseComfyUI } from './parsers/comfyui.js';
 import { samplerLabel } from './sampler-names.js';
+import { parseJsonLenient } from './text-decode.js';
+import { isXmp, readXmpTextFields } from './xmp.js';
 
 export type DetectedFormatType =
   | 'a1111'
@@ -181,13 +183,23 @@ export function extractFromRawText(
 ): ExtractedMetadata | null {
   if (!rawText || typeof rawText !== 'string') return null;
 
+  // An XMP packet holds the parameters in one of its fields; parsing the whole packet
+  // as A1111 text would return the XML itself as the prompt
+  if (isXmp(rawText)) {
+    for (const field of readXmpTextFields(rawText)) {
+      const parsed = extractFromRawText(field, imageDimensions);
+      if (parsed) return parsed;
+    }
+    return null;
+  }
+
   const cleaned = rawText.replace(/^ASCII\0{0,3}/i, '').replace(/^UNICODE\0{0,3}/i, '').trim();
   if (!cleaned) return null;
 
   // 1. Check if it's JSON (ComfyUI / NovelAI / SwarmUI / InvokeAI)
   if ((cleaned.startsWith('{') && cleaned.endsWith('}')) || (cleaned.startsWith('[') && cleaned.endsWith(']'))) {
     try {
-      const parsed = JSON.parse(cleaned);
+      const parsed = parseJsonLenient(cleaned);
 
       // Check NovelAI
       if (parsed.prompt !== undefined && (parsed.uc !== undefined || parsed.sampler !== undefined || parsed.scale !== undefined)) {
@@ -254,14 +266,14 @@ export function extractFromPngChunks(pngData: PngParseResult): ExtractedMetadata
     let combinedInput: any = {};
     if (comfyPrompt) {
       try {
-        combinedInput.prompt = JSON.parse(comfyPrompt);
+        combinedInput.prompt = parseJsonLenient(comfyPrompt);
       } catch {
         combinedInput.prompt = comfyPrompt;
       }
     }
     if (comfyWorkflow) {
       try {
-        combinedInput.workflow = JSON.parse(comfyWorkflow);
+        combinedInput.workflow = parseJsonLenient(comfyWorkflow);
         if (!combinedInput.nodes && combinedInput.workflow.nodes) {
           combinedInput.nodes = combinedInput.workflow.nodes;
         }
@@ -292,7 +304,13 @@ export function extractFromPngChunks(pngData: PngParseResult): ExtractedMetadata
     }
   }
 
-  // 5. Any chunk with A1111-like or ComfyUI-like content
+  // 5. EXIF text tags from an eXIf chunk (UserComment, often UTF-16)
+  for (const text of pngData.exifTexts ?? []) {
+    const parsed = extractFromRawText(text, { width, height });
+    if (parsed) return parsed;
+  }
+
+  // 6. Any chunk with A1111-like or ComfyUI-like content (XMP packets included)
   for (const [, value] of Object.entries(textChunks)) {
     const parsed = extractFromRawText(value, { width, height });
     if (parsed) return parsed;

@@ -6,6 +6,10 @@ on:
       version:
         description: 'Release version, must match package.json (e.g. 1.0.8)'
         required: true
+      publish:
+        description: 'Publish a GitHub release (off: build only, installer kept as a run artifact)'
+        type: boolean
+        default: true
   push:
     tags:
       - 'v*'
@@ -61,7 +65,18 @@ jobs:
       - name: Package Windows .exe (Installer & Portable)
         run: npx electron-builder --win --publish never
 
+      # Test builds: the installer is downloadable from the run page, nothing is released
+      - name: Upload test build
+        if: github.event_name == 'workflow_dispatch' && !inputs.publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromptHound-${{ steps.version.outputs.version }}-test-${{ github.sha }}
+          path: |
+            release/*.exe
+          retention-days: 14
+
       - name: Extract release notes from CHANGELOG.md
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
@@ -76,6 +91,7 @@ jobs:
 
       # Tag pushes release that tag; manual runs create tag v<version> on the built commit
       - name: Publish GitHub Release
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}

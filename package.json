@@ -1,7 +1,7 @@
 {
   "name": "prompthound",
   "productName": "PromptHound",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "license": "MIT",
   "description": "AI prompt and metadata extractor for AI-generated images",
   "main": "dist-electron/main.cjs",
