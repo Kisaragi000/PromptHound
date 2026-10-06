@@ -14,12 +14,6 @@ import { LibraryBackupControls } from '../components/library/LibraryBackupContro
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
-  const [autoExtractClipboard, setAutoExtractClipboard] = useState(() => {
-    return localStorage.getItem('prompthound_auto_clipboard') !== 'false';
-  });
-  const [resolveLoras, setResolveLoras] = useState(() => {
-    return localStorage.getItem('prompthound_resolve_loras') !== 'false';
-  });
   const [civitaiDomain, setCivitaiDomain] = useState<CivitaiDomainPreference>(() => {
     return getPreferredCivitaiDomain();
   });
@@ -61,9 +55,8 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = () => {
     try {
-      localStorage.setItem('prompthound_auto_clipboard', String(autoExtractClipboard));
-      localStorage.setItem('prompthound_resolve_loras', String(resolveLoras));
-      localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
+      // The desktop app stores the key encrypted below; only the web preview keeps it here
+      if (!window.promptHound?.settings) localStorage.setItem('prompthound_civitai_key', civitaiApiKey.trim());
       setPreferredCivitaiDomain(civitaiDomain);
 
       setRuntimeCivitaiApiKey(civitaiApiKey.trim() || null);
@@ -114,29 +107,12 @@ export const SettingsPage: React.FC = () => {
       <div>
         <h1 className={styles.headerTitle}>Preferences & Settings</h1>
         <p className={styles.headerSubtitle}>
-          Configure metadata extraction, network resolvers, and storage directories.
+          Windows integration, Civitai access, library backups and the model cache.
         </p>
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>AUTOMATION</div>
-        <div className={styles.settingRow}>
-          <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Clipboard Auto-Detection</div>
-            <div className={styles.settingDesc}>
-              Automatically detect image URLs or file paths copied to the clipboard.
-            </div>
-          </div>
-          <label className={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={autoExtractClipboard}
-              onChange={(e) => setAutoExtractClipboard(e.target.checked)}
-            />
-            <span className={styles.toggleSlider} />
-          </label>
-        </div>
-
+        <div className={styles.sectionTitle}>WINDOWS INTEGRATION</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
             <div className={styles.settingLabel}>Explorer Right-Click Menu</div>
@@ -153,23 +129,6 @@ export const SettingsPage: React.FC = () => {
               checked={explorerMenu.enabled}
               disabled={!explorerMenu.supported || explorerMenu.busy}
               onChange={(e) => void handleExplorerMenuChange(e.target.checked)}
-            />
-            <span className={styles.toggleSlider} />
-          </label>
-        </div>
-
-        <div className={styles.settingRow}>
-          <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Resolve Remote LoRAs</div>
-            <div className={styles.settingDesc}>
-              Query Civitai and remote databases for friendly names, thumbnails, and model pages.
-            </div>
-          </div>
-          <label className={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={resolveLoras}
-              onChange={(e) => setResolveLoras(e.target.checked)}
             />
             <span className={styles.toggleSlider} />
           </label>

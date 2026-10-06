@@ -144,9 +144,21 @@ export function scanPromptForKnownLoras(promptText: string): LoraReference[] {
 
 let cachedAsyncApiKey: string | null = null;
 if (typeof window !== 'undefined' && window.promptHound?.settings?.getCivitaiKey) {
-  window.promptHound.settings.getCivitaiKey().then((k) => {
-    cachedAsyncApiKey = k;
-  }).catch(() => {});
+  const settings = window.promptHound.settings;
+  settings
+    .getCivitaiKey()
+    .then(async (k) => {
+      // Versions up to 1.0.16 also kept the key in plain text in localStorage; move it
+      // to the encrypted store and remove the plain copy
+      const legacy = localStorage.getItem('prompthound_civitai_key');
+      if (!k && legacy) {
+        await settings.saveCivitaiKey(legacy);
+        k = legacy;
+      }
+      localStorage.removeItem('prompthound_civitai_key');
+      cachedAsyncApiKey = k;
+    })
+    .catch(() => {});
 }
 
 export function setRuntimeCivitaiApiKey(key: string | null): void {
@@ -207,10 +219,11 @@ export function buildCivitaiModelUrl(
 /**
  * Helper to get optional Civitai API key from in-memory cache or localStorage
  */
-function getCivitaiApiKey(): string | null {
+export function getCivitaiApiKey(): string | null {
   if (cachedAsyncApiKey) return cachedAsyncApiKey;
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
+    // Web preview only: the desktop app keeps the key encrypted (see above)
+    if (typeof window !== 'undefined' && window.localStorage && !window.promptHound?.settings) {
       return localStorage.getItem('prompthound_civitai_key') || null;
     }
   } catch {
