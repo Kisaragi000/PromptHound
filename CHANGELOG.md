@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.17
 
 ### New
 - **Explorer right-click menu**: "Extract with PromptHound" on PNG, JPEG, WebP and AVIF
