@@ -17,7 +17,8 @@
     "catalog:verify": "tsx scripts/build-lora-catalog.ts verify",
     "benchmark:collect": "tsx scripts/lora-benchmark/collect.ts",
     "benchmark:eval": "tsx scripts/lora-benchmark/evaluate.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
+    "test": "tsx --test \"tests/**/*.test.ts\""
   },
   "build": {
     "appId": "com.prompthound.app",

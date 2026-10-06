@@ -2,6 +2,7 @@ import type { PngParseResult } from './png.js';
 import type { ExtractedMetadata, LoraReference } from './types.js';
 import { parseA1111, extractInlineLoras } from './parsers/a1111.js';
 import { parseComfyUI } from './parsers/comfyui.js';
+import { samplerLabel } from './sampler-names.js';
 
 export type DetectedFormatType =
   | 'a1111'
@@ -55,7 +56,8 @@ function parseNovelAI(obj: any, imageDimensions?: { width?: number; height?: num
   return {
     prompt: cleanPrompt,
     negativePrompt: uc,
-    sampler: obj.sampler || obj.sampler_name || undefined,
+    // NovelAI writes k-diffusion ids ("k_euler_ancestral")
+    sampler: samplerLabel(String(obj.sampler || obj.sampler_name || '').replace(/^k_/, '') || undefined),
     steps: typeof obj.steps === 'number' ? obj.steps : undefined,
     cfgScale: typeof obj.scale === 'number' ? obj.scale : typeof obj.cfg === 'number' ? obj.cfg : undefined,
     seed: obj.seed !== undefined ? String(obj.seed) : undefined,
