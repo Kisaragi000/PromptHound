@@ -1,4 +1,6 @@
 import { unzlibSync, inflateSync } from 'fflate';
+import { decodeLatin1OrUtf8 } from './text-decode.js';
+import { readExifTextFromPayload } from './exif.js';
 
 export interface PngTextChunk {
   keyword: string;
@@ -11,6 +13,8 @@ export interface PngParseResult {
   height?: number;
   textChunks: Record<string, string>;
   allChunks: PngTextChunk[];
+  /** Text tags of an eXIf chunk (EXIF UserComment etc.), as some tools write them */
+  exifTexts: string[];
 }
 
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -38,13 +42,14 @@ export function isPng(buffer: Uint8Array | Buffer): boolean {
 }
 
 /**
- * Dependency-free PNG chunk reader handling tEXt, zTXt (compressed), and iTXt (UTF-8).
+ * Dependency-free PNG chunk reader handling tEXt, zTXt (compressed), iTXt (UTF-8) and eXIf.
  * Isomorphic and safe across both Node and browser runtimes.
  */
 export function readPngChunks(buffer: Uint8Array | Buffer): PngParseResult {
   const result: PngParseResult = {
     textChunks: {},
     allChunks: [],
+    exifTexts: [],
   };
 
   if (!isPng(buffer)) {
@@ -88,7 +93,7 @@ export function readPngChunks(buffer: Uint8Array | Buffer): PngParseResult {
       const nullIdx = chunkData.indexOf(0);
       if (nullIdx !== -1) {
         const keyword = new TextDecoder('latin1').decode(chunkData.subarray(0, nullIdx));
-        const text = new TextDecoder('latin1').decode(chunkData.subarray(nullIdx + 1));
+        const text = decodeLatin1OrUtf8(chunkData.subarray(nullIdx + 1));
         result.textChunks[keyword] = text;
         result.allChunks.push({ keyword, text, type: 'tEXt' });
       }
@@ -99,7 +104,7 @@ export function readPngChunks(buffer: Uint8Array | Buffer): PngParseResult {
         const compressedData = chunkData.subarray(nullIdx + 2);
         try {
           const decompressed = decompressZlib(compressedData);
-          const text = new TextDecoder('latin1').decode(decompressed);
+          const text = decodeLatin1OrUtf8(decompressed);
           result.textChunks[keyword] = text;
           result.allChunks.push({ keyword, text, type: 'zTXt' });
         } catch {
@@ -144,6 +149,12 @@ export function readPngChunks(buffer: Uint8Array | Buffer): PngParseResult {
             }
           }
         }
+      }
+    } else if (type === 'eXIf') {
+      try {
+        result.exifTexts.push(...readExifTextFromPayload(chunkData));
+      } catch {
+        // Ignore malformed EXIF
       }
     } else if (type === 'IEND') {
       break;

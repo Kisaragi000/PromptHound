@@ -17,6 +17,13 @@
 - **SeaArt links**: every LoRA card and the LoRA details dialog link to a SeaArt search.
 
 ### Fixed
+- **PNG prompts are found in more images**: UTF-8 text in PNG text chunks no longer shows
+  as garbled characters (Japanese, emoji, curly quotes); parameters stored in an XMP
+  packet or a PNG EXIF chunk are read instead of showing the raw XML or nothing; ComfyUI
+  graphs written with `NaN` values are traced again; and parameters hidden in the pixels
+  (NovelAI, A1111 stealth-pnginfo) are read when the text chunks were stripped.
+- JPEG XMP metadata no longer comes back as raw XML in the prompt.
+- Favorites: a single favorite keeps the normal card size instead of filling the row.
 - Sampler names keep their scheduler ("DPM++ 2M Karras" showed as "DPM++ 2M"), including
   A1111 1.9+'s separate "Schedule type".
 - NovelAI samplers show as labels ("Euler a" instead of "k_euler_ancestral").

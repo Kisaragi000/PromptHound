@@ -1,6 +1,7 @@
 import type { ExtractedMetadata } from './types.js';
 import { extractFromRawText } from './format-detect.js';
 import { readExifTextFromPayload } from './exif.js';
+import { readXmpTextFields } from './xmp.js';
 
 /**
  * Checks if the buffer starts with the standard JPEG/JFIF SOI signature (0xFF, 0xD8).
@@ -99,13 +100,9 @@ export function readJpegSegments(buffer: Uint8Array | Buffer): JpegParseResult {
         } else if (header6.startsWith('http:/') || decLatin1.decode(payload.subarray(0, 28)).includes('http://ns.adobe.com/xap/1.0/')) {
           // XMP data
           const xmpText = decUtf8.decode(payload);
-          if (xmpText) {
-            result.textEntries.push(xmpText);
-            const userCommentMatch = xmpText.match(/<exif:UserComment>(.*?)<\/exif:UserComment>/s);
-            if (userCommentMatch && userCommentMatch[1]) result.textEntries.push(userCommentMatch[1]);
-            const descMatch = xmpText.match(/<dc:description>(.*?)<\/dc:description>/s);
-            if (descMatch && descMatch[1]) result.textEntries.push(descMatch[1]);
-          }
+          // Only the fields that can hold parameters: the packet itself would parse as
+          // A1111 text and come back as the prompt
+          if (xmpText) result.textEntries.push(...readXmpTextFields(xmpText));
         }
       }
     }

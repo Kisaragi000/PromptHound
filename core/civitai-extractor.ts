@@ -5,6 +5,7 @@ import { resolveLoras } from './lora-resolution.js';
 import { extractFromRawText } from './format-detect.js';
 import { extractInlineLoras } from './parsers/a1111.js';
 import { withScheduler } from './sampler-names.js';
+import { repairMojibake } from './text-decode.js';
 
 /**
  * Reads generation metadata with Civitai's generation-metadata engine, without
@@ -108,6 +109,11 @@ export async function readCivitaiLibraryMetadata(input: any): Promise<ExtractedM
   if (negativePrompt && typeof negativePrompt !== 'string') {
     negativePrompt = String(negativePrompt);
   }
+
+  // The engine reads PNG tEXt as Latin-1, which garbles the UTF-8 many tools write there
+  prompt = repairMojibake(prompt);
+  negativePrompt = repairMojibake(negativePrompt);
+  if (typeof model === 'string') model = repairMojibake(model);
 
   const { cleanPrompt, loras: inlineLoras } = extractInlineLoras(prompt);
   prompt = cleanPrompt;

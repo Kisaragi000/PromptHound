@@ -2,6 +2,7 @@ import type { ExtractedMetadata, LoraReference } from '../types.js';
 import { extractInlineLoras } from './a1111.js';
 import { fillMissingFields, loraKey } from '../metadata-merge.js';
 import { normalizeSampler } from '../sampler-names.js';
+import { parseJsonLenient } from '../text-decode.js';
 
 /**
  * ComfyUI metadata parser.
@@ -591,7 +592,7 @@ function looksLikeWorkflow(value: unknown): value is WorkflowGraph {
 export function parseComfyUI(rawJson: string | object, imageDimensions?: Dimensions): ExtractedMetadata {
   let parsedObj: any = {};
   try {
-    parsedObj = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+    parsedObj = typeof rawJson === 'string' ? parseJsonLenient(rawJson) : rawJson;
   } catch {
     return { prompt: '', loras: [], detectedFormat: 'comfyui' };
   }
@@ -599,7 +600,7 @@ export function parseComfyUI(rawJson: string | object, imageDimensions?: Dimensi
   const parseMaybeJson = (v: unknown) => {
     if (typeof v !== 'string') return v;
     try {
-      return JSON.parse(v);
+      return parseJsonLenient(v);
     } catch {
       return undefined;
     }
