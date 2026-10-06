@@ -198,7 +198,8 @@ export async function restoreBackupItems(
       if (image.file && backup.files[image.file]) {
         const ext = image.file.split('.').pop()?.toLowerCase() ?? '';
         const blob = new Blob([backup.files[image.file] as BlobPart], { type: TYPE_BY_EXTENSION[ext] ?? '' });
-        const stored = await storeLibraryImage(entry.id, blob, image.name ?? `image.${ext}`);
+        // One unreadable image must not stop the rest of the import
+        const stored = await storeLibraryImage(entry.id, blob, image.name ?? `image.${ext}`).catch(() => null);
         if (stored) images.push(stored);
       } else if (image.url) {
         images.push({ url: image.url, thumbUrl: image.url, name: image.name });
