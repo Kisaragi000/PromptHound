@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **About > Updates** shows the installed version and a "Check for updates" button with
+  the result in plain words (up to date, downloading, ready to restart, or why the check
+  failed). Before, a failed update check showed nothing at all, and About listed an old
+  placeholder version.
+
 ## v1.0.17
 
 ### New

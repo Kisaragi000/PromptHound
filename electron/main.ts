@@ -798,7 +798,7 @@ function registerExtractionHandlers(): void {
  * user clicks "Restart to update". The portable build cannot update itself.
  */
 type UpdateStatus =
-  | { state: 'idle' | 'checking' | 'unsupported' }
+  | { state: 'idle' | 'checking' | 'up-to-date' | 'unsupported' }
   | { state: 'available' | 'downloaded'; version: string }
   | { state: 'downloading'; version?: string; percent: number }
   | { state: 'error'; message: string };
@@ -843,7 +843,7 @@ function registerUpdateHandlers(): void {
     availableVersion = info.version;
     sendUpdateStatus({ state: 'available', version: info.version });
   });
-  autoUpdater.on('update-not-available', () => sendUpdateStatus({ state: 'idle' }));
+  autoUpdater.on('update-not-available', () => sendUpdateStatus({ state: 'up-to-date' }));
   autoUpdater.on('download-progress', (progress) =>
     sendUpdateStatus({ state: 'downloading', version: availableVersion, percent: Math.round(progress.percent) })
   );
