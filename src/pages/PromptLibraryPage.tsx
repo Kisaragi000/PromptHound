@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FolderIcon,
   SearchIcon,
@@ -89,28 +89,27 @@ export const PromptLibraryPage: React.FC = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isEditingImages, setIsEditingImages] = useState(false);
 
-  // Calculate folder counts dynamically
-  const folderCounts = folders.reduce<Record<string, number>>((acc, f) => {
-    if (f === 'All Prompts') {
-      acc[f] = libraryItems.length;
-    } else {
-      acc[f] = libraryItems.filter((i) => i.folder === f).length;
+  // Folder counts in one pass over the library
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'All Prompts': libraryItems.length };
+    for (const item of libraryItems) {
+      if (item.folder !== 'All Prompts') counts[item.folder] = (counts[item.folder] ?? 0) + 1;
     }
-    return acc;
-  }, {});
+    return counts;
+  }, [libraryItems]);
 
-  const folderItems = libraryItems.filter(
-    (item) => selectedFolder === 'All Prompts' || item.folder === selectedFolder
+  const folderItems = useMemo(
+    () => libraryItems.filter((item) => selectedFolder === 'All Prompts' || item.folder === selectedFolder),
+    [libraryItems, selectedFolder]
   );
-  const facets = libraryFacets(folderItems);
+  const facets = useMemo(() => libraryFacets(folderItems), [folderItems]);
   // A filter for a model or LoRA no longer in this folder stops applying
   const activeModelFilter = facets.models.some(([name]) => name === modelFilter) ? modelFilter : '';
   const activeLoraFilter = facets.loras.some(([name]) => name === loraFilter) ? loraFilter : '';
-  const filteredItems = filterLibraryItems(folderItems, {
-    query: searchQuery,
-    model: activeModelFilter,
-    lora: activeLoraFilter,
-  });
+  const filteredItems = useMemo(
+    () => filterLibraryItems(folderItems, { query: searchQuery, model: activeModelFilter, lora: activeLoraFilter }),
+    [folderItems, searchQuery, activeModelFilter, activeLoraFilter]
+  );
   const isFiltering = Boolean(searchQuery.trim() || activeModelFilter || activeLoraFilter);
   const clearFilters = () => {
     setSearchQuery('');
@@ -557,7 +556,7 @@ export const PromptLibraryPage: React.FC = () => {
                         </td>
                         <td>
                           <div className={styles.tableThumbWrap}>
-                            <img src={item.thumbnailUrl} alt={item.title} className={styles.tableThumb} />
+                            <img src={item.thumbnailUrl} alt={item.title} className={styles.tableThumb} loading="lazy" decoding="async" />
                             {itemImages(item).length > 1 && (
                               <span className={styles.tableThumbCount}>+{itemImages(item).length - 1}</span>
                             )}

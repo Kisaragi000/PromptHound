@@ -69,6 +69,8 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
           alt={count > 1 ? `${alt} (${current + 1} of ${count})` : alt}
           className={`${styles.image} ${imageClassName}`}
           draggable={false}
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className={styles.empty}>No image</div>

@@ -99,9 +99,71 @@
   color: var(--color-text-muted);
 }
 
-.versionFooter {
-  margin-top: var(--space-4);
-  padding: 0 var(--space-3);
+.updateBox {
+  margin: var(--space-3) 6px 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(130, 150, 180, 0.16);
+  background: rgba(45, 55, 75, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.updateText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.updateVersion {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.updateState {
   font-size: var(--font-size-micro);
   color: var(--color-text-muted);
+}
+
+.updateStateReady {
+  color: var(--color-amber-primary);
+}
+
+.updateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(245, 154, 36, 0.35);
+  background: rgba(245, 154, 36, 0.1);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-micro);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.updateButton:hover:not(:disabled) {
+  background: rgba(245, 154, 36, 0.2);
+  border-color: rgba(245, 154, 36, 0.6);
+}
+
+.updateButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.spinning {
+  animation: sidebarSpin 1s linear infinite;
+}
+
+@keyframes sidebarSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

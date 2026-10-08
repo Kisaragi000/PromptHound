@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.1.0
+
+PromptHound is now open source, and versions move to 1.1 from here.
+
+### New
+- **Updates in the sidebar**: under About, the sidebar shows the installed version, whether
+  it is up to date, and a "Check for updates" button (or "Restart to update" once a new
+  version has downloaded). The portable version gets a link to the Releases page instead.
+
+### Changed
+- **Setup banner**: once setup is done (in the wizard or by saving Settings), the Home
+  banner shrinks to a quiet "Setup complete" line with a "Run again" button.
+- **Faster library**: folder counts, filters and search results are only recalculated when
+  the library or a filter changes, and thumbnails load as they scroll into view.
+
+### Fixed
+- **About** showed version 0.1.0 in the installed app; it now shows the real version.
+- Links opened from the app only go to web pages (http/https), never to local files or
+  other programs.
+
 ## v1.0.18
 
 ### New

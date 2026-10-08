@@ -5,7 +5,8 @@ import type { ExtractionResult, ExtractionError } from '../core/types.js';
 
 function readAppVersion(): string {
   try {
-    const packageJsonPath = path.join(__dirname, '../../package.json');
+    // preload.cjs sits in dist-electron/, next to package.json's folder (app.asar when packaged)
+    const packageJsonPath = path.join(__dirname, '../package.json');
     const raw = fs.readFileSync(packageJsonPath, 'utf-8');
     const parsed = JSON.parse(raw) as { version?: string };
     return parsed.version ?? '0.1.0';
@@ -72,7 +73,6 @@ const library = {
   savePrompt: (item: any): Promise<void> => ipcRenderer.invoke('library:save-prompt', item),
   getAll: (): Promise<any[]> => ipcRenderer.invoke('library:get-all'),
   deletePrompt: (uuid: string): Promise<void> => ipcRenderer.invoke('library:delete-prompt', uuid),
-  searchFts: (query: string): Promise<any[]> => ipcRenderer.invoke('library:search-fts', query),
   toggleFavorite: (uuid: string, isFav: boolean): Promise<void> => ipcRenderer.invoke('library:toggle-favorite', uuid, isFav),
   storeImage: (itemId: string, original: Uint8Array, extension: string, thumbnail: Uint8Array, name?: string) =>
     ipcRenderer.invoke('library:store-image', itemId, original, extension, thumbnail, name),
