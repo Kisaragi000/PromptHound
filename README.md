@@ -1,190 +1,102 @@
-# PromptHound
+<p align="center">
+  <img src="public/icon.png" alt="PromptHound" width="112">
+</p>
 
-> Universal AI Prompt & Metadata Extraction Utility for Windows Desktop (v1.0.16)
+<h1 align="center">PromptHound</h1>
 
-[![Release](https://img.shields.io/badge/Release-v1.0.16-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.16)
-[![Repository](https://img.shields.io/badge/GitHub-PromptHound-F59A22?logo=github)](https://github.com/Kisaragi000/PromptHound)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Electron](https://img.shields.io/badge/Electron-33.x-47848F?logo=electron)](https://www.electronjs.org/)
-[![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+<p align="center">
+  <b>Find out how an AI image was made.</b><br>
+  Drop an image and get its prompt, settings, base model and LoRAs, then keep the ones you like in a searchable library.
+</p>
 
-PromptHound is a desktop application crafted for AI artists, prompters, and creators. It extracts, normalizes, and visualizes generation recipes, positive/negative prompts, parameters (sampler, steps, CFG, seed, resolution), and LoRA weights embedded within AI-generated images or external links (Civitai, SeaArt, Local PNG/WebP files).
+<p align="center">
+  <a href="https://github.com/Kisaragi000/PromptHound/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Kisaragi000/PromptHound?color=F59A22&label=release"></a>
+  <a href="https://github.com/Kisaragi000/PromptHound/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Kisaragi000/PromptHound/ci.yml?branch=main&label=checks"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-3b82f6">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
+</p>
 
-📦 **[Download Latest Release v1.0.16](https://github.com/Kisaragi000/PromptHound/releases/tag/v1.0.16)**
+<p align="center">
+  <a href="https://github.com/Kisaragi000/PromptHound/releases/latest"><b>⬇ Download for Windows</b></a>
+</p>
 
----
+<p align="center">
+  <img src="docs/images/result.jpg" alt="PromptHound showing the prompt, settings and LoRAs of an image" width="860">
+</p>
 
-## 🎨 Visual Identity & Architecture
+## What it does
 
-PromptHound is built with a bespoke **Dark Forest Glassmorphism** design system with amber accents (`#F59A22`), translucent panels (`rgba(24, 39, 19, 0.7)`), and precision typography (`Plus Jakarta Sans` & `JetBrains Mono`).
+- **Reads the recipe from the image**: positive and negative prompt, sampler, steps, CFG, seed, size, base model and LoRAs with their weights.
+- **Identifies the models**: LoRAs and checkpoints are matched by hash and Civitai id (exact), using a built-in offline catalog (about 15,000 entries) first and Civitai second. A name match is the last resort and is labeled as one.
+- **Keeps a library**: folders, favorites, up to five images per prompt, grid and table views, side-by-side comparison and search.
+- **Makes sharing easy**: copy the prompt as A1111 syntax, ComfyUI text or plain text, or save a clean image card with everything on it.
 
-### Project Directory Structure
+<p align="center">
+  <img src="docs/images/library.jpg" alt="The Prompt Library" width="425">
+  <img src="docs/images/image-card.jpg" alt="A saved image card" width="425">
+</p>
 
-```text
-PromptHound/
-├── .github/workflows/           # ci.yml (typecheck, tests, build) and release.yml (Windows installer)
-├── build/                       # Installer artwork, icon and NSIS script (installer.nsh)
-├── core/                        # Extraction engine shared by the app and the main process
-│   ├── link-fetch.ts            # Entry points: extract from image bytes or a link
-│   ├── png.ts, jpeg.ts, webp.ts # Metadata chunk readers
-│   ├── format-detect.ts         # A1111 / ComfyUI / NovelAI / SwarmUI detection
-│   ├── parsers/                 # A1111 settings parser and ComfyUI graph tracing
-│   ├── civitai-extractor.ts     # Civitai generation-metadata engine, merged with the native readers
-│   ├── content-credentials.ts   # C2PA / IPTC "AI-generated" labels (ChatGPT, Gemini, ...)
-│   ├── lora-resolution.ts       # LoRA and checkpoint identification (catalog, then Civitai)
-│   ├── lora-cache.ts            # In-memory and SQLite catalog of known models
-│   ├── seaart.ts                # SeaArt search links
-│   └── data/                    # Generated offline catalog (see below)
-├── docs/                        # Blueprint, UI spec and archived planning notes
-├── electron/
-│   ├── main.ts                  # Window, IPC, SQLite library, updates, file dialogs
-│   ├── shell-integration.ts     # Explorer right-click menu and opening files from it
-│   └── preload.ts               # window.promptHound bridge for the UI
-├── public/samples/              # Example images shown in a new Prompt Library
-├── scripts/                     # Dev runner, catalog builder, LoRA benchmark
-├── src/                         # React UI (Vite + TypeScript)
-│   ├── components/              # Shell, primitives, library, LoRA cards, recipe panels, setup wizard
-│   ├── extraction/              # Extraction state (single images and batches)
-│   ├── navigation/              # Routing and the Prompt Library state
-│   ├── pages/                   # Home, Result, Library, Favorites, Settings, About
-│   └── utils/                   # Images, library backup and search, paste handling
-└── tests/                       # npm test: extraction, search, backup and link tests
-```
+## Install
 
----
+Get the latest files from the **[Releases page](https://github.com/Kisaragi000/PromptHound/releases/latest)** (Windows 10 or 11, 64-bit):
 
-## 🆕 What's New in 1.0.16
+| File | Use it when |
+| --- | --- |
+| `PromptHound-Setup-<version>.exe` | You want a normal install. It needs no administrator rights, adds a Start menu entry and **updates itself**. |
+| `PromptHound-<version>-Portable.exe` | You want a single file that runs from anywhere. It does not update itself. |
 
-- **Up to 5 images per prompt**: add images in New Prompt (drop, paste or browse) or later with "Edit images" in the Library. Cards and the detail pane show ‹ › arrows and dots; click the image for a full-size view.
-- **New Prompt fills itself in**: if an added image has generation data, empty fields (title, prompt, model, sampler, steps) are filled from it.
-- **Images are kept as files** in the app's data folder (original + thumbnail), so large libraries stay fast.
-- **Themed dropdowns** for folders and settings instead of the Windows list.
+**Windows says "Windows protected your PC"?** PromptHound is not code-signed yet (a signing certificate costs money), so Windows SmartScreen warns about every new download. Choose **More info**, then **Run anyway**. The installers are built by GitHub Actions from the source in this repository (`.github/workflows/release.yml`).
 
-### 1.0.15
+**Updates:** the installed version checks GitHub for a newer release when it starts and every few hours, downloads it in the background and shows **Restart to update**. If you ignore it, it is installed the next time you close the app.
 
-- **ChatGPT, Gemini and other AI services**: their images store no prompt, but they carry a Content Credentials (C2PA) or IPTC label. PromptHound now reads it and shows "Confirmed AI-generated image — Made with ChatGPT (OpenAI)" (or Google Gemini, Adobe Firefly, Microsoft, Meta…) with the model, date and signer, instead of "Could not extract metadata".
+## Supported images
 
-### 1.0.14
+| Source | What you get |
+| --- | --- |
+| Automatic1111, Forge, SD.Next | Everything, including LoRAs from `<lora:...>` tags and Civitai resource lists |
+| ComfyUI | The prompt that reaches the sampler (the graph is traced), plus settings and LoRAs |
+| SwarmUI, Fooocus, NovelAI | Prompt and settings |
+| Civitai images and links | Generation data from the post, or from the original file when you paste it |
+| ChatGPT, Gemini, Firefly and others | A **"Confirmed AI-generated"** label with the service and date. These services do not store the prompt in the file, so there is none to show |
 
-- **Prompt Library folders**: in Edit Library, click a folder to rename or delete it. Deleting asks first and keeps the prompts (they stay in All Prompts).
-- **Fixed**: "Launch PromptHound" on the installer's last page was invisible (black on dark).
+PNG, JPEG and WebP files work, whether you drop them, paste them with `Ctrl+V`, paste an image link, or right-click them in Windows Explorer and choose **Extract with PromptHound** (turn it on in Settings > Windows Integration).
 
-### 1.0.13
+## Privacy
 
-- **Save to Library** turns green with a check once saved; clicking it again opens the saved item instead of saving a duplicate.
-- Saved items get a title from the first descriptive prompt tag instead of "score_9" or "masterpiece".
-- **Fixed**: library previews shrank once the grid filled up; text overflowing in Recent Recipes, the Settings key badge and the platform list; button icons sitting above their labels.
+- Your images and library stay on your PC (`%APPDATA%\PromptHound`). There is no account, no analytics and no telemetry.
+- The app goes online only to: look up models on **Civitai** (hashes, ids and names, never your images), show their preview pictures, fetch the links you paste, and check **GitHub** for updates.
+- A **Civitai API key is optional**. If you add one it is encrypted by Windows on your PC and is only ever sent to Civitai.
 
-### 1.0.12
+## Questions
 
-- **Automatic updates**: new versions download in the background and replace the installed one when you restart (installer version; from 1.0.12 on).
-- **Redesigned installer** with a welcome and finish page; installing over an older version replaces it.
-- **Fixed**: the saved image card showed black boxes instead of dropped images; dropping a working image after a failed one kept showing the error; library items saved from dropped images lost their preview after a restart; empty space on the right of Favorites.
-- **Previews** in the Prompt Library and Favorites use one frame and show the whole image.
+<details>
+<summary><b>It says "Could not extract metadata"</b></summary>
 
-### 1.0.11
+The file has no generation data. Discord, Reddit, X, screenshots and many converters remove it. Try the original file from your generator, or from the Civitai page (pasting the image link works too).
+</details>
 
-- **Image card**: "Save Image Card" now shows the base model and every LoRA with its preview image, version, base model and weight, laid out to suit wide and tall images.
+<details>
+<summary><b>Why is there no prompt for my ChatGPT or Gemini image?</b></summary>
 
-### 1.0.10
+They label their images as AI-generated (and PromptHound shows that label), but they do not save the prompt in the file. Keep the prompt yourself with <b>New Prompt</b>, which also takes up to five images.
+</details>
 
-- **Prompt Library**: Edit Library can move selected items to an existing or a new folder.
-- **Favorites**: first click previews a favorite in a side pane, a second click opens it (like the Prompt Library).
-- **Fixed**: Esc closes the full-size image view; the saved image card and LoRA trigger chips use the current color theme.
+<details>
+<summary><b>What does the "name match" tag on a LoRA mean?</b></summary>
 
-### 1.0.9
+The file had no hash or id, so PromptHound guessed from the name. Hash and id matches are exact; a name match deserves a quick check, and you can re-link the LoRA by hand.
+</details>
 
-- **Base model card**: the checkpoint is identified like the LoRAs (hash, Civitai id, name) and shown with a preview image, version and base model.
-- **Fixed**: dropping an image after viewing a library item showed the library item instead of the new result.
+<details>
+<summary><b>How do I back up or move my library?</b></summary>
 
-### 1.0.8
+Settings > Prompt Library Backup exports every prompt, folder, favorite and image to one `.zip`, and imports it on another PC.
+</details>
 
-- **More reliable extraction** from PNG, JPEG and WebP (A1111 / Forge, ComfyUI, SwarmUI, Civitai on-site images), with ComfyUI graph tracing rebuilt.
-- **Accurate LoRA identification**: hashes, Civitai version ids and AIR ids first, name matching only as a labeled fallback; no more LoRAs invented from prompt words.
-- **Real offline LoRA catalog** generated from Civitai (top 10,000 models), plus a persistent cache of LoRAs you look up or link.
-- **Example images** in the Prompt Library on first launch.
+## For developers
 
-See [CHANGELOG.md](CHANGELOG.md) for details.
+Build, test and release instructions are in **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. The release history is in **[CHANGELOG.md](CHANGELOG.md)**, and bug reports and ideas are welcome as [issues](https://github.com/Kisaragi000/PromptHound/issues/new/choose).
 
-## ⚡ Features
+## License
 
-1. **Extract from anything**: drop or browse up to 10 images, paste with Ctrl+V, paste a Civitai / SeaArt / image link, or right-click an image in Windows Explorer and choose **Extract with PromptHound** (Settings > Windows Integration). Pasting an image copied in a browser fetches the original file, so the prompt is kept.
-2. **Formats**: A1111 / Forge, ComfyUI (graph tracing), SwarmUI, Fooocus, NovelAI and Civitai on-site images in PNG, JPEG and WebP, plus Content Credentials labels from ChatGPT, Gemini, Firefly and others.
-3. **LoRA and checkpoint identification**: hashes, Civitai version ids and AIR ids against an offline catalog of the top 10,000 models, then Civitai; every LoRA also links to a SeaArt search.
-4. **LoRA mixer and prompt formats**: weight sliders, trigger word chips, and conversion between A1111 syntax, ComfyUI text and plain text.
-5. **Prompt Library**: folders, favorites, up to 5 images per prompt, grid and table views, side-by-side diff, search across prompts, models and LoRAs (`"phrase"`, `-word`) with model and LoRA filters.
-6. **Library backup**: Settings > Prompt Library Backup exports everything to one .zip and imports it on this or another PC.
-7. **Image card**: a shareable PNG of the image with its prompt, settings, base model and LoRAs.
-8. **Automatic updates** for the installed version.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+ (Node 20 or 22 recommended)
-- npm or yarn
-
-### Installation
-```bash
-git clone https://github.com/Kisaragi000/PromptHound.git
-cd PromptHound
-npm install
-```
-
-### Running in Development
-
-**Desktop app** (Vite, the Electron main process and Electron together):
-```bash
-node scripts/dev.mjs
-```
-
-**Web preview** (the UI in a browser; no file access, Explorer menu or encrypted settings):
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000).
-
-**Windows installer**: `npm run package:win` (on Windows). Releases are built by `.github/workflows/release.yml` from a `v*` tag.
-
-### Checks
-
-```bash
-npm run lint   # typecheck the UI, core and Electron main process
-npm test       # extraction, library search, backup and link tests (offline)
-```
-
-CI runs both, plus `npm run build`, on every push and pull request.
-
-### Rebuilding the Offline LoRA Catalog
-
-PromptHound identifies LoRAs offline from two generated files; never edit their hashes, ids or trigger words by hand:
-
-- `core/data/lora-seed.json`: full records (name, trigger words, cover, SHA256 and AutoV3 hashes) for the 2,000 most-downloaded LoRA / LoCon / DoRA models, 3 versions each, plus the versions in `scripts/catalog-includes.json`.
-- `core/data/lora-version-index.json`: a compact index (ids, names, AutoV2 and AutoV3 hash prefixes) of every other version of those models and of the next 8,000 models.
-
-```bash
-# Check the catalog against Civitai (writes nothing; exits 1 on mismatches)
-npm run catalog:verify
-
-# Rebuild both files
-CIVITAI_API_KEY=... npm run catalog:build -- --models 2000 --versions 3 --compact-models 10000
-```
-
-Useful options: `--dry-run`, `--extra file.json` (merge hand-made records), `--all-covers` (covers of any rating; PG only by default). See the header of `scripts/build-lora-catalog.ts`. The desktop app replaces its stored copy of the catalog automatically when the bundled file changes; LoRAs users found or linked themselves are kept.
-
-### Measuring LoRA Identification
-
-```bash
-CIVITAI_API_KEY=... npm run benchmark:collect    # ~360 real Civitai images + ground truth into .benchmark/
-npm run benchmark:eval -- offline                # bundled catalog only
-CIVITAI_API_KEY=... npm run benchmark:eval -- online
-```
-
-In a sandbox whose proxy Node does not pick up automatically, prefix the commands with `NODE_USE_ENV_PROXY=1`.
-
----
-
-## 📄 License
-MIT License. Created for the AI art community.
+[MIT](LICENSE). Made for the AI art community.
