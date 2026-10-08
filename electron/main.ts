@@ -522,35 +522,6 @@ function registerLibraryHandlers(): void {
     loraDbInstance.prepare('DELETE FROM saved_prompts WHERE uuid = ?').run(uuid);
   });
 
-  ipcMain.handle('library:search-fts', (_event, query: string) => {
-    if (!loraDbInstance || !query || !query.trim()) return [];
-    try {
-      const clean = query.replace(/[^\w\s]/g, ' ').trim();
-      if (!clean) return [];
-      const matchPattern = clean.split(/\s+/).map((w) => `"${w}"*`).join(' ');
-      const rows = loraDbInstance.prepare(`
-        SELECT sp.raw_item, sp.is_favorite, sp.folder
-        FROM saved_prompts sp
-        JOIN saved_prompts_fts fts ON sp.id = fts.rowid
-        WHERE saved_prompts_fts MATCH ?
-        ORDER BY rank
-      `).all(matchPattern) as Array<{ raw_item: string; is_favorite: number; folder: string }>;
-
-      return rows.map((r) => {
-        try {
-          const item = JSON.parse(r.raw_item);
-          item.isFavorite = Boolean(r.is_favorite);
-          item.folder = r.folder || item.folder;
-          return item;
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
-    } catch {
-      return [];
-    }
-  });
-
   /** Writes a library backup zip where the user chooses; returns the path, or null if cancelled */
   ipcMain.handle('library:save-backup', async (_event, bytes: Uint8Array, defaultName: string): Promise<string | null> => {
     if (!mainWindow) return null;
@@ -714,8 +685,9 @@ function registerWindowControlHandlers(): void {
     mainWindow?.close();
   });
   ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false);
+  // Web links only: a crafted link in image metadata must not open local files or other apps
   ipcMain.on('shell:openExternal', (_event, url: string) => {
-    shell.openExternal(url);
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) void shell.openExternal(url);
   });
 }
 

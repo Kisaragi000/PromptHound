@@ -65,6 +65,8 @@ export const SettingsPage: React.FC = () => {
         window.promptHound.settings.saveCivitaiKey(civitaiApiKey.trim());
       }
       setIsKeyConfigured(Boolean(civitaiApiKey.trim()));
+      // Saving settings by hand counts as setup, so Home stops offering the wizard
+      localStorage.setItem('prompthound_setup_completed', 'true');
     } catch {
       // storage error
     }

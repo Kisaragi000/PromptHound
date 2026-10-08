@@ -63,7 +63,6 @@ export interface PromptHoundAPI {
     savePrompt: (item: any) => Promise<void>;
     getAll: () => Promise<any[]>;
     deletePrompt: (uuid: string) => Promise<void>;
-    searchFts: (query: string) => Promise<any[]>;
     toggleFavorite: (uuid: string, isFav: boolean) => Promise<void>;
   };
   shellIntegration?: {

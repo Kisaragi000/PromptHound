@@ -44,8 +44,15 @@ export const HomePage: React.FC = () => {
   const [batchFeedback, setBatchFeedback] = useState<string | null>(null);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
 
-  // Setup Wizard Modal state
+  // Setup Wizard Modal state; once finished, the banner shrinks to a quiet "run again" line
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [setupCompleted, setSetupCompleted] = useState(() => {
+    try {
+      return localStorage.getItem('prompthound_setup_completed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // A new version takes the setup banner's place while it downloads and until it is installed
   const updateStatus = useUpdateStatus();
@@ -212,18 +219,28 @@ export const HomePage: React.FC = () => {
             </div>
           )}
         </div>
-      ) : (
-      <div className={styles.wizardBanner}>
-        <div className={styles.wizardBannerLeft}>
-          <SparklesIcon size={18} />
-          <div>
-            <strong>Quick Setup Wizard:</strong> Configure Civitai API key, workflow syntax, and local model paths.
+      ) : setupCompleted ? (
+        <div className={`${styles.wizardBanner} ${styles.wizardBannerDone}`}>
+          <div className={styles.wizardBannerLeft}>
+            <SparklesIcon size={16} />
+            <div>Setup complete. Change these choices any time in Settings.</div>
           </div>
+          <button className={styles.wizardBannerLater} onClick={() => setIsWizardOpen(true)}>
+            Run again
+          </button>
         </div>
-        <button className={styles.wizardBannerBtn} onClick={() => setIsWizardOpen(true)}>
-          Run Setup Wizard
-        </button>
-      </div>
+      ) : (
+        <div className={styles.wizardBanner}>
+          <div className={styles.wizardBannerLeft}>
+            <SparklesIcon size={18} />
+            <div>
+              <strong>Quick Setup Wizard:</strong> Configure Civitai API key, workflow syntax, and local model paths.
+            </div>
+          </div>
+          <button className={styles.wizardBannerBtn} onClick={() => setIsWizardOpen(true)}>
+            Run Setup Wizard
+          </button>
+        </div>
       )}
 
       {/* Batch Notice Toast */}
@@ -416,6 +433,7 @@ export const HomePage: React.FC = () => {
         onClose={() => setIsWizardOpen(false)}
         onComplete={() => {
           setIsWizardOpen(false);
+          setSetupCompleted(true);
         }}
       />
     </div>

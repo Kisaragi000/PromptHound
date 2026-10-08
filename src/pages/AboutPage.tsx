@@ -1,41 +1,17 @@
 import React from 'react';
 import { PromptHoundLogo, ExternalLinkIcon } from '../components/icons/Icons.js';
 import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
-import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
-import type { UpdateStatus } from '../types/global.js';
+import {
+  useUpdateStatus,
+  describeUpdateStatus,
+  canCheckForUpdates,
+} from '../components/shell/useUpdateStatus.js';
 import styles from './StaticPage.module.css';
 
-/** Plain-language line for the current update state; errors keep the raw message for the tooltip */
-function describeUpdateStatus(status: UpdateStatus | null): string {
-  if (!status) return 'Updates are only available in the installed app.';
-  switch (status.state) {
-    case 'idle':
-      return 'PromptHound checks for updates when it starts and every 6 hours.';
-    case 'checking':
-      return 'Checking for updates…';
-    case 'up-to-date':
-      return 'You have the latest version.';
-    case 'available':
-      return `Version ${status.version} found, downloading…`;
-    case 'downloading':
-      return `Downloading update${status.version ? ` v${status.version}` : ''}: ${status.percent}%`;
-    case 'downloaded':
-      return `Version ${status.version} is ready. Restart PromptHound to install it.`;
-    case 'unsupported':
-      return 'The portable version cannot update itself. Download the newest one from the Releases page.';
-    case 'error':
-      return /\b40[134]\b/.test(status.message)
-        ? 'Could not read the releases on GitHub. Check again later or download the newest version from the Releases page.'
-        : 'Could not check for updates. Check your internet connection and try again.';
-  }
-}
-
 export const AboutPage: React.FC = () => {
-  const version = window.promptHound?.appInfo?.version ?? '';
+  const version = __APP_VERSION__;
   const updateStatus = useUpdateStatus();
-
-  const busy = updateStatus?.state === 'checking' || updateStatus?.state === 'available' || updateStatus?.state === 'downloading';
-  const canCheck = !!updateStatus && updateStatus.state !== 'unsupported' && updateStatus.state !== 'downloaded' && !busy;
+  const canCheck = canCheckForUpdates(updateStatus);
 
   return (
     <div className={styles.page}>
