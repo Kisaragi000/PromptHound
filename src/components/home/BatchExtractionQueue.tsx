@@ -11,6 +11,7 @@ import {
 import { PrimaryButton } from '../primitives/PrimaryButton.js';
 import { SecondaryButton } from '../primitives/SecondaryButton.js';
 import { IconButton } from '../primitives/IconButton.js';
+import { useT } from '../../i18n/index.js';
 import styles from './BatchExtractionQueue.module.css';
 
 export interface BatchItem {
@@ -41,6 +42,7 @@ export const BatchExtractionQueue: React.FC<BatchExtractionQueueProps> = ({
   isSavingAll,
   saveFeedback,
 }) => {
+  const t = useT();
   const [selectedItemId, setSelectedItemId] = useState<string | null>(items[0]?.id || null);
 
   const successCount = items.filter((i) => i.status === 'success').length;
@@ -54,23 +56,23 @@ export const BatchExtractionQueue: React.FC<BatchExtractionQueueProps> = ({
         <div className={styles.headerLeft}>
           <div className={styles.badge}>
             <CloudUploadIcon size={14} />
-            <span>Batch Queue ({items.length}/10 max)</span>
+            <span>{t('batch.queue', { count: items.length })}</span>
           </div>
           <span className={styles.progressText}>
-            {successCount} of {items.length} parsed successfully
+            {t('batch.progress', { done: successCount, total: items.length })}
           </span>
         </div>
 
         <div className={styles.headerActions}>
           <SecondaryButton onClick={onClearAll} icon={<TrashIcon size={14} />}>
-            Clear Queue
+            {t('batch.clear')}
           </SecondaryButton>
           <PrimaryButton
             onClick={onSaveAllToLibrary}
             disabled={successCount === 0 || isSavingAll}
             icon={saveFeedback ? <CheckIcon size={14} color="#4ade80" /> : <BookmarkIcon size={14} />}
           >
-            {isSavingAll ? 'Saving All…' : saveFeedback ?? `Save All (${successCount}) to Library`}
+            {isSavingAll ? t('batch.savingAll') : saveFeedback ?? t('batch.saveAll', { count: successCount })}
           </PrimaryButton>
         </div>
       </div>
@@ -105,7 +107,7 @@ export const BatchExtractionQueue: React.FC<BatchExtractionQueueProps> = ({
                   </div>
                 )}
                 {item.status === 'error' && (
-                  <div className={styles.overlayError} title={item.error || 'No metadata found'}>
+                  <div className={styles.overlayError} title={item.error || t('batch.noMetadata')}>
                     ✕
                   </div>
                 )}
@@ -117,16 +119,16 @@ export const BatchExtractionQueue: React.FC<BatchExtractionQueueProps> = ({
                 </div>
                 <div className={styles.cardSub}>
                   {item.status === 'parsing'
-                    ? 'Extracting…'
+                    ? t('batch.extracting')
                     : item.status === 'success'
-                    ? `${item.metadata?.model || 'Parsed'} · ${item.metadata?.loras?.length || 0} LoRA`
-                    : 'No metadata'}
+                    ? `${item.metadata?.model || t('batch.parsed')} · ${item.metadata?.loras?.length || 0} LoRA`
+                    : t('batch.noMetadataShort')}
                 </div>
               </div>
 
               <div className={styles.cardActions}>
                 <IconButton
-                  title="Remove from queue"
+                  title={t('batch.remove')}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveItem(item.id);

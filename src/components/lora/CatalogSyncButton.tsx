@@ -3,6 +3,7 @@ import { RefreshIcon, CheckIcon } from '../icons/Icons.js';
 import { getLoraCacheStats, upsertLoraRecord } from '../../../core/lora-cache.js';
 import { normalizeLoraName } from '../../../core/lora-resolution.js';
 import { getCivitaiApiKey } from '../../../core/lora-resolution.js';
+import { useT } from '../../i18n/index.js';
 
 interface CatalogSyncButtonProps {
   variant?: 'compact' | 'full' | 'sidebar';
@@ -13,7 +14,9 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
   variant = 'full',
   style,
 }) => {
+  const t = useT();
   const [syncing, setSyncing] = useState(false);
+  const [synced, setSynced] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [stats, setStats] = useState(() => getLoraCacheStats());
@@ -23,7 +26,8 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
     if (syncing) return;
 
     setSyncing(true);
-    setStatusMessage('Syncing latest community models...');
+    setSynced(false);
+    setStatusMessage(t('sync.syncing'));
     setProgress({ current: 0, total: 100 });
 
     try {
@@ -69,16 +73,17 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
             added++;
           }
           setStats(getLoraCacheStats());
-          setStatusMessage(`Synced ${added} new models!`);
+          setStatusMessage(t('sync.synced', { count: added }));
+          setSynced(true);
         } else {
-          setStatusMessage('Catalog up to date');
+          setStatusMessage(t('sync.upToDate'));
         }
       } else {
         // Offline / fallback mode
-        setStatusMessage('Pre-bundled offline catalog is active');
+        setStatusMessage(t('sync.offline'));
       }
     } catch {
-      setStatusMessage('Pre-bundled offline catalog is active');
+      setStatusMessage(t('sync.offline'));
     } finally {
       setProgress({ current: 100, total: 100 });
       setTimeout(() => {
@@ -111,17 +116,17 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
           textAlign: 'left',
           ...style,
         }}
-        title="Sync latest community LoRAs and models to your offline catalog"
+        title={t('sync.sidebarTitle')}
       >
         <span style={{ display: 'inline-flex', animation: syncing ? 'spin 1s linear infinite' : 'none' }}>
           <RefreshIcon size={14} />
         </span>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {syncing ? 'Syncing Catalog...' : 'Sync Models'}
+            {syncing ? t('sync.syncingCatalog') : t('sync.syncModels')}
           </span>
           <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-            {statusMessage || `${stats.count.toLocaleString()} offline ready`}
+            {statusMessage || t('sync.offlineReady', { count: stats.count })}
           </span>
         </div>
       </button>
@@ -149,14 +154,14 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
       }}
     >
       <span style={{ display: 'inline-flex', animation: syncing ? 'spin 1s linear infinite' : 'none' }}>
-        {statusMessage?.includes('Synced') ? <CheckIcon size={16} /> : <RefreshIcon size={16} />}
+        {statusMessage && synced ? <CheckIcon size={16} /> : <RefreshIcon size={16} />}
       </span>
       <span>
         {syncing
           ? progress
-            ? `Syncing (${progress.current}%)...`
-            : 'Syncing...'
-          : statusMessage || 'Sync Models Catalog'}
+            ? t('sync.syncingPercent', { percent: progress.current })
+            : t('sync.syncingShort')
+          : statusMessage || t('sync.syncCatalog')}
       </span>
       {!syncing && !statusMessage && (
         <span
@@ -169,7 +174,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
             marginLeft: '4px',
           }}
         >
-          {stats.count.toLocaleString()} Offline
+          {t('sync.offlineCount', { count: stats.count })}
         </span>
       )}
     </button>

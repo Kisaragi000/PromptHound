@@ -3,16 +3,14 @@ import type { LoraReference, LoraMatchMethod } from '../../../core/types.js';
 import { ExternalLinkIcon, CopyIcon, CheckIcon, LayersIcon, SearchIcon } from '../icons/Icons.js';
 import styles from './LoraCard.module.css';
 import { seaartSearchUrl } from '../../../core/seaart.js';
+import { useT, type StringKey } from '../../i18n/index.js';
 
-export const MATCH_LABELS: Record<LoraMatchMethod, { label: string; title: string }> = {
-  hash: { label: 'Hash match', title: 'Identified by the file hash stored in the image metadata' },
-  'civitai-version': { label: 'Civitai ID', title: 'The image names this exact Civitai model version' },
-  'name-match': {
-    label: 'Name match',
-    title: 'Matched by name only, so this may be the wrong model. Click to inspect or re-link.',
-  },
-  manual: { label: 'Linked manually', title: 'You linked this model by hand' },
-  local: { label: 'Local file', title: 'Read from a local .safetensors file' },
+export const MATCH_LABELS: Record<LoraMatchMethod, { label: StringKey; title: StringKey }> = {
+  hash: { label: 'lora.match.hash', title: 'lora.match.hashTitle' },
+  'civitai-version': { label: 'lora.match.civitai', title: 'lora.match.civitaiTitle' },
+  'name-match': { label: 'lora.match.name', title: 'lora.match.nameTitle' },
+  manual: { label: 'lora.match.manual', title: 'lora.match.manualTitle' },
+  local: { label: 'lora.match.local', title: 'lora.match.localTitle' },
 };
 
 // Name matches are guesses; tint them so they stand apart from exact identifications
@@ -29,6 +27,7 @@ interface LoraCardProps {
 }
 
 export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect }) => {
+  const t = useT();
   const [copiedTrigger, setCopiedTrigger] = useState<string | null>(null);
   // Offline or a removed image: show the icon instead of broken-image alt text
   const [failedCover, setFailedCover] = useState<string | null>(null);
@@ -66,7 +65,7 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
       className={styles.card}
       onClick={() => onInspect?.(lora)}
       style={{ cursor: onInspect ? 'pointer' : 'default' }}
-      title={onInspect ? 'Click to inspect or re-link LoRA model' : undefined}
+      title={onInspect ? t('lora.inspectTitle') : undefined}
     >
       <div className={styles.mainRow}>
         {/* Thumbnail Preview */}
@@ -133,10 +132,10 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
                     alignItems: 'center',
                     gap: '4px',
                   }}
-                  title="Inspect / Search model"
+                  title={t('lora.inspectSearch')}
                 >
                   <SearchIcon size={10} />
-                  {lora.resolved ? 'Inspect' : 'Link'}
+                  {lora.resolved ? t('lora.inspect') : t('lora.link')}
                 </button>
               )}
               {seaartUrl && (
@@ -149,7 +148,7 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
                     e.stopPropagation();
                     handleLinkClick(e, seaartUrl);
                   }}
-                  title={`Search SeaArt for "${displayName}"`}
+                  title={t('lora.searchSeaart', { name: displayName })}
                 >
                   SeaArt
                 </a>
@@ -176,9 +175,9 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
               <span
                 className={styles.tagPill}
                 style={matchedBy === 'name-match' ? NAME_MATCH_PILL_STYLE : undefined}
-                title={matchInfo.title}
+                title={t(matchInfo.title)}
               >
-                {matchInfo.label}
+                {t(matchInfo.label)}
                 {matchedBy === 'name-match' && matchScore !== undefined ? ` ${Math.round(matchScore * 100)}%` : ''}
               </span>
             )}
@@ -197,16 +196,16 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
                   color: '#fca5a5',
                   fontWeight: 600,
                 }}
-                title="Model routed via Civitai Red (NSFW)"
+                title={t('lora.redTitle')}
               >
                 civitai.red
               </span>
             )}
             {!lora.resolved && lora.hash && (
-              <span className={styles.tagPill}>Hash: {lora.hash.slice(0, 8)}…</span>
+              <span className={styles.tagPill}>{t('lora.hashShort', { hash: lora.hash.slice(0, 8) })}</span>
             )}
             {!lora.resolved && !lora.hash && (
-              <span className={styles.tagPill}>Prompt Tag</span>
+              <span className={styles.tagPill}>{t('lora.promptTag')}</span>
             )}
           </div>
         </div>
@@ -215,13 +214,13 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
       {/* Trigger Words Chips */}
       {triggerWords.length > 0 && (
         <div className={styles.triggersSection}>
-          <span className={styles.triggerLabel}>TRIGGERS:</span>
+          <span className={styles.triggerLabel}>{t('lora.triggers')}</span>
           {triggerWords.slice(0, 6).map((word) => (
             <button
               key={word}
               className={styles.triggerChip}
               onClick={(e) => handleCopyTrigger(word, e)}
-              title={`Click to copy "${word}"`}
+              title={t('lora.copyWord', { word })}
             >
               <span>{word}</span>
               {copiedTrigger === word ? (
@@ -233,7 +232,7 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
           ))}
           {triggerWords.length > 6 && (
             <span style={{ fontSize: '10px', color: '#94a3b8' }}>
-              +{triggerWords.length - 6} more
+              {t('lora.more', { count: triggerWords.length - 6 })}
             </span>
           )}
         </div>

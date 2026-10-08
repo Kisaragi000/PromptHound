@@ -22,9 +22,11 @@ import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { SavedPromptItem } from '../../core/types.js';
+import { useT } from '../i18n/index.js';
 import styles from './HomePage.module.css';
 
 export const HomePage: React.FC = () => {
+  const t = useT();
   const {
     navigate,
     libraryItems,
@@ -78,7 +80,7 @@ export const HomePage: React.FC = () => {
     // Strict 10 file ceiling
     let files = rawFiles;
     if (files.length > 10) {
-      setBatchNotice('Batch extraction is limited to 10 images at once. Processing first 10.');
+      setBatchNotice(t('home.batchLimit'));
       setTimeout(() => setBatchNotice(null), 4000);
       files = files.slice(0, 10);
     }
@@ -172,7 +174,7 @@ export const HomePage: React.FC = () => {
     });
 
     setIsSavingAll(false);
-    setBatchFeedback(`Saved ${count} to Library!`);
+    setBatchFeedback(t('home.savedToLibrary', { count }));
     setTimeout(() => setBatchFeedback(null), 3000);
   };
 
@@ -196,14 +198,17 @@ export const HomePage: React.FC = () => {
             <div>
               {pendingUpdate.state === 'downloaded' ? (
                 <>
-                  <strong>PromptHound v{pendingUpdate.version} is ready:</strong> restart to update now, or it
-                  installs next time you close the app.
+                  <strong>{t('update.home.readyTitle', { version: pendingUpdate.version })}</strong>{' '}
+                  {t('update.home.readyBody')}
                 </>
               ) : (
                 <>
-                  <strong>New version{pendingUpdate.version ? ` v${pendingUpdate.version}` : ''} available:</strong>{' '}
-                  downloading in the background
-                  {pendingUpdate.state === 'downloading' ? ` (${pendingUpdate.percent}%)` : ''}…
+                  <strong>
+                    {t('update.home.availableTitle', { version: pendingUpdate.version ? ` v${pendingUpdate.version}` : '' })}
+                  </strong>{' '}
+                  {t('update.home.availableBody', {
+                    percent: pendingUpdate.state === 'downloading' ? ` (${pendingUpdate.percent}%)` : '',
+                  })}
                 </>
               )}
             </div>
@@ -211,10 +216,10 @@ export const HomePage: React.FC = () => {
           {pendingUpdate.state === 'downloaded' && (
             <div className={styles.wizardBannerLeft}>
               <button className={styles.wizardBannerLater} onClick={() => setDismissedUpdate(pendingUpdate.version)}>
-                Later
+                {t('common.later')}
               </button>
               <button className={styles.wizardBannerBtn} onClick={() => window.promptHound?.updates?.install()}>
-                Restart to update
+                {t('update.restart')}
               </button>
             </div>
           )}
@@ -223,10 +228,10 @@ export const HomePage: React.FC = () => {
         <div className={`${styles.wizardBanner} ${styles.wizardBannerDone}`}>
           <div className={styles.wizardBannerLeft}>
             <SparklesIcon size={16} />
-            <div>Setup complete. Change these choices any time in Settings.</div>
+            <div>{t('home.setupDone')}</div>
           </div>
           <button className={styles.wizardBannerLater} onClick={() => setIsWizardOpen(true)}>
-            Run again
+            {t('home.runAgain')}
           </button>
         </div>
       ) : (
@@ -234,11 +239,11 @@ export const HomePage: React.FC = () => {
           <div className={styles.wizardBannerLeft}>
             <SparklesIcon size={18} />
             <div>
-              <strong>Quick Setup Wizard:</strong> Configure Civitai API key, workflow syntax, and local model paths.
+              <strong>{t('home.setupTitle')}</strong> {t('home.setupBody')}
             </div>
           </div>
           <button className={styles.wizardBannerBtn} onClick={() => setIsWizardOpen(true)}>
-            Run Setup Wizard
+            {t('home.runSetup')}
           </button>
         </div>
       )}
@@ -265,12 +270,12 @@ export const HomePage: React.FC = () => {
           <PromptHoundLogo size={56} />
         </div>
         <h1 className={styles.heroTitle}>
-          Welcome to Prompt<span className={styles.heroTitleAccent}>Hound</span>
+          {t('home.welcome')} Prompt<span className={styles.heroTitleAccent}>Hound</span>
         </h1>
         <p className={styles.heroSubtitle}>
-          Extract generation metadata, LoRAs, checkpoints, and parameters from any AI image.
+          {t('home.subtitle1')}
           <br />
-          Organize prompts. Build your creative library.
+          {t('home.subtitle2')}
         </p>
       </section>
 
@@ -281,9 +286,9 @@ export const HomePage: React.FC = () => {
           <div className={styles.actionIconWrap}>
             <LinkIcon size={24} />
           </div>
-          <h3 className={styles.actionTitle}>Paste URL</h3>
+          <h3 className={styles.actionTitle}>{t('home.pasteUrl')}</h3>
           <p className={styles.actionDescription}>
-            Input a Civitai post, SeaArt artwork, or direct image URL to extract embedded generation metadata.
+            {t('home.pasteUrlBody')}
           </p>
           <div className={styles.actionButtonRow}>
             <PrimaryButton
@@ -293,7 +298,7 @@ export const HomePage: React.FC = () => {
                 setShowUrlModal(true);
               }}
             >
-              Enter URL
+              {t('home.enterUrl')}
             </PrimaryButton>
           </div>
         </GlassCard>
@@ -314,10 +319,10 @@ export const HomePage: React.FC = () => {
             <CloudUploadIcon size={24} />
           </div>
           <h3 className={styles.actionTitle}>
-            {isCardHovered ? 'Release to Analyze (Up to 10)' : 'Drop Images (1–10 Max)'}
+            {isCardHovered ? t('home.dropRelease') : t('home.dropTitle')}
           </h3>
           <p className={styles.actionDescription}>
-            Drag and drop up to 10 AI-generated PNGs or WebPs at once, or browse your local folders.
+            {t('home.dropBody')}
           </p>
           <div className={styles.actionButtonRow}>
             <SecondaryButton
@@ -327,7 +332,7 @@ export const HomePage: React.FC = () => {
                 void handleBrowseFilesClick();
               }}
             >
-              Browse Files
+              {t('home.browseFiles')}
             </SecondaryButton>
           </div>
         </GlassCard>
@@ -337,9 +342,9 @@ export const HomePage: React.FC = () => {
           <div className={styles.actionIconWrap}>
             <BookmarkIcon size={24} />
           </div>
-          <h3 className={styles.actionTitle}>Prompt Library</h3>
+          <h3 className={styles.actionTitle}>{t('nav.library')}</h3>
           <p className={styles.actionDescription}>
-            Browse your saved collection of prompt recipes, compare generations, or filter by LoRA.
+            {t('home.libraryBody')}
           </p>
           <div className={styles.actionButtonRow}>
             <SecondaryButton
@@ -349,7 +354,7 @@ export const HomePage: React.FC = () => {
                 navigate('library');
               }}
             >
-              Open Library
+              {t('home.openLibrary')}
             </SecondaryButton>
           </div>
         </GlassCard>
@@ -368,8 +373,8 @@ export const HomePage: React.FC = () => {
             <CpuIcon size={18} />
           </div>
           <div className={styles.featureText}>
-            <strong>Zero Latency Parsing</strong>
-            <span>Instant client-side PNG chunk and ComfyUI graph extraction</span>
+            <strong>{t('home.feature1Title')}</strong>
+            <span>{t('home.feature1Body')}</span>
           </div>
         </div>
 
@@ -380,8 +385,8 @@ export const HomePage: React.FC = () => {
             <GlobeIcon size={18} />
           </div>
           <div className={styles.featureText}>
-            <strong>Civitai Auto-Resolution</strong>
-            <span>Hashes resolved to real LoRA names, versions, and trained trigger tags</span>
+            <strong>{t('home.feature2Title')}</strong>
+            <span>{t('home.feature2Body')}</span>
           </div>
         </div>
 
@@ -392,8 +397,8 @@ export const HomePage: React.FC = () => {
             <SparklesIcon size={18} />
           </div>
           <div className={styles.featureText}>
-            <strong>Universal Formats</strong>
-            <span>Full support for Automatic1111, Forge, ComfyUI, SDXL, and WebUI</span>
+            <strong>{t('home.feature3Title')}</strong>
+            <span>{t('home.feature3Body')}</span>
           </div>
         </div>
       </section>
@@ -402,24 +407,24 @@ export const HomePage: React.FC = () => {
       {showUrlModal && (
         <div className={styles.modalOverlay} onClick={() => setShowUrlModal(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Extract from Web Link</h3>
+            <h3 className={styles.modalTitle}>{t('home.urlModalTitle')}</h3>
             <p className={styles.modalSubtitle}>
-              Paste a link to a Civitai post, image page, or a direct .png/.webp image URL:
+              {t('home.urlModalBody')}
             </p>
             <form onSubmit={handleUrlSubmit} className={styles.modalForm}>
               <GlassInput
                 value={inputUrl}
                 onChange={(e) => setInputUrl(e.target.value)}
-                placeholder="https://civitai.com/images/4819201 or direct image link..."
+                placeholder={t('home.urlPlaceholder')}
                 icon={<LinkIcon size={16} />}
                 autoFocus
               />
               <div className={styles.modalActions}>
                 <SecondaryButton type="button" onClick={() => setShowUrlModal(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </SecondaryButton>
                 <PrimaryButton type="submit" disabled={!inputUrl.trim()}>
-                  Extract Metadata
+                  {t('home.extractMetadata')}
                 </PrimaryButton>
               </div>
             </form>

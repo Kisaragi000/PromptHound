@@ -7,9 +7,11 @@ import { PrimaryButton } from '../components/primitives/PrimaryButton.js';
 import { CatalogSyncButton } from '../components/lora/CatalogSyncButton.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import type { SavedPromptItem } from '../../core/types.js';
+import { useT } from '../i18n/index.js';
 import styles from './StaticPage.module.css';
 
 export const FavoritesPage: React.FC = () => {
+  const t = useT();
   const {
     navigate,
     favorites,
@@ -38,9 +40,9 @@ export const FavoritesPage: React.FC = () => {
       <div className={styles.page} style={{ maxWidth: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 className={styles.headerTitle}>Favorite Prompts</h1>
+            <h1 className={styles.headerTitle}>{t('favorites.title')}</h1>
             <p className={styles.headerSubtitle}>
-              Quickly access your starred prompts, configurations, and generation recipes.
+              {t('favorites.subtitle')}
             </p>
           </div>
           <CatalogSyncButton variant="full" />
@@ -48,11 +50,11 @@ export const FavoritesPage: React.FC = () => {
 
         <EmptyStatePanel
           icon={<StarIcon size={32} />}
-          title="No Favorite Prompts Yet"
-          description="Mark prompts with the star icon in your library or extraction view to bookmark your best recipes here."
+          title={t('favorites.emptyTitle')}
+          description={t('favorites.emptyBody')}
           action={
             <PrimaryButton onClick={() => navigate('library')}>
-              Explore Library
+              {t('favorites.explore')}
             </PrimaryButton>
           }
         />
@@ -64,10 +66,9 @@ export const FavoritesPage: React.FC = () => {
     <div className={styles.page} style={{ maxWidth: 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className={styles.headerTitle}>Favorite Prompts</h1>
+          <h1 className={styles.headerTitle}>{t('favorites.title')}</h1>
           <p className={styles.headerSubtitle}>
-            Quickly access your starred prompts, configurations, and generation recipes. Click a card to preview it, click
-            again to open the full result.
+            {t('favorites.subtitleHint')}
           </p>
         </div>
         <CatalogSyncButton variant="full" />
@@ -101,7 +102,7 @@ export const FavoritesPage: React.FC = () => {
             }}
             onClick={() => handleCardClick(fav.id)}
             onDoubleClick={() => openRecipeInResult(fav)}
-            title={selectedId === fav.id ? `Click again to open ${fav.title}` : `Click to preview ${fav.title}`}
+            title={selectedId === fav.id ? t('favorites.clickAgainTitle', { title: fav.title }) : t('favorites.clickPreviewTitle', { title: fav.title })}
           >
             <div style={{ width: '100%', aspectRatio: '4 / 3', borderRadius: 'var(--radius-control)', overflow: 'hidden', background: '#05080a' }}>
               {fav.thumbnailUrl ? (
@@ -114,7 +115,7 @@ export const FavoritesPage: React.FC = () => {
                 />
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)' }}>
-                  No Preview
+                  {t('common.noPreview')}
                 </div>
               )}
             </div>
@@ -124,7 +125,7 @@ export const FavoritesPage: React.FC = () => {
                 {fav.title}
               </h3>
               <IconButton
-                title="Unfavorite"
+                title={t('favorites.unfavorite')}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleFavorite(fav.id);
@@ -149,16 +150,16 @@ export const FavoritesPage: React.FC = () => {
               overflow: 'hidden',
               minHeight: '54px',
             }}>
-              {fav.metadata?.prompt || 'No prompt content'}
+              {fav.metadata?.prompt || t('favorites.noPrompt')}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <span style={{ fontSize: '11px', color: 'var(--color-brand-orange)' }}>
-                {selectedId === fav.id ? 'Click again to open →' : 'Click to preview'}
+                {selectedId === fav.id ? t('favorites.clickAgain') : t('favorites.clickPreview')}
               </span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <IconButton
-                  title="Copy prompt"
+                  title={t('common.copyPrompt')}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(fav.metadata?.prompt || '');
@@ -167,7 +168,7 @@ export const FavoritesPage: React.FC = () => {
                   <CopyIcon size={14} />
                 </IconButton>
                 <IconButton
-                  title="Open full extraction result"
+                  title={t('common.openFullResult')}
                   onClick={(e) => {
                     e.stopPropagation();
                     openRecipeInResult(fav);
@@ -204,12 +205,13 @@ const paneBox: React.CSSProperties = {
 
 /** Side preview of the selected favorite: image, prompt and key settings */
 const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }> = ({ fav, onOpen }) => {
+  const t = useT();
   const meta = fav.metadata || {};
   const params: Array<[string, React.ReactNode]> = [
-    ['Sampler', meta.sampler ?? '—'],
-    ['Steps', meta.steps ?? '—'],
-    ['CFG Scale', meta.cfgScale ?? '—'],
-    ['Seed', meta.seed ?? '—'],
+    [t('param.sampler'), meta.sampler ?? '—'],
+    [t('param.steps'), meta.steps ?? '—'],
+    [t('param.cfgScale'), meta.cfgScale ?? '—'],
+    [t('param.seed'), meta.seed ?? '—'],
   ];
   const loras: any[] = Array.isArray(meta.loras) ? meta.loras : [];
 
@@ -229,14 +231,14 @@ const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }
     >
       <div
         onClick={onOpen}
-        title="Open full result"
+        title={t('favorites.openFull')}
         style={{ width: '100%', aspectRatio: '4 / 3', flexShrink: 0, borderRadius: 'var(--radius-control)', overflow: 'hidden', background: '#05080a', cursor: 'pointer' }}
       >
         {fav.thumbnailUrl ? (
           <img src={fav.thumbnailUrl} alt={fav.title} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-            No Preview
+            {t('common.noPreview')}
           </div>
         )}
       </div>
@@ -249,9 +251,9 @@ const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }
       </div>
 
       <div style={paneBox}>
-        <div style={paneLabel}>Prompt</div>
+        <div style={paneLabel}>{t('param.prompt')}</div>
         <p style={{ fontSize: '13px', lineHeight: 1.45, marginTop: '6px', color: 'var(--color-text-primary)', maxHeight: '140px', overflowY: 'auto' }}>
-          {meta.prompt || 'No prompt content'}
+          {meta.prompt || t('favorites.noPrompt')}
         </p>
       </div>
 
@@ -268,7 +270,7 @@ const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }
 
       {loras.length > 0 && (
         <div style={paneBox}>
-          <div style={paneLabel}>LoRAs ({loras.length})</div>
+          <div style={paneLabel}>{t('param.loras', { count: loras.length })}</div>
           <ul style={{ margin: '6px 0 0', paddingLeft: '16px', fontSize: '12.5px', color: 'var(--color-text-secondary)' }}>
             {loras.map((l, i) => (
               <li key={i}>
@@ -280,7 +282,7 @@ const FavoritePreviewPane: React.FC<{ fav: SavedPromptItem; onOpen: () => void }
         </div>
       )}
 
-      <PrimaryButton onClick={onOpen}>Open Full Result</PrimaryButton>
+      <PrimaryButton onClick={onOpen}>{t('favorites.openFullButton')}</PrimaryButton>
     </GlassCard>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { LoraReference } from '../../../core/types.js';
 import { SparklesIcon, CopyIcon, CheckIcon, CpuIcon } from '../icons/Icons.js';
+import { useT } from '../../i18n/index.js';
 import styles from './LoraMixerPanel.module.css';
 
 interface LoraMixerPanelProps {
@@ -14,11 +15,12 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
   basePrompt = '',
   onUpdateLoraStrength,
 }) => {
+  const t = useT();
   const [activeTriggers, setActiveTriggers] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     loras.forEach((l) => {
-      l.resolved?.triggerWords?.forEach((t) => {
-        initial[t] = true;
+      l.resolved?.triggerWords?.forEach((word) => {
+        initial[word] = true;
       });
     });
     return initial;
@@ -78,11 +80,11 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
       <div className={styles.header}>
         <div className={styles.titleRow}>
           <SparklesIcon size={16} />
-          <h4 className={styles.title}>LoRA Weight &amp; Trigger Mixer</h4>
+          <h4 className={styles.title}>{t('mixer.title')}</h4>
         </div>
         <button className={styles.copyBtn} onClick={handleCopy}>
           {copied ? <CheckIcon size={12} color="#4ade80" /> : <CopyIcon size={12} />}
-          <span>{copied ? 'Copied' : 'Copy LoRA Stack'}</span>
+          <span>{copied ? t('common.copied') : t('mixer.copy')}</span>
         </button>
       </div>
 
@@ -116,7 +118,7 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
               {/* Trigger Words Toggle Pills */}
               {triggerWords.length > 0 && (
                 <div className={styles.triggerRow}>
-                  <span className={styles.triggerLabel}>Triggers:</span>
+                  <span className={styles.triggerLabel}>{t('param.triggers')}</span>
                   <div className={styles.triggerList}>
                     {triggerWords.map((word) => {
                       const isActive = activeTriggers[word] !== false;
@@ -125,7 +127,7 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
                           key={word}
                           className={`${styles.triggerChip} ${isActive ? styles.triggerActive : ''}`}
                           onClick={() => toggleTrigger(word)}
-                          title="Click to toggle trigger tag in copied prompt"
+                          title={t('mixer.toggle')}
                         >
                           {isActive ? '✓ ' : '+ '}
                           {word}

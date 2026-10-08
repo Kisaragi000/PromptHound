@@ -11,9 +11,12 @@ import {
 } from '../../core/lora-resolution.js';
 import { Dropdown } from '../components/primitives/Dropdown.js';
 import { LibraryBackupControls } from '../components/library/LibraryBackupControls.js';
+import { useT, useLanguage, setLanguage, LANGUAGES, type Language } from '../i18n/index.js';
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
+  const t = useT();
+  const language = useLanguage();
   const [civitaiDomain, setCivitaiDomain] = useState<CivitaiDomainPreference>(() => {
     return getPreferredCivitaiDomain();
   });
@@ -83,7 +86,7 @@ export const SettingsPage: React.FC = () => {
     try {
       setExplorerMenu(await integration.set(enabled));
     } catch {
-      setExplorerMenu((s) => ({ ...s, busy: false, error: 'Windows did not accept the change. Try again.' }));
+      setExplorerMenu((s) => ({ ...s, busy: false, error: t('settings.explorerMenuError') }));
     }
   };
 
@@ -107,21 +110,38 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className={styles.page}>
       <div>
-        <h1 className={styles.headerTitle}>Preferences & Settings</h1>
-        <p className={styles.headerSubtitle}>
-          Windows integration, Civitai access, library backups and the model cache.
-        </p>
+        <h1 className={styles.headerTitle}>{t('settings.title')}</h1>
+        <p className={styles.headerSubtitle}>{t('settings.subtitle')}</p>
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>WINDOWS INTEGRATION</div>
+        <div className={styles.sectionTitle}>{t('settings.languageSection')}</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Explorer Right-Click Menu</div>
+            <div className={styles.settingLabel}>{t('settings.language')}</div>
+            <div className={styles.settingDesc}>{t('settings.languageDesc')}</div>
+          </div>
+          <div className={styles.settingControl}>
+            <Dropdown
+              value={language}
+              ariaLabel={t('settings.language')}
+              className={styles.platformDropdown}
+              onChange={(v) => setLanguage(v as Language)}
+              options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>{t('settings.windowsSection')}</div>
+        <div className={styles.settingRow}>
+          <div className={styles.settingInfo}>
+            <div className={styles.settingLabel}>{t('settings.explorerMenu')}</div>
             <div className={styles.settingDesc}>
               {explorerMenu.supported
-                ? 'Adds "Extract with PromptHound" when you right-click a PNG, JPEG, WebP or AVIF file in Windows Explorer.'
-                : 'Available in the installed Windows app.'}
+                ? t('settings.explorerMenuDesc')
+                : t('settings.explorerMenuInstalled')}
               {explorerMenu.error && <div style={{ marginTop: '4px', color: '#f87171' }}>{explorerMenu.error}</div>}
             </div>
           </div>
@@ -138,31 +158,31 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>API & INTEGRATIONS</div>
+        <div className={styles.sectionTitle}>{t('settings.apiSection')}</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Civitai API Key (Optional)</div>
+            <div className={styles.settingLabel}>{t('settings.apiKey')}</div>
             <div className={styles.settingDesc}>
-              Required for private models and significantly higher rate limits.{' '}
+              {t('settings.apiKeyDesc')}{' '}
               <a
                 href="https://civitai.com/user/account"
                 onClick={handleOpenCivitaiAccount}
                 style={{ color: '#38bdf8', textDecoration: 'underline', cursor: 'pointer' }}
               >
-                Get your Civitai API key ↗
+                {t('settings.getKey')}
               </a>
             </div>
           </div>
           <div className={styles.settingControl} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <GlassInput
               type="password"
-              placeholder={isKeyConfigured && !civitaiApiKey ? '•••••••••••••••• (Encrypted in safe storage)' : 'Enter Civitai API Key...'}
+              placeholder={isKeyConfigured && !civitaiApiKey ? t('settings.keyEncrypted') : t('settings.keyPlaceholder')}
               value={civitaiApiKey}
               onChange={(e) => setCivitaiApiKey(e.target.value)}
             />
             {isKeyConfigured && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start' }}>
-                <StatusBadge label="Key saved (encrypted)" status="success" />
+                <StatusBadge label={t('settings.keySaved')} status="success" />
               </div>
             )}
           </div>
@@ -170,21 +190,21 @@ export const SettingsPage: React.FC = () => {
 
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Preferred Civitai Platform (civitai.red vs civitai.com)</div>
+            <div className={styles.settingLabel}>{t('settings.platform')}</div>
             <div className={styles.settingDesc}>
-              <strong>civitai.red</strong> hosts the complete catalog (both SFW and NSFW) without filtering restrictions. Choose your default platform for viewing models:
+              <strong>civitai.red</strong> {t('settings.platformDesc')}
             </div>
           </div>
           <div className={styles.settingControl}>
             <Dropdown
               value={civitaiDomain}
-              ariaLabel="Preferred Civitai platform"
+              ariaLabel={t('settings.platformAria')}
               className={styles.platformDropdown}
               onChange={(v) => setCivitaiDomain(v as CivitaiDomainPreference)}
               options={[
-                { value: 'civitai.red', label: 'civitai.red (full catalog)' },
-                { value: 'auto', label: 'Automatic (by rating)' },
-                { value: 'civitai.com', label: 'civitai.com (SFW only)' },
+                { value: 'civitai.red', label: t('settings.platformRed') },
+                { value: 'auto', label: t('settings.platformAuto') },
+                { value: 'civitai.com', label: t('settings.platformCom') },
               ]}
             />
           </div>
@@ -192,13 +212,12 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>STORAGE & EXPORTS</div>
+        <div className={styles.sectionTitle}>{t('settings.storageSection')}</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Prompt Library Backup</div>
+            <div className={styles.settingLabel}>{t('settings.backup')}</div>
             <div className={styles.settingDesc}>
-              Save every prompt, folder, favorite and image to one .zip file, to keep as a backup, move to
-              another PC or share. Importing adds the prompts you don't have yet and keeps the ones you do.
+              {t('settings.backupDesc')}
             </div>
           </div>
           <div className={styles.settingControl}>
@@ -208,17 +227,21 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>LOCAL MODEL CACHE (TIER 1)</div>
+        <div className={styles.sectionTitle}>{t('settings.cacheSection')}</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>Indexed LoRAs & Models</div>
+            <div className={styles.settingLabel}>{t('settings.cache')}</div>
             <div className={styles.settingDesc}>
               {cacheStats.count > 0
-                ? `${cacheStats.count.toLocaleString()} model${cacheStats.count === 1 ? '' : 's'} available locally (${cacheStats.count - cacheStats.userCount} bundled seed + ${cacheStats.userCount} user discoveries).`
-                : 'No models cached yet. Models resolve live and auto-save here as you extract images.'}
+                ? t('settings.cacheCount', {
+                    count: cacheStats.count,
+                    seed: cacheStats.count - cacheStats.userCount,
+                    user: cacheStats.userCount,
+                  })
+                : t('settings.cacheEmpty')}
               {cacheStats.lastUpdated && (
                 <div style={{ marginTop: '4px', fontSize: '11px', color: '#94a3b8' }}>
-                  Last user auto-upsert: {new Date(cacheStats.lastUpdated).toLocaleDateString()} {new Date(cacheStats.lastUpdated).toLocaleTimeString()}
+                  {t('settings.cacheUpdated', { date: `${new Date(cacheStats.lastUpdated).toLocaleDateString()} ${new Date(cacheStats.lastUpdated).toLocaleTimeString()}` })}
                 </div>
               )}
             </div>
@@ -239,18 +262,18 @@ export const SettingsPage: React.FC = () => {
                 opacity: cacheStats.count === 0 ? 0.5 : 1,
               }}
             >
-              Clear Cache
+              {t('settings.clearCache')}
             </button>
-            {cacheCleared && <StatusBadge label="Cache cleared" status="neutral" />}
+            {cacheCleared && <StatusBadge label={t('settings.cacheCleared')} status="neutral" />}
           </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <PrimaryButton onClick={handleSave}>
-          {saved ? 'Settings Saved' : 'Save Preferences'}
+          {saved ? t('settings.saved') : t('settings.save')}
         </PrimaryButton>
-        {saved && <StatusBadge label="Saved to local storage" status="success" />}
+        {saved && <StatusBadge label={t('settings.savedLocal')} status="success" />}
       </div>
     </div>
   );

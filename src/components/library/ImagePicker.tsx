@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ImageIcon, PlusIcon, StarIcon, CloseIcon } from '../icons/Icons.js';
 import { isImageFile } from '../../utils/libraryImages.js';
+import { useT } from '../../i18n/index.js';
 import styles from './ImagePicker.module.css';
 
 export interface PickerImage {
@@ -23,9 +24,11 @@ interface ImagePickerProps {
 
 /** Image tiles with add (click, drop or paste), remove and "make cover" */
 export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, onRemove, onMakeCover, busy, hint }) => {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const room = max - images.length;
+  const addLabel = busy ? t('images.adding') : images.length ? t('images.addMore') : t('images.add');
 
   const add = (files: File[]) => {
     const accepted = files.filter(isImageFile).slice(0, Math.max(0, room));
@@ -58,7 +61,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
     >
       <div className={styles.header}>
         <span className={styles.label}>
-          <ImageIcon size={14} /> Images
+          <ImageIcon size={14} /> {t('images.label')}
         </span>
         <span className={styles.count}>
           {images.length} / {max}
@@ -68,11 +71,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
       <div className={styles.tiles}>
         {images.map((img, i) => (
           <div key={img.id} className={`${styles.tile} ${i === 0 ? styles.cover : ''}`} title={img.name}>
-            <img src={img.previewUrl} alt={img.name || `Image ${i + 1}`} />
+            <img src={img.previewUrl} alt={img.name || t('images.imageN', { n: i + 1 })} />
             {i === 0 ? (
-              <span className={styles.coverBadge}>Cover</span>
+              <span className={styles.coverBadge}>{t('images.cover')}</span>
             ) : (
-              <button type="button" className={styles.tileBtn} onClick={() => onMakeCover(img.id)} title="Make this the cover image" aria-label="Make cover">
+              <button type="button" className={styles.tileBtn} onClick={() => onMakeCover(img.id)} title={t('images.makeCoverTitle')} aria-label={t('images.makeCover')}>
                 <StarIcon size={12} />
               </button>
             )}
@@ -80,8 +83,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
               type="button"
               className={`${styles.tileBtn} ${styles.removeBtn}`}
               onClick={() => onRemove(img.id)}
-              title="Remove image"
-              aria-label="Remove image"
+              title={t('images.remove')}
+              aria-label={t('images.remove')}
             >
               <CloseIcon size={12} />
             </button>
@@ -89,15 +92,22 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
         ))}
 
         {room > 0 && (
-          <button type="button" className={styles.addTile} onClick={() => inputRef.current?.click()} disabled={busy}>
+          <button
+            type="button"
+            className={styles.addTile}
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            title={addLabel}
+            aria-label={addLabel}
+          >
             {busy ? <span className={styles.spinner} /> : <PlusIcon size={18} />}
-            <span>{busy ? 'Adding…' : images.length ? 'Add more' : 'Add images'}</span>
+            <span className={styles.addLabel}>{addLabel}</span>
           </button>
         )}
       </div>
 
       <p className={styles.hint}>
-        {hint ?? `Drop, paste or browse up to ${max} images. The first one is the cover.`}
+        {hint ?? t('images.hint', { max })}
       </p>
 
       <input

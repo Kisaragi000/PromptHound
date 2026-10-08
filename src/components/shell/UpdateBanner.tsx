@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { useUpdateStatus } from './useUpdateStatus.js';
+import { useT } from '../../i18n/index.js';
 import styles from './UpdateBanner.module.css';
 
 /**
@@ -8,6 +9,7 @@ import styles from './UpdateBanner.module.css';
  * Home shows the same notice at the top of the page instead.
  */
 export const UpdateBanner: React.FC = () => {
+  const t = useT();
   const status = useUpdateStatus();
   const { currentRoute } = useNavigation();
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export const UpdateBanner: React.FC = () => {
     return (
       <div className={styles.banner} role="status">
         <div className={styles.text}>
-          <strong>Downloading update{version ? ` v${version}` : ''}</strong>
+          <strong>{t('update.banner.downloading', { version: version ? ` v${version}` : '' })}</strong>
           <span>{status.percent}%</span>
         </div>
         <div className={styles.progress}>
@@ -34,15 +36,15 @@ export const UpdateBanner: React.FC = () => {
   return (
     <div className={styles.banner} role="status">
       <div className={styles.text}>
-        <strong>PromptHound v{version} is ready</strong>
-        <span>It replaces this version when you restart, or next time you close the app.</span>
+        <strong>{t('update.banner.ready', { version })}</strong>
+        <span>{t('update.banner.readyBody')}</span>
       </div>
       <div className={styles.actions}>
         <button type="button" className={styles.later} onClick={() => setDismissedVersion(version)}>
-          Later
+          {t('common.later')}
         </button>
         <button type="button" className={styles.restart} onClick={() => window.promptHound?.updates?.install()}>
-          Restart to update
+          {t('update.restart')}
         </button>
       </div>
     </div>

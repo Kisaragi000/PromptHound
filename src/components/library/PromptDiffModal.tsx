@@ -3,6 +3,8 @@ import type { SavedPromptItem, LoraReference } from '../../../core/types.js';
 import { EyeIcon, SparklesIcon, CheckIcon, CopyIcon } from '../icons/Icons.js';
 import { SecondaryButton } from '../primitives/SecondaryButton.js';
 import { PrimaryButton } from '../primitives/PrimaryButton.js';
+import { useT } from '../../i18n/index.js';
+import { folderLabel, formatItemDate } from '../../i18n/labels.js';
 import styles from './PromptDiffModal.module.css';
 
 interface PromptDiffModalProps {
@@ -18,6 +20,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const t = useT();
   if (!isOpen) return null;
 
   const metaA = itemA.metadata || {};
@@ -31,11 +34,11 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
         {/* Header */}
         <div className={styles.header}>
           <div>
-            <h3 className={styles.title}>Side-by-Side Recipe Comparison</h3>
-            <p className={styles.subtitle}>Comparing parameters, prompts, and LoRAs across generations</p>
+            <h3 className={styles.title}>{t('diff.title')}</h3>
+            <p className={styles.subtitle}>{t('diff.subtitle')}</p>
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
-            ✕ Close
+            {t('diff.close')}
           </button>
         </div>
 
@@ -50,20 +53,20 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                 </div>
                 <div>
                   <h4 className={styles.itemTitle}>{itemA.title}</h4>
-                  <span className={styles.itemSub}>{itemA.folder || 'Unfiled'} · {itemA.date}</span>
+                  <span className={styles.itemSub}>{itemA.folder ? folderLabel(itemA.folder) : t('folder.unfiled')} · {formatItemDate(itemA.date)}</span>
                 </div>
               </div>
 
               <div className={styles.diffSection}>
-                <span className={styles.sectionLabel}>Positive Prompt</span>
+                <span className={styles.sectionLabel}>{t('param.positivePrompt')}</span>
                 <div className={`${styles.textBox} ${isDiff(metaA.prompt, metaB.prompt) ? styles.textDiff : ''}`}>
-                  {metaA.prompt || '(Empty prompt)'}
+                  {metaA.prompt || t('param.emptyPrompt')}
                 </div>
               </div>
 
               {metaA.negativePrompt && (
                 <div className={styles.diffSection}>
-                  <span className={styles.sectionLabel}>Negative Prompt</span>
+                  <span className={styles.sectionLabel}>{t('param.negativePrompt')}</span>
                   <div className={`${styles.textBox} ${isDiff(metaA.negativePrompt, metaB.negativePrompt) ? styles.textDiff : ''}`}>
                     {metaA.negativePrompt}
                   </div>
@@ -72,34 +75,34 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
 
               <div className={styles.paramsGrid}>
                 <div className={`${styles.paramCard} ${isDiff(metaA.model, metaB.model) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Model</span>
+                  <span className={styles.paramLabel}>{t('param.model')}</span>
                   <span className={styles.paramValue}>{metaA.model || itemA.model || '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.sampler, metaB.sampler) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Sampler</span>
+                  <span className={styles.paramLabel}>{t('param.sampler')}</span>
                   <span className={styles.paramValue}>{metaA.sampler || '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.steps, metaB.steps) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Steps</span>
+                  <span className={styles.paramLabel}>{t('param.steps')}</span>
                   <span className={styles.paramValue}>{metaA.steps ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.cfgScale, metaB.cfgScale) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>CFG Scale</span>
+                  <span className={styles.paramLabel}>{t('param.cfgScale')}</span>
                   <span className={styles.paramValue}>{metaA.cfgScale ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.seed, metaB.seed) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Seed</span>
+                  <span className={styles.paramLabel}>{t('param.seed')}</span>
                   <span className={styles.paramValue}>{metaA.seed ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.width, metaB.width) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Dimensions</span>
+                  <span className={styles.paramLabel}>{t('param.dimensions')}</span>
                   <span className={styles.paramValue}>{itemA.dimensions || '1024 × 1024'}</span>
                 </div>
               </div>
 
               {/* LoRA List A */}
               <div className={styles.diffSection}>
-                <span className={styles.sectionLabel}>LoRAs ({metaA.loras?.length || 0})</span>
+                <span className={styles.sectionLabel}>{t('param.loras', { count: metaA.loras?.length || 0 })}</span>
                 <div className={styles.loraList}>
                   {metaA.loras && metaA.loras.length > 0 ? (
                     metaA.loras.map((l: LoraReference, i: number) => (
@@ -109,7 +112,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                       </div>
                     ))
                   ) : (
-                    <span className={styles.emptyText}>No LoRAs used</span>
+                    <span className={styles.emptyText}>{t('diff.noLoras')}</span>
                   )}
                 </div>
               </div>
@@ -123,20 +126,20 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                 </div>
                 <div>
                   <h4 className={styles.itemTitle}>{itemB.title}</h4>
-                  <span className={styles.itemSub}>{itemB.folder || 'Unfiled'} · {itemB.date}</span>
+                  <span className={styles.itemSub}>{itemB.folder ? folderLabel(itemB.folder) : t('folder.unfiled')} · {formatItemDate(itemB.date)}</span>
                 </div>
               </div>
 
               <div className={styles.diffSection}>
-                <span className={styles.sectionLabel}>Positive Prompt</span>
+                <span className={styles.sectionLabel}>{t('param.positivePrompt')}</span>
                 <div className={`${styles.textBox} ${isDiff(metaA.prompt, metaB.prompt) ? styles.textDiff : ''}`}>
-                  {metaB.prompt || '(Empty prompt)'}
+                  {metaB.prompt || t('param.emptyPrompt')}
                 </div>
               </div>
 
               {metaB.negativePrompt && (
                 <div className={styles.diffSection}>
-                  <span className={styles.sectionLabel}>Negative Prompt</span>
+                  <span className={styles.sectionLabel}>{t('param.negativePrompt')}</span>
                   <div className={`${styles.textBox} ${isDiff(metaA.negativePrompt, metaB.negativePrompt) ? styles.textDiff : ''}`}>
                     {metaB.negativePrompt}
                   </div>
@@ -145,34 +148,34 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
 
               <div className={styles.paramsGrid}>
                 <div className={`${styles.paramCard} ${isDiff(metaA.model, metaB.model) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Model</span>
+                  <span className={styles.paramLabel}>{t('param.model')}</span>
                   <span className={styles.paramValue}>{metaB.model || itemB.model || '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.sampler, metaB.sampler) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Sampler</span>
+                  <span className={styles.paramLabel}>{t('param.sampler')}</span>
                   <span className={styles.paramValue}>{metaB.sampler || '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.steps, metaB.steps) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Steps</span>
+                  <span className={styles.paramLabel}>{t('param.steps')}</span>
                   <span className={styles.paramValue}>{metaB.steps ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.cfgScale, metaB.cfgScale) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>CFG Scale</span>
+                  <span className={styles.paramLabel}>{t('param.cfgScale')}</span>
                   <span className={styles.paramValue}>{metaB.cfgScale ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.seed, metaB.seed) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Seed</span>
+                  <span className={styles.paramLabel}>{t('param.seed')}</span>
                   <span className={styles.paramValue}>{metaB.seed ?? '—'}</span>
                 </div>
                 <div className={`${styles.paramCard} ${isDiff(metaA.width, metaB.width) ? styles.paramDiff : ''}`}>
-                  <span className={styles.paramLabel}>Dimensions</span>
+                  <span className={styles.paramLabel}>{t('param.dimensions')}</span>
                   <span className={styles.paramValue}>{itemB.dimensions || '1024 × 1024'}</span>
                 </div>
               </div>
 
               {/* LoRA List B */}
               <div className={styles.diffSection}>
-                <span className={styles.sectionLabel}>LoRAs ({metaB.loras?.length || 0})</span>
+                <span className={styles.sectionLabel}>{t('param.loras', { count: metaB.loras?.length || 0 })}</span>
                 <div className={styles.loraList}>
                   {metaB.loras && metaB.loras.length > 0 ? (
                     metaB.loras.map((l: LoraReference, i: number) => (
@@ -182,7 +185,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
                       </div>
                     ))
                   ) : (
-                    <span className={styles.emptyText}>No LoRAs used</span>
+                    <span className={styles.emptyText}>{t('diff.noLoras')}</span>
                   )}
                 </div>
               </div>
@@ -191,7 +194,7 @@ export const PromptDiffModal: React.FC<PromptDiffModalProps> = ({
         </div>
 
         <div className={styles.footer}>
-          <SecondaryButton onClick={onClose}>Close Comparison</SecondaryButton>
+          <SecondaryButton onClick={onClose}>{t('diff.closeComparison')}</SecondaryButton>
         </div>
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
   setRuntimeCivitaiApiKey,
   type CivitaiDomainPreference,
 } from '../../../core/lora-resolution.js';
+import { useT } from '../../i18n/index.js';
 import styles from './InstallWizardModal.module.css';
 
 interface InstallWizardModalProps {
@@ -32,6 +33,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
   onClose,
   onComplete,
 }) => {
+  const t = useT();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Step 1: Workflow Profile
@@ -81,19 +83,19 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
         setApiTestResult({
           success: true,
           message: civitaiApiKey.trim()
-            ? 'API key verified! High-rate limits & mature content enabled.'
-            : 'Public API connected successfully (Anonymous tier).',
+            ? t('wizard.keyVerified')
+            : t('wizard.publicOk'),
         });
       } else {
         setApiTestResult({
           success: false,
-          message: `Civitai returned HTTP ${res.status}: Check your API token.`,
+          message: t('wizard.httpError', { status: res.status }),
         });
       }
     } catch {
       setApiTestResult({
         success: false,
-        message: 'Could not connect to Civitai API. Check your network connection.',
+        message: t('wizard.networkError'),
       });
     } finally {
       setApiTesting(false);
@@ -130,17 +132,17 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
           <div className={styles.logoRow}>
             <PromptHoundLogo size={32} />
             <div>
-              <h2 className={styles.title}>Welcome to PromptHound Setup</h2>
-              <p className={styles.subtitle}>Configure your generation workflow in 4 quick steps</p>
+              <h2 className={styles.title}>{t('wizard.title')}</h2>
+              <p className={styles.subtitle}>{t('wizard.subtitle')}</p>
             </div>
           </div>
 
           <div className={styles.stepper}>
             {[
-              { num: 1, label: 'Workflow' },
-              { num: 2, label: 'Folders' },
-              { num: 3, label: 'Civitai' },
-              { num: 4, label: 'Integration' },
+              { num: 1, label: t('wizard.stepWorkflow') },
+              { num: 2, label: t('wizard.stepFolders') },
+              { num: 3, label: t('wizard.stepCivitai') },
+              { num: 4, label: t('wizard.stepIntegration') },
             ].map((s) => (
               <div
                 key={s.num}
@@ -163,10 +165,10 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <CpuIcon size={20} />
-                <h3>Select Your Primary Generation Workflow</h3>
+                <h3>{t('wizard.workflowTitle')}</h3>
               </div>
               <p className={styles.sectionDesc}>
-                <strong>Good news:</strong> PromptHound runs all extraction engines concurrently on every image. Selecting a workflow simply customizes your default one-click copy syntax.
+                <strong>{t('wizard.goodNews')}</strong> {t('wizard.workflowDesc')}
               </p>
 
               <div className={styles.cardGrid}>
@@ -174,9 +176,9 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   className={`${styles.selectCard} ${workflowProfile === 'general' ? styles.cardSelected : ''}`}
                   onClick={() => setWorkflowProfile('general')}
                 >
-                  <div className={styles.cardBadge} style={{ background: '#F59A24', color: '#0B0E15' }}>Recommended</div>
-                  <h4>Universal Auto-Detect</h4>
-                  <p>Runs all engines together. Perfect for mixed libraries (Civitai, ComfyUI, A1111, Midjourney).</p>
+                  <div className={styles.cardBadge} style={{ background: '#F59A24', color: '#0B0E15' }}>{t('wizard.recommended')}</div>
+                  <h4>{t('wizard.universal')}</h4>
+                  <p>{t('wizard.universalDesc')}</p>
                 </div>
 
                 <div
@@ -185,16 +187,16 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                 >
                   <div className={styles.cardBadge}>WebUI</div>
                   <h4>Automatic1111 / SD-Forge</h4>
-                  <p>Standard web UI syntax, embeddings, and &lt;lora:name:weight&gt; prompt tags.</p>
+                  <p>{t('wizard.a1111Desc')}</p>
                 </div>
 
                 <div
                   className={`${styles.selectCard} ${workflowProfile === 'comfyui' ? styles.cardSelected : ''}`}
                   onClick={() => setWorkflowProfile('comfyui')}
                 >
-                  <div className={styles.cardBadge}>Node Graph</div>
+                  <div className={styles.cardBadge}>{t('wizard.nodeGraph')}</div>
                   <h4>ComfyUI</h4>
-                  <p>Extracts full JSON node workflows, KSampler seeds, and CLIP text conditioning.</p>
+                  <p>{t('wizard.comfyDesc')}</p>
                 </div>
 
                 <div
@@ -202,7 +204,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   onClick={() => setWorkflowProfile('fooocus')}
                 >
                   <h4>Fooocus & NovelAI</h4>
-                  <p>Parses hidden metadata, Danbooru tag weighting, and Fooocus preset styles.</p>
+                  <p>{t('wizard.fooocusDesc')}</p>
                 </div>
               </div>
             </div>
@@ -213,14 +215,14 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <FolderIcon size={20} />
-                <h3>Configure Local Model Directories</h3>
+                <h3>{t('wizard.foldersTitle')}</h3>
               </div>
               <p className={styles.sectionDesc}>
-                Set your local LoRA and output folders to allow header reading and offline hash matching.
+                {t('wizard.foldersDesc')}
               </p>
 
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Local LoRA Directory</label>
+                <label className={styles.formLabel}>{t('wizard.loraDir')}</label>
                 <GlassInput
                   value={loraDirectory}
                   onChange={(e) => setLoraDirectory(e.target.value)}
@@ -228,12 +230,12 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   icon={<FolderIcon size={16} />}
                 />
                 <span className={styles.formHelp}>
-                  Used to cross-reference extracted filename hashes with locally downloaded .safetensors files.
+                  {t('wizard.loraDirHelp')}
                 </span>
               </div>
 
               <div className={styles.formGroup} style={{ marginTop: '16px' }}>
-                <label className={styles.formLabel}>Default Generation Output Folder</label>
+                <label className={styles.formLabel}>{t('wizard.outputDir')}</label>
                 <GlassInput
                   value={outputDirectory}
                   onChange={(e) => setOutputDirectory(e.target.value)}
@@ -241,7 +243,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
                   icon={<FolderIcon size={16} />}
                 />
                 <span className={styles.formHelp}>
-                  Default destination for exported prompt cards and metadata receipts.
+                  {t('wizard.outputDirHelp')}
                 </span>
               </div>
             </div>
@@ -252,47 +254,47 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <GlobeIcon size={20} />
-                <h3>Civitai Platform & API Configuration</h3>
+                <h3>{t('wizard.civitaiTitle')}</h3>
               </div>
               <p className={styles.sectionDesc}>
-                Configure resolution domain and add an optional API token to unlock mature model lookups and higher rate limits.
+                {t('wizard.civitaiDesc')}
               </p>
 
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Preferred Civitai Platform</label>
+                <label className={styles.formLabel}>{t('wizard.platform')}</label>
                 <select
                   value={civitaiDomain}
                   onChange={(e) => setCivitaiDomain(e.target.value as CivitaiDomainPreference)}
                   className={styles.selectInput}
                 >
                   <option value="civitai.red">
-                    Civitai.red (Recommended - Full SFW & NSFW Catalog)
+                    {t('wizard.platformRed')}
                   </option>
                   <option value="auto">
-                    Auto-Route (civitai.red for NSFW, civitai.com for SFW)
+                    {t('wizard.platformAuto')}
                   </option>
                   <option value="civitai.com">
-                    Civitai.com (Strict PG/SFW Domain)
+                    {t('wizard.platformCom')}
                   </option>
                 </select>
                 <span className={styles.formHelp}>
-                  <strong>Civitai.red</strong> hosts both SFW and NSFW models with no domain filtering, ensuring model links open reliably.
+                  <strong>Civitai.red</strong> {t('wizard.platformHelp')}
                 </span>
               </div>
 
               <div className={styles.formGroup} style={{ marginTop: '16px' }}>
-                <label className={styles.formLabel}>Civitai API Key (Optional)</label>
+                <label className={styles.formLabel}>{t('wizard.apiKey')}</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
                     <GlassInput
                       type="password"
                       value={civitaiApiKey}
                       onChange={(e) => setCivitaiApiKey(e.target.value)}
-                      placeholder="Paste your Civitai API key here..."
+                      placeholder={t('wizard.apiKeyPlaceholder')}
                     />
                   </div>
                   <SecondaryButton onClick={testCivitaiConnection} disabled={apiTesting}>
-                    {apiTesting ? 'Testing…' : 'Test API'}
+                    {apiTesting ? t('wizard.testing') : t('wizard.test')}
                   </SecondaryButton>
                 </div>
                 {apiTestResult && (
@@ -319,18 +321,18 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <LightningIcon size={20} />
-                <h3>Windows Integration</h3>
+                <h3>{t('wizard.integrationTitle')}</h3>
               </div>
               <p className={styles.sectionDesc}>
-                Open images in PromptHound straight from Windows Explorer.
+                {t('wizard.integrationDesc')}
               </p>
 
               <div className={styles.toggleList}>
                 <label className={styles.toggleRow}>
                   <div className={styles.toggleInfo}>
-                    <span className={styles.toggleTitle}>Windows Explorer Right-Click Menu</span>
+                    <span className={styles.toggleTitle}>{t('wizard.explorerMenu')}</span>
                     <span className={styles.toggleDesc}>
-                      Add &quot;Extract with PromptHound&quot; to the right-click menu of PNG, JPEG, WebP and AVIF files. You can change this later in Settings.
+                      {t('wizard.explorerMenuDesc')}
                     </span>
                   </div>
                   <input
@@ -350,22 +352,22 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
         <div className={styles.footer}>
           {step > 1 ? (
             <SecondaryButton onClick={() => setStep((step - 1) as any)}>
-              Back
+              {t('common.back')}
             </SecondaryButton>
           ) : (
             <SecondaryButton onClick={onClose}>
-              Skip for Now
+              {t('wizard.skip')}
             </SecondaryButton>
           )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
             {step < 4 ? (
               <PrimaryButton onClick={() => setStep((step + 1) as any)}>
-                Continue
+                {t('common.continue')}
               </PrimaryButton>
             ) : (
               <PrimaryButton onClick={handleFinishSetup} icon={<SparklesIcon size={16} />}>
-                Complete Setup
+                {t('wizard.complete')}
               </PrimaryButton>
             )}
           </div>
