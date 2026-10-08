@@ -1,0 +1,18 @@
+name: Feature or format request
+description: An idea, or an image format PromptHound should read
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like PromptHound to do?
+      description: The problem you are trying to solve matters more than the exact solution.
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Example (for a new image format)
+      description: |
+        Which tool or website made the images, and an original sample file if you can share one.
+        Images contain their own prompt, so only share ones you are happy to make public.

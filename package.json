@@ -4,6 +4,25 @@
   "version": "1.0.17",
   "license": "MIT",
   "description": "AI prompt and metadata extractor for AI-generated images",
+  "author": "Kisaragi",
+  "homepage": "https://github.com/Kisaragi000/PromptHound#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kisaragi000/PromptHound.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kisaragi000/PromptHound/issues"
+  },
+  "keywords": [
+    "stable-diffusion",
+    "prompt",
+    "metadata",
+    "comfyui",
+    "automatic1111",
+    "civitai",
+    "lora",
+    "electron"
+  ],
   "main": "dist-electron/main.cjs",
   "type": "module",
   "scripts": {
