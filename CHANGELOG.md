@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.18
+
+### New
+- **Update notice on Home**: when a new version is found, the banner at the top of Home
+  shows it downloading, then offers "Restart to update".
+
+### Fixed
+- **Window size**: the window now fits the screen it opens on. On smaller or scaled
+  screens it opens maximized, and the title bar button switches between Maximize and
+  Restore down (before, it opened stretched over the screen without being maximized, so
+  the button could not shrink it).
+- **About > Updates** shows the installed version and a "Check for updates" button with
+  the result in plain words (up to date, downloading, ready to restart, or why the check
+  failed). Before, a failed update check showed nothing at all, and About listed an old
+  placeholder version.
+
 ## v1.0.17
 
 ### New

@@ -9,6 +9,7 @@ import {
   BookmarkIcon,
   SparklesIcon,
   LightningIcon,
+  RefreshIcon,
 } from '../components/icons/Icons.js';
 import { GlassCard } from '../components/primitives/GlassCard.js';
 import { PrimaryButton } from '../components/primitives/PrimaryButton.js';
@@ -17,6 +18,7 @@ import { GlassInput } from '../components/primitives/GlassInput.js';
 import { InstallWizardModal } from '../components/setup/InstallWizardModal.js';
 import { BatchExtractionQueue, type BatchItem } from '../components/home/BatchExtractionQueue.js';
 import { RecentExtractionsStrip } from '../components/home/RecentExtractionsStrip.js';
+import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { SavedPromptItem } from '../../core/types.js';
@@ -44,6 +46,16 @@ export const HomePage: React.FC = () => {
 
   // Setup Wizard Modal state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+  // A new version takes the setup banner's place while it downloads and until it is installed
+  const updateStatus = useUpdateStatus();
+  const [dismissedUpdate, setDismissedUpdate] = useState<string | null>(null);
+  const pendingUpdate =
+    updateStatus &&
+    (updateStatus.state === 'available' || updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') &&
+    updateStatus.version !== dismissedUpdate
+      ? updateStatus
+      : null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const batchInputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +181,38 @@ export const HomePage: React.FC = () => {
         style={{ display: 'none' }}
       />
 
-      {/* Setup Wizard Banner */}
+      {/* Update Banner (replaces the setup banner while a new version is on its way) */}
+      {pendingUpdate ? (
+        <div className={styles.wizardBanner} role="status">
+          <div className={styles.wizardBannerLeft}>
+            <RefreshIcon size={18} />
+            <div>
+              {pendingUpdate.state === 'downloaded' ? (
+                <>
+                  <strong>PromptHound v{pendingUpdate.version} is ready:</strong> restart to update now, or it
+                  installs next time you close the app.
+                </>
+              ) : (
+                <>
+                  <strong>New version{pendingUpdate.version ? ` v${pendingUpdate.version}` : ''} available:</strong>{' '}
+                  downloading in the background
+                  {pendingUpdate.state === 'downloading' ? ` (${pendingUpdate.percent}%)` : ''}…
+                </>
+              )}
+            </div>
+          </div>
+          {pendingUpdate.state === 'downloaded' && (
+            <div className={styles.wizardBannerLeft}>
+              <button className={styles.wizardBannerLater} onClick={() => setDismissedUpdate(pendingUpdate.version)}>
+                Later
+              </button>
+              <button className={styles.wizardBannerBtn} onClick={() => window.promptHound?.updates?.install()}>
+                Restart to update
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className={styles.wizardBanner}>
         <div className={styles.wizardBannerLeft}>
           <SparklesIcon size={18} />
@@ -181,6 +224,7 @@ export const HomePage: React.FC = () => {
           Run Setup Wizard
         </button>
       </div>
+      )}
 
       {/* Batch Notice Toast */}
       {batchNotice && <div className={styles.toastNotice}>{batchNotice}</div>}

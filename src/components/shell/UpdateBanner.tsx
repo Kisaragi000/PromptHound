@@ -1,20 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import type { UpdateStatus } from '../../types/global.js';
+import React, { useState } from 'react';
+import { useNavigation } from '../../navigation/NavigationContext.js';
+import { useUpdateStatus } from './useUpdateStatus.js';
 import styles from './UpdateBanner.module.css';
 
-/** Bottom-right notice for background updates: download progress, then "Restart to update". */
+/**
+ * Bottom-right notice for background updates: download progress, then "Restart to update".
+ * Home shows the same notice at the top of the page instead.
+ */
 export const UpdateBanner: React.FC = () => {
-  const [status, setStatus] = useState<UpdateStatus | null>(null);
+  const status = useUpdateStatus();
+  const { currentRoute } = useNavigation();
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
 
-  useEffect(() => {
-    const updates = window.promptHound?.updates;
-    if (!updates) return;
-    updates.getStatus().then(setStatus).catch(() => undefined);
-    return updates.onStatus(setStatus);
-  }, []);
-
-  if (!status) return null;
+  if (!status || currentRoute === 'home') return null;
   if (status.state !== 'downloading' && status.state !== 'downloaded') return null;
   const version = status.version ?? '';
   if (dismissedVersion === version) return null;

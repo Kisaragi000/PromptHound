@@ -1,5 +1,5 @@
-import React from 'react';
-import { PromptHoundLogo, MinimizeIcon, MaximizeIcon, CloseIcon } from '../icons/Icons.js';
+import React, { useEffect, useState } from 'react';
+import { PromptHoundLogo, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon } from '../icons/Icons.js';
 import { IconButton } from '../primitives/IconButton.js';
 import { StatusBadge } from '../primitives/StatusBadge.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
@@ -18,6 +18,14 @@ const routeTitleMap: Record<string, string> = {
 export const TitleBar: React.FC = () => {
   const { currentRoute } = useNavigation();
   const contextTitle = routeTitleMap[currentRoute] || 'Extract · Organize · Create';
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    const controls = window.promptHound?.windowControls;
+    if (!controls) return;
+    controls.isMaximized().then(setIsMaximized).catch(() => undefined);
+    return controls.onMaximizedChange?.(setIsMaximized);
+  }, []);
 
   const handleMinimize = () => {
     window.promptHound?.windowControls.minimize();
@@ -54,8 +62,8 @@ export const TitleBar: React.FC = () => {
           <IconButton title="Minimize" onClick={handleMinimize}>
             <MinimizeIcon size={14} />
           </IconButton>
-          <IconButton title="Maximize" onClick={handleMaximize}>
-            <MaximizeIcon size={14} />
+          <IconButton title={isMaximized ? 'Restore down' : 'Maximize'} onClick={handleMaximize}>
+            {isMaximized ? <RestoreIcon size={14} /> : <MaximizeIcon size={14} />}
           </IconButton>
           <IconButton title="Close" variant="danger" onClick={handleClose}>
             <CloseIcon size={14} />

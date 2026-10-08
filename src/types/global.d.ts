@@ -1,7 +1,7 @@
 import type { ExtractionResult, ExtractionError } from '../../core/types.js';
 
 export type UpdateStatus =
-  | { state: 'idle' | 'checking' | 'unsupported' }
+  | { state: 'idle' | 'checking' | 'up-to-date' | 'unsupported' }
   | { state: 'available' | 'downloaded'; version: string }
   | { state: 'downloading'; version?: string; percent: number }
   | { state: 'error'; message: string };

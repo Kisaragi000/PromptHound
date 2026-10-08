@@ -95,7 +95,7 @@ Settings > Prompt Library Backup exports every prompt, folder, favorite and imag
 
 ## For developers
 
-Build, test and release instructions are in **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. The release history is in **[CHANGELOG.md](CHANGELOG.md)**, and bug reports and ideas are welcome as [issues](https://github.com/Kisaragi000/PromptHound/issues/new/choose).
+Build, test and release instructions are in **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**. The release history is in **[CHANGELOG.md](CHANGELOG.md)**, and bug reports and ideas are welcome as [issues](https://github.com/Kisaragi000/PromptHound/issues/new/choose). Everyone taking part is asked to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
