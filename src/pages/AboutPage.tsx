@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { PromptHoundLogo, ExternalLinkIcon } from '../components/icons/Icons.js';
 import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
+import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
 import type { UpdateStatus } from '../types/global.js';
 import styles from './StaticPage.module.css';
 
@@ -31,14 +32,7 @@ function describeUpdateStatus(status: UpdateStatus | null): string {
 
 export const AboutPage: React.FC = () => {
   const version = window.promptHound?.appInfo?.version ?? '';
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
-
-  useEffect(() => {
-    const updates = window.promptHound?.updates;
-    if (!updates) return;
-    updates.getStatus().then(setUpdateStatus).catch(() => undefined);
-    return updates.onStatus(setUpdateStatus);
-  }, []);
+  const updateStatus = useUpdateStatus();
 
   const busy = updateStatus?.state === 'checking' || updateStatus?.state === 'available' || updateStatus?.state === 'downloading';
   const canCheck = !!updateStatus && updateStatus.state !== 'unsupported' && updateStatus.state !== 'downloaded' && !busy;

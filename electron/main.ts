@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage, protocol, net, screen } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -628,11 +628,19 @@ function createWindow(): void {
   const iconPath = path.join(__dirname, '../build/icon.ico');
   const preloadPath = path.join(__dirname, 'preload.cjs');
 
+  // Preferred size, shrunk to fit the screen. Windows otherwise stretches an oversized window
+  // over the whole screen without maximizing it, so the maximize button had nothing to undo.
+  const workArea = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.min(1536, Math.round(workArea.width * 0.9));
+  const height = Math.min(1024, Math.round(workArea.height * 0.9));
+  const startMaximized = width < 1536 || height < 1024;
+
   mainWindow = new BrowserWindow({
-    width: 1536,
-    height: 1024,
-    minWidth: 1200,
-    minHeight: 760,
+    width,
+    height,
+    minWidth: Math.min(1200, width),
+    minHeight: Math.min(760, height),
+    center: true,
     show: false,
     frame: false,
     backgroundColor: '#0B0E15',
@@ -647,6 +655,8 @@ function createWindow(): void {
 
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) {
+      // Smaller screens open maximized; "Restore down" then returns to the fitted size
+      if (startMaximized) mainWindow.maximize();
       mainWindow.show();
       mainWindow.focus();
     }
