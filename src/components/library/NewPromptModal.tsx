@@ -11,6 +11,8 @@ import { PrimaryButton } from '../primitives/PrimaryButton.js';
 import { SecondaryButton } from '../primitives/SecondaryButton.js';
 import { ImagePicker, type PickerImage } from './ImagePicker.js';
 import pageStyles from '../../pages/PromptLibraryPage.module.css';
+import { useT } from '../../i18n/index.js';
+import { folderLabel } from '../../i18n/labels.js';
 import styles from './NewPromptModal.module.css';
 
 interface NewPromptModalProps {
@@ -61,6 +63,7 @@ async function imageSize(url: string): Promise<{ width: number; height: number }
 
 /** "Save Custom Prompt Recipe": a prompt typed by hand, with up to five images */
 export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, onClose, onSaved }) => {
+  const t = useT();
   const { folders, addFolder, saveToLibrary } = useNavigation();
   const folderOptions = folders.filter((f) => f !== 'All Prompts');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -117,8 +120,8 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
     setExtracted(meta);
     setAutofillNote(
       filled.length
-        ? `Filled ${filled.length} empty ${filled.length === 1 ? 'field' : 'fields'} from ${fileName}.`
-        : `${fileName} has generation data; your entries were kept.`
+        ? t('newPrompt.filled', { count: filled.length, file: fileName })
+        : t('newPrompt.kept', { file: fileName })
     );
   };
 
@@ -136,11 +139,11 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       for (const img of added) {
         const meta = await readImageMetadata(img.file);
         if (meta) {
-          autofillFrom(meta, img.name ?? 'the image');
+          autofillFrom(meta, img.name ?? t('newPrompt.theImage'));
           return;
         }
       }
-      setAutofillNote((note) => note ?? 'No generation data in these images; fill in the fields by hand.');
+      setAutofillNote((note) => note ?? t('newPrompt.noData'));
     } finally {
       setReading(false);
     }
@@ -175,7 +178,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
         const saved = await storeLibraryImage(id, img.file, img.name);
         if (saved) stored.push(saved);
       }
-      if (images.length && !stored.length) throw new Error('The images could not be saved.');
+      if (images.length && !stored.length) throw new Error(t('newPrompt.imagesNotSaved'));
 
       const toNumber = (v: string) => (v.trim() && Number.isFinite(Number(v)) ? Number(v) : undefined);
       const size =
@@ -214,7 +217,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       });
       onSaved(item);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Saving failed.');
+      setSaveError(err instanceof Error ? err.message : t('newPrompt.saveFailed'));
       setSaving(false);
     }
   };
@@ -229,7 +232,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
         aria-labelledby="new-prompt-title"
       >
         <h3 id="new-prompt-title" className={pageStyles.modalTitle}>
-          Save Custom Prompt Recipe
+          {t('newPrompt.title')}
         </h3>
         <form onSubmit={handleSubmit} className={pageStyles.modalForm}>
           <ImagePicker
@@ -239,7 +242,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
             onRemove={handleRemove}
             onMakeCover={handleMakeCover}
             busy={reading}
-            hint={`Drop, paste or browse up to ${MAX_LIBRARY_IMAGES} images. If one has generation data, empty fields are filled from it.`}
+            hint={t('newPrompt.hint', { max: MAX_LIBRARY_IMAGES })}
           />
           {autofillNote && (
             <div className={styles.note}>
@@ -250,19 +253,19 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
           <div className={pageStyles.formRow}>
             <div className={pageStyles.formField}>
               <label className={pageStyles.label} htmlFor="new-prompt-name">
-                Recipe Title *
+                {t('newPrompt.recipeTitle')}
               </label>
-              <GlassInput id="new-prompt-name" value={form.title} onChange={set('title')} placeholder="e.g., Neon Samurai Portrait" autoFocus required />
+              <GlassInput id="new-prompt-name" value={form.title} onChange={set('title')} placeholder={t('newPrompt.titlePlaceholder')} autoFocus required />
             </div>
             <div className={pageStyles.formField}>
-              <span className={pageStyles.label}>Folder</span>
+              <span className={pageStyles.label}>{t('common.folder')}</span>
               {newFolderName === null ? (
                 <Dropdown
                   value={folder}
-                  ariaLabel="Folder"
+                  ariaLabel={t('common.folder')}
                   options={[
-                    ...folderOptions.map((f) => ({ value: f, label: f, icon: <FolderIcon size={14} /> })),
-                    { value: NEW_FOLDER, label: 'New folder…', icon: <PlusIcon size={14} />, isAction: true },
+                    ...folderOptions.map((f) => ({ value: f, label: folderLabel(f), icon: <FolderIcon size={14} /> })),
+                    { value: NEW_FOLDER, label: t('common.newFolderOption'), icon: <PlusIcon size={14} />, isAction: true },
                   ]}
                   onChange={(v) => (v === NEW_FOLDER ? setNewFolderName('') : setFolder(v))}
                 />
@@ -271,12 +274,12 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
                   <GlassInput
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="New folder name"
-                    aria-label="New folder name"
+                    placeholder={t('common.newFolderName')}
+                    aria-label={t('common.newFolderName')}
                     autoFocus
                   />
                   <button type="button" className={styles.linkBtn} onClick={() => setNewFolderName(null)}>
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 </div>
               )}
@@ -285,36 +288,36 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
 
           <div className={pageStyles.formField}>
             <label className={pageStyles.label} htmlFor="new-prompt-positive">
-              Positive Prompt
+              {t('param.positivePrompt')}
             </label>
-            <textarea id="new-prompt-positive" className={pageStyles.textarea} rows={3} value={form.prompt} onChange={set('prompt')} placeholder="Masterpiece, 8k portrait of..." />
+            <textarea id="new-prompt-positive" className={pageStyles.textarea} rows={3} value={form.prompt} onChange={set('prompt')} placeholder={t('newPrompt.positivePlaceholder')} />
           </div>
 
           <div className={pageStyles.formField}>
             <label className={pageStyles.label} htmlFor="new-prompt-negative">
-              Negative Prompt
+              {t('param.negativePrompt')}
             </label>
-            <textarea id="new-prompt-negative" className={pageStyles.textarea} rows={2} value={form.negativePrompt} onChange={set('negativePrompt')} placeholder="low quality, blurry, deformed..." />
+            <textarea id="new-prompt-negative" className={pageStyles.textarea} rows={2} value={form.negativePrompt} onChange={set('negativePrompt')} placeholder={t('newPrompt.negativePlaceholder')} />
           </div>
 
           <div className={pageStyles.formRow3}>
             <div className={pageStyles.formField}>
               <label className={pageStyles.label} htmlFor="new-prompt-model">
-                Model Checkpoint
+                {t('newPrompt.modelCheckpoint')}
               </label>
-              <GlassInput id="new-prompt-model" value={form.model} onChange={set('model')} placeholder="e.g., SDXL Base 1.0" />
+              <GlassInput id="new-prompt-model" value={form.model} onChange={set('model')} placeholder={t('newPrompt.modelPlaceholder')} />
             </div>
             <div className={pageStyles.formField}>
               <label className={pageStyles.label} htmlFor="new-prompt-sampler">
-                Sampler
+                {t('param.sampler')}
               </label>
-              <GlassInput id="new-prompt-sampler" value={form.sampler} onChange={set('sampler')} placeholder="e.g., Euler a" />
+              <GlassInput id="new-prompt-sampler" value={form.sampler} onChange={set('sampler')} placeholder={t('newPrompt.samplerPlaceholder')} />
             </div>
             <div className={pageStyles.formField}>
               <label className={pageStyles.label} htmlFor="new-prompt-steps">
-                Steps
+                {t('param.steps')}
               </label>
-              <GlassInput id="new-prompt-steps" type="number" min={1} value={form.steps} onChange={set('steps')} placeholder="e.g., 30" />
+              <GlassInput id="new-prompt-steps" type="number" min={1} value={form.steps} onChange={set('steps')} placeholder={t('newPrompt.stepsPlaceholder')} />
             </div>
           </div>
 
@@ -322,10 +325,10 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
 
           <div className={pageStyles.modalActions}>
             <SecondaryButton type="button" onClick={onClose} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </SecondaryButton>
             <PrimaryButton type="submit" disabled={!canSave}>
-              {saving ? 'Saving…' : 'Save Recipe'}
+              {saving ? t('common.saving') : t('newPrompt.save')}
             </PrimaryButton>
           </div>
         </form>

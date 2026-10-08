@@ -9,9 +9,11 @@ import {
 } from '../icons/Icons.js';
 import { useExtraction, type SessionImageItem } from '../../extraction/ExtractionContext.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
+import { useT } from '../../i18n/index.js';
 import styles from './MultiImageSessionStrip.module.css';
 
 export const MultiImageSessionStrip: React.FC = () => {
+  const t = useT();
   const {
     sessionImages,
     activeImageIndex,
@@ -77,7 +79,7 @@ export const MultiImageSessionStrip: React.FC = () => {
           meta.prompt?.split(/,|\n/)[0]?.trim()?.slice(0, 36) ||
           meta.model ||
           item.label ||
-          'AI Generation';
+          t('session.defaultTitle');
         const dimensions =
           meta.width && meta.height ? `${meta.width} × ${meta.height}` : '1024 × 1024';
 
@@ -113,7 +115,7 @@ export const MultiImageSessionStrip: React.FC = () => {
       {/* Header bar */}
       <div className={styles.sessionHeader}>
         <div className={styles.sessionTitleWrap}>
-          <span>Batch Previews</span>
+          <span>{t('session.title')}</span>
           <span className={styles.sessionBadge}>
             {activeImageIndex + 1} / {sessionImages.length}
           </span>
@@ -125,7 +127,7 @@ export const MultiImageSessionStrip: React.FC = () => {
             className={styles.navArrowBtn}
             onClick={() => setActiveImageIndex(Math.max(0, activeImageIndex - 1))}
             disabled={activeImageIndex === 0}
-            title="Previous image (Left Arrow)"
+            title={t('session.previous')}
           >
             <ChevronLeftIcon size={14} />
           </button>
@@ -136,7 +138,7 @@ export const MultiImageSessionStrip: React.FC = () => {
               setActiveImageIndex(Math.min(sessionImages.length - 1, activeImageIndex + 1))
             }
             disabled={activeImageIndex === sessionImages.length - 1}
-            title="Next image (Right Arrow)"
+            title={t('session.next')}
           >
             <ChevronRightIcon size={14} />
           </button>
@@ -145,9 +147,9 @@ export const MultiImageSessionStrip: React.FC = () => {
               type="button"
               className={styles.addBtnSmall}
               onClick={handleAddClick}
-              title="Add more images to this session"
+              title={t('session.addMore')}
             >
-              <PlusIcon size={12} /> Add
+              <PlusIcon size={12} /> {t('common.add')}
             </button>
           )}
         </div>
@@ -184,7 +186,7 @@ export const MultiImageSessionStrip: React.FC = () => {
                     e.stopPropagation();
                     removeSessionImage(item.id);
                   }}
-                  title="Remove from session"
+                  title={t('session.remove')}
                 >
                   <CloseIcon size={10} />
                 </button>
@@ -198,20 +200,20 @@ export const MultiImageSessionStrip: React.FC = () => {
           <div
             className={styles.addSlotCard}
             onClick={handleAddClick}
-            title="Add another image (up to 10)"
+            title={t('session.addAnother')}
           >
             <PlusIcon size={16} />
-            <span>Add</span>
+            <span>{t('common.add')}</span>
           </div>
         )}
       </div>
 
       {/* Footer bar with Save All & Shortcut hint */}
       <div className={styles.saveAllRow}>
-        <span className={styles.hintText}>Use ← / → keys to switch</span>
+        <span className={styles.hintText}>{t('session.hint')}</span>
         <button type="button" className={styles.saveAllBtn} onClick={handleSaveAll}>
           <BookmarkIcon size={13} />
-          {savedAllCount !== null ? `Saved ${savedAllCount} to Library!` : 'Save All to Library'}
+          {savedAllCount !== null ? t('session.savedAll', { count: savedAllCount }) : t('session.saveAll')}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import type { LibraryImage, SavedPromptItem } from '../../../core/types.js';
 import { MAX_LIBRARY_IMAGES } from '../../../core/types.js';
 import { deleteLibraryImages, itemImages, storeLibraryImage } from '../../utils/libraryImages.js';
 import { ImagePicker } from './ImagePicker.js';
+import { useT } from '../../i18n/index.js';
 
 interface ItemImagesEditorProps {
   item: SavedPromptItem;
@@ -11,6 +12,7 @@ interface ItemImagesEditorProps {
 
 /** Add, remove and reorder the images of a saved prompt (Library detail pane) */
 export const ItemImagesEditor: React.FC<ItemImagesEditorProps> = ({ item, onChange }) => {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const images = itemImages(item);
@@ -26,10 +28,10 @@ export const ItemImagesEditor: React.FC<ItemImagesEditorProps> = ({ item, onChan
         const stored = await storeLibraryImage(item.id, file, file.name);
         if (stored) added.push(stored);
       }
-      if (added.length < files.length) setError('Some files could not be read as images.');
+      if (added.length < files.length) setError(t('images.someUnreadable'));
       if (added.length) commit([...images, ...added].slice(0, MAX_LIBRARY_IMAGES));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Adding images failed.');
+      setError(err instanceof Error ? err.message : t('images.addFailed'));
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,7 @@ export const ItemImagesEditor: React.FC<ItemImagesEditorProps> = ({ item, onChan
         onRemove={handleRemove}
         onMakeCover={handleMakeCover}
         busy={busy}
-        hint="Changes are saved right away. The first image is the cover."
+        hint={t('images.editHint')}
       />
       {error && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#fca5a5' }}>{error}</p>}
     </div>

@@ -24,6 +24,8 @@ import { LoraCard } from '../components/lora/LoraCard.js';
 import { PromptDiffModal } from '../components/library/PromptDiffModal.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { SavedPromptItem, LoraReference } from '../../core/types.js';
+import { useT } from '../i18n/index.js';
+import { folderLabel, sourceLabel, formatItemDate } from '../i18n/labels.js';
 import styles from './PromptLibraryPage.module.css';
 import { MAX_LIBRARY_IMAGES } from '../../core/types.js';
 import { ImageCarousel } from '../components/library/ImageCarousel.js';
@@ -35,6 +37,7 @@ import { itemImages } from '../utils/libraryImages.js';
 import { filterLibraryItems, libraryFacets } from '../utils/librarySearch.js';
 
 export const PromptLibraryPage: React.FC = () => {
+  const t = useT();
   const {
     libraryItems,
     folders,
@@ -181,7 +184,7 @@ export const PromptLibraryPage: React.FC = () => {
     setSelectedForDeletion([]);
     setMoveTarget('');
     setMoveNewFolderName('');
-    setMoveFeedback(`Moved ${count} ${count === 1 ? 'item' : 'items'} to "${moveDestination}"`);
+    setMoveFeedback(t('library.moved', { count, folder: moveDestination }));
     setTimeout(() => setMoveFeedback(null), 2500);
   };
 
@@ -192,7 +195,7 @@ export const PromptLibraryPage: React.FC = () => {
 
   const renameError =
     renamingFolder && renameValue.trim() && renameValue.trim() !== renamingFolder && folders.includes(renameValue.trim())
-      ? 'A folder with this name already exists'
+      ? t('library.folderExists')
       : null;
 
   const commitRename = () => {
@@ -238,7 +241,7 @@ export const PromptLibraryPage: React.FC = () => {
       {/* Top Action Bar */}
       <header className={styles.topBar}>
         <div className={styles.topBarLeft}>
-          <h2 className={styles.pageTitle}>Prompt Library</h2>
+          <h2 className={styles.pageTitle}>{t('library.title')}</h2>
 
           {/* Edit Library Toggle in top left */}
           <button
@@ -247,18 +250,18 @@ export const PromptLibraryPage: React.FC = () => {
               setIsEditMode(!isEditMode);
               if (isEditMode) setSelectedForDeletion([]);
             }}
-            title={isEditMode ? 'Finish editing library' : 'Edit and delete library images'}
+            title={isEditMode ? t('library.finishEditing') : t('library.editTitle')}
           >
             <EditIcon size={14} />
-            <span>{isEditMode ? 'Done Editing' : 'Edit Library'}</span>
+            <span>{isEditMode ? t('library.doneEditing') : t('library.edit')}</span>
           </button>
 
           <div className={styles.searchWrap}>
             <GlassInput
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search prompts, models, LoRAs"
-              title={'Every word must match. Use "quotes" for a phrase and -word to leave items out.'}
+              placeholder={t('library.searchPlaceholder')}
+              title={t('library.searchHelp')}
               icon={<SearchIcon size={16} />}
             />
           </div>
@@ -270,16 +273,16 @@ export const PromptLibraryPage: React.FC = () => {
             <button
               className={`${styles.viewToggleBtn} ${viewMode === 'grid' ? styles.viewToggleActive : ''}`}
               onClick={() => setViewMode('grid')}
-              title="Grid View"
+              title={t('library.gridTitle')}
             >
-              Grid
+              {t('library.grid')}
             </button>
             <button
               className={`${styles.viewToggleBtn} ${viewMode === 'table' ? styles.viewToggleActive : ''}`}
               onClick={() => setViewMode('table')}
-              title="Compact Table View"
+              title={t('library.tableTitle')}
             >
-              Table
+              {t('library.table')}
             </button>
           </div>
 
@@ -290,15 +293,15 @@ export const PromptLibraryPage: React.FC = () => {
               disabled={compareSelection.length < 2}
               icon={<SparklesIcon size={14} />}
             >
-              Compare ({compareSelection.length}/2)
+              {t('library.compare', { count: compareSelection.length })}
             </SecondaryButton>
           )}
 
           <SecondaryButton onClick={() => setIsNewFolderOpen(true)} icon={<FolderIcon size={16} />}>
-            New Folder
+            {t('library.newFolder')}
           </SecondaryButton>
           <PrimaryButton onClick={() => setIsNewPromptOpen(true)} icon={<PlusIcon size={16} />}>
-            New Prompt
+            {t('library.newPrompt')}
           </PrimaryButton>
         </div>
       </header>
@@ -308,7 +311,7 @@ export const PromptLibraryPage: React.FC = () => {
         <div className={styles.editModeToolbar}>
           <div className={styles.editModeToolbarLeft}>
             <span className={styles.editModeHelp}>
-              {moveFeedback ?? 'Select items to move or delete them. Click a folder to rename or delete it.'}
+              {moveFeedback ?? t('library.editHelp')}
             </span>
           </div>
           <div className={styles.editModeToolbarRight}>
@@ -316,14 +319,14 @@ export const PromptLibraryPage: React.FC = () => {
               size="sm"
               className={styles.toolbarDropdown}
               value={moveTarget}
-              placeholder="Move to folder…"
-              title="Folder to move the selected items to"
-              ariaLabel="Move selected items to folder"
+              placeholder={t('library.moveTo')}
+              title={t('library.moveToTitle')}
+              ariaLabel={t('library.moveToTitle')}
               options={[
                 ...folders
                   .filter((f) => f !== 'All Prompts')
-                  .map((f) => ({ value: f, label: f, icon: <FolderIcon size={13} /> })),
-                { value: NEW_FOLDER_OPTION, label: 'New folder…', icon: <PlusIcon size={13} />, isAction: true },
+                  .map((f) => ({ value: f, label: folderLabel(f), icon: <FolderIcon size={13} /> })),
+                { value: NEW_FOLDER_OPTION, label: t('common.newFolderOption'), icon: <PlusIcon size={13} />, isAction: true },
               ]}
               onChange={setMoveTarget}
             />
@@ -335,7 +338,7 @@ export const PromptLibraryPage: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleMoveSelected();
                 }}
-                placeholder="New folder name"
+                placeholder={t('common.newFolderName')}
                 autoFocus
               />
             )}
@@ -345,15 +348,15 @@ export const PromptLibraryPage: React.FC = () => {
               onClick={handleMoveSelected}
             >
               <FolderIcon size={14} />
-              <span>Move ({selectedForDeletion.length})</span>
+              <span>{t('library.move', { count: selectedForDeletion.length })}</span>
             </button>
             <button
               className={styles.toolbarSecondaryBtn}
               onClick={handleSelectAllForDeletion}
             >
               {selectedForDeletion.length === filteredItems.length && filteredItems.length > 0
-                ? 'Deselect All'
-                : `Select All (${filteredItems.length})`}
+                ? t('library.deselectAll')
+                : t('library.selectAll', { count: filteredItems.length })}
             </button>
             <button
               className={styles.toolbarDeleteBtn}
@@ -361,7 +364,7 @@ export const PromptLibraryPage: React.FC = () => {
               onClick={handleDeleteSelected}
             >
               <TrashIcon size={14} />
-              <span>Delete Selected ({selectedForDeletion.length})</span>
+              <span>{t('library.deleteSelected', { count: selectedForDeletion.length })}</span>
             </button>
           </div>
         </div>
@@ -384,13 +387,13 @@ export const PromptLibraryPage: React.FC = () => {
                       if (e.key === 'Enter') commitRename();
                       if (e.key === 'Escape') setRenamingFolder(null);
                     }}
-                    aria-label={`New name for ${f}`}
+                    aria-label={t('library.renameLabel', { folder: folderLabel(f) })}
                     autoFocus
                   />
                   {renameError && <span className={styles.folderEditError}>{renameError}</span>}
                   <div className={styles.folderActions}>
                     <button type="button" className={styles.folderActionBtn} onClick={() => setRenamingFolder(null)}>
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="button"
@@ -398,7 +401,7 @@ export const PromptLibraryPage: React.FC = () => {
                       disabled={!renameValue.trim() || Boolean(renameError)}
                       onClick={commitRename}
                     >
-                      Save
+                      {t('common.save')}
                     </button>
                   </div>
                 </div>
@@ -412,25 +415,25 @@ export const PromptLibraryPage: React.FC = () => {
                     setSelectedFolder(f);
                     setRenamingFolder(null);
                   }}
-                  title={isEditMode && f !== 'All Prompts' ? `Select ${f} to rename or delete it` : undefined}
+                  title={isEditMode && f !== 'All Prompts' ? t('library.selectFolderTitle', { folder: folderLabel(f) }) : undefined}
                 >
                   <div className={styles.folderLeft}>
                     <FolderIcon size={16} />
-                    <span>{f}</span>
+                    <span>{folderLabel(f)}</span>
                   </div>
                   <span className={styles.folderCount}>{folderCounts[f] || 0}</span>
                 </button>
                 {editable && (
                   <div className={styles.folderActions}>
                     <button type="button" className={styles.folderActionBtn} onClick={() => startRename(f)}>
-                      Rename
+                      {t('library.rename')}
                     </button>
                     <button
                       type="button"
                       className={`${styles.folderActionBtn} ${styles.folderActionDanger}`}
                       onClick={() => setFolderToDelete(f)}
                     >
-                      Delete folder
+                      {t('library.deleteFolder')}
                     </button>
                   </div>
                 )}
@@ -446,12 +449,12 @@ export const PromptLibraryPage: React.FC = () => {
               {facets.models.length > 0 && (
                 <Dropdown
                   size="sm"
-                  ariaLabel="Filter by model"
+                  ariaLabel={t('library.filterModel')}
                   className={styles.filterDropdown}
                   value={activeModelFilter}
                   onChange={setModelFilter}
                   options={[
-                    { value: '', label: 'All models' },
+                    { value: '', label: t('library.allModels') },
                     ...facets.models.map(([name, count]) => ({ value: name, label: `${name} (${count})` })),
                   ]}
                 />
@@ -459,12 +462,12 @@ export const PromptLibraryPage: React.FC = () => {
               {facets.loras.length > 0 && (
                 <Dropdown
                   size="sm"
-                  ariaLabel="Filter by LoRA"
+                  ariaLabel={t('library.filterLora')}
                   className={styles.filterDropdown}
                   value={activeLoraFilter}
                   onChange={setLoraFilter}
                   options={[
-                    { value: '', label: 'All LoRAs' },
+                    { value: '', label: t('library.allLoras') },
                     ...facets.loras.map(([name, count]) => ({ value: name, label: `${name} (${count})` })),
                   ]}
                 />
@@ -472,10 +475,10 @@ export const PromptLibraryPage: React.FC = () => {
               {isFiltering && (
                 <>
                   <span className={styles.filterCount}>
-                    {filteredItems.length} of {folderItems.length}
+                    {t('library.filterCount', { shown: filteredItems.length, total: folderItems.length })}
                   </span>
                   <button type="button" className={styles.filterClear} onClick={clearFilters}>
-                    Clear
+                    {t('common.clear')}
                   </button>
                 </>
               )}
@@ -484,8 +487,8 @@ export const PromptLibraryPage: React.FC = () => {
           {filteredItems.length === 0 ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
               {isFiltering
-                ? 'No prompts match your search and filters.'
-                : `No prompts found in ${selectedFolder}. Add one or extract an image to save!`}
+                ? t('library.noMatches')
+                : t('library.emptyFolder', { folder: folderLabel(selectedFolder) })}
             </div>
           ) : viewMode === 'table' ? (
             <div className={styles.tableWrapper}>
@@ -493,15 +496,15 @@ export const PromptLibraryPage: React.FC = () => {
                 <thead>
                   <tr>
                     {isEditMode ? (
-                      <th style={{ width: '40px' }}>Select</th>
+                      <th style={{ width: '40px' }}>{t('library.colSelect')}</th>
                     ) : (
-                      <th style={{ width: '40px' }}>Diff</th>
+                      <th style={{ width: '40px' }}>{t('library.colDiff')}</th>
                     )}
-                    <th style={{ width: '60px' }}>Thumb</th>
-                    <th>Title &amp; Prompt</th>
-                    <th>Model</th>
-                    <th>Sampler / Steps</th>
-                    <th>Actions</th>
+                    <th style={{ width: '60px' }}>{t('library.colThumb')}</th>
+                    <th>{t('library.colTitle')}</th>
+                    <th>{t('library.colModel')}</th>
+                    <th>{t('library.colSampler')}</th>
+                    <th>{t('library.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -531,10 +534,10 @@ export const PromptLibraryPage: React.FC = () => {
                         style={{ cursor: 'pointer' }}
                         title={
                           isEditMode
-                            ? 'Click to select for deletion'
+                            ? t('library.clickSelectDelete')
                             : selectedItem?.id === item.id
-                            ? 'Click again to open full scan results'
-                            : 'Click to select (orange border), click again to open full'
+                            ? t('library.clickAgainOpen')
+                            : t('library.clickSelect')
                         }
                       >
                         <td onClick={(e) => e.stopPropagation()}>
@@ -543,14 +546,14 @@ export const PromptLibraryPage: React.FC = () => {
                               type="checkbox"
                               checked={isMarkedDelete}
                               onChange={() => toggleSelectForDeletion(item.id)}
-                              title="Select to delete"
+                              title={t('library.selectToDelete')}
                             />
                           ) : (
                             <input
                               type="checkbox"
                               checked={isCompared}
                               onChange={() => toggleCompareItem(item.id)}
-                              title="Select for Diff Comparison"
+                              title={t('library.selectForDiff')}
                             />
                           )}
                         </td>
@@ -565,12 +568,12 @@ export const PromptLibraryPage: React.FC = () => {
                         <td>
                           <div className={styles.tableTitle}>{item.title}</div>
                           <div className={styles.tablePromptSnippet}>
-                            {item.metadata?.prompt || '(No prompt text)'}
+                            {item.metadata?.prompt || t('library.noPromptText')}
                           </div>
                         </td>
                         <td className={styles.tableModel}>{item.model || 'SDXL'}</td>
                         <td className={styles.tableParams}>
-                          {item.metadata?.sampler || '—'}{item.metadata?.steps ? ` · ${item.metadata.steps}s` : ''}
+                          {item.metadata?.sampler || '—'}{item.metadata?.steps ? ` · ${t('library.stepsShort', { steps: item.metadata.steps })}` : ''}
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className={styles.tableActions}>
@@ -578,14 +581,14 @@ export const PromptLibraryPage: React.FC = () => {
                               <button
                                 className={styles.deleteQuickBtn}
                                 onClick={() => handleDeleteItem(item.id)}
-                                title="Delete image from library"
+                                title={t('library.deleteImageFromLibrary')}
                               >
                                 <TrashIcon size={14} />
                               </button>
                             ) : (
                               <>
                                 <IconButton
-                                  title="Copy prompt"
+                                  title={t('common.copyPrompt')}
                                   onClick={() => copyText(item.metadata?.prompt || '', `table-${item.id}`)}
                                 >
                                   {copiedField === `table-${item.id}` ? (
@@ -595,13 +598,13 @@ export const PromptLibraryPage: React.FC = () => {
                                   )}
                                 </IconButton>
                                 <IconButton
-                                  title="Inspect full extraction"
+                                  title={t('library.inspectFull')}
                                   onClick={() => openRecipeInResult(item)}
                                 >
                                   <EyeIcon size={13} />
                                 </IconButton>
                                 <IconButton
-                                  title="Delete"
+                                  title={t('common.delete')}
                                   onClick={() => handleDeleteItem(item.id)}
                                 >
                                   <TrashIcon size={13} />
@@ -643,10 +646,10 @@ export const PromptLibraryPage: React.FC = () => {
                   }}
                   title={
                     isEditMode
-                      ? 'Click to select for deletion'
+                      ? t('library.clickSelectDelete')
                       : selectedItem?.id === item.id
-                      ? `Click again to open full scan results for ${item.title}`
-                      : `Click to select ${item.title} (orange border), click again to open full`
+                      ? t('library.clickAgainOpenItem', { title: item.title })
+                      : t('library.clickSelectItem', { title: item.title })
                   }
                 >
                   <div className={styles.cardThumbWrap}>
@@ -676,7 +679,7 @@ export const PromptLibraryPage: React.FC = () => {
                             e.stopPropagation();
                             handleDeleteItem(item.id);
                           }}
-                          title="Delete this image"
+                          title={t('library.deleteThisImage')}
                         >
                           <TrashIcon size={14} />
                         </button>
@@ -689,7 +692,7 @@ export const PromptLibraryPage: React.FC = () => {
                             e.stopPropagation();
                             toggleFavorite(item.id);
                           }}
-                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          title={isFav ? t('library.removeFavorite') : t('library.addFavorite')}
                         >
                           <StarIcon size={16} filled={isFav} />
                         </button>
@@ -700,9 +703,9 @@ export const PromptLibraryPage: React.FC = () => {
                             e.stopPropagation();
                             toggleCompareItem(item.id);
                           }}
-                          title="Select for Diff comparison"
+                          title={t('library.selectForDiff')}
                         >
-                          {isCompared ? '✓ Diff' : '+ Diff'}
+                          {isCompared ? t('library.diffOn') : t('library.diffOff')}
                         </button>
                       </>
                     )}
@@ -711,11 +714,11 @@ export const PromptLibraryPage: React.FC = () => {
                   <div className={styles.cardBody}>
                     <div className={styles.cardTitle}>{item.title}</div>
                     <div className={styles.cardChipsRow}>
-                      {item.folder && <span className={styles.chip}>{item.folder}</span>}
-                      <span className={styles.chip}>{item.source}</span>
+                      {item.folder && <span className={styles.chip}>{folderLabel(item.folder)}</span>}
+                      <span className={styles.chip}>{sourceLabel(item.source)}</span>
                     </div>
                     <div className={styles.cardMetaRow}>
-                      <span>{item.date}</span>
+                      <span>{formatItemDate(item.date)}</span>
                       <span>{item.model}</span>
                     </div>
                     <div className={styles.cardActionsRow}>
@@ -728,12 +731,12 @@ export const PromptLibraryPage: React.FC = () => {
                           }}
                         >
                           <TrashIcon size={13} />
-                          <span>Delete Image</span>
+                          <span>{t('library.deleteImage')}</span>
                         </button>
                       ) : (
                         <>
                           <IconButton
-                            title="Copy prompt"
+                            title={t('common.copyPrompt')}
                             onClick={(e) => {
                               e.stopPropagation();
                               copyText(item.metadata?.prompt || '', `card-${item.id}`);
@@ -742,7 +745,7 @@ export const PromptLibraryPage: React.FC = () => {
                             {copiedField === `card-${item.id}` ? <CheckIcon size={14} color="#4ade80" /> : <CopyIcon size={14} />}
                           </IconButton>
                           <IconButton
-                            title="Open full extraction result"
+                            title={t('common.openFullResult')}
                             onClick={(e) => {
                               e.stopPropagation();
                               openRecipeInResult(item);
@@ -751,7 +754,7 @@ export const PromptLibraryPage: React.FC = () => {
                             <EyeIcon size={14} />
                           </IconButton>
                           <IconButton
-                            title="Delete from library"
+                            title={t('library.deleteFromLibrary')}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteItem(item.id);
@@ -776,7 +779,7 @@ export const PromptLibraryPage: React.FC = () => {
               className={styles.detailImageWrap}
               onClick={() => setLightboxIndex(detailImageIndex)}
               style={{ cursor: itemImages(activeItem).length ? 'zoom-in' : 'default' }}
-              title="Click to view full size"
+              title={t('library.viewFull')}
             >
               <ImageCarousel
                 images={itemImages(activeItem)}
@@ -798,10 +801,10 @@ export const PromptLibraryPage: React.FC = () => {
 
             <div className={styles.detailImagesBar}>
               <span>
-                {itemImages(activeItem).length} / {MAX_LIBRARY_IMAGES} images
+                {t('library.imagesCount', { count: itemImages(activeItem).length, max: MAX_LIBRARY_IMAGES })}
               </span>
               <button type="button" className={styles.detailImagesBtn} onClick={() => setIsEditingImages((v) => !v)}>
-                {isEditingImages ? 'Done' : itemImages(activeItem).length ? 'Edit images' : 'Add images'}
+                {isEditingImages ? t('common.done') : itemImages(activeItem).length ? t('library.editImages') : t('library.addImages')}
               </button>
             </div>
             {isEditingImages && (
@@ -812,7 +815,7 @@ export const PromptLibraryPage: React.FC = () => {
               <div className={styles.detailTitleRow}>
                 <h3 className={styles.detailTitle}>{activeItem.title}</h3>
                 <IconButton
-                  title="Open in Recipe Inspector"
+                  title={t('library.openInspector')}
                   onClick={() => openRecipeInResult(activeItem)}
                 >
                   <ExternalLinkIcon size={16} />
@@ -820,32 +823,32 @@ export const PromptLibraryPage: React.FC = () => {
               </div>
 
               <div className={styles.detailChips}>
-                {activeItem.folder && <span className={styles.chip}>{activeItem.folder}</span>}
-                <span className={styles.chip}>{activeItem.source}</span>
+                {activeItem.folder && <span className={styles.chip}>{folderLabel(activeItem.folder)}</span>}
+                <span className={styles.chip}>{sourceLabel(activeItem.source)}</span>
                 <span className={styles.chip}>{activeItem.model}</span>
               </div>
 
               {/* Prompt Section */}
               <div className={styles.detailSection}>
                 <div className={styles.sectionHeader}>
-                  <span>Prompt</span>
+                  <span>{t('param.prompt')}</span>
                   <button
                     className={styles.copyBtn}
                     onClick={() => copyText(activeItem.metadata?.prompt || '', 'detail-prompt')}
                   >
                     {copiedField === 'detail-prompt' ? (
                       <>
-                        <CheckIcon size={12} color="#4ade80" /> Copied
+                        <CheckIcon size={12} color="#4ade80" /> {t('common.copied')}
                       </>
                     ) : (
                       <>
-                        <CopyIcon size={12} /> Copy
+                        <CopyIcon size={12} /> {t('common.copy')}
                       </>
                     )}
                   </button>
                 </div>
                 <div className={styles.promptText}>
-                  {activeItem.metadata?.prompt || '(No prompt saved)'}
+                  {activeItem.metadata?.prompt || t('library.noPromptSaved')}
                 </div>
               </div>
 
@@ -853,7 +856,7 @@ export const PromptLibraryPage: React.FC = () => {
               {activeItem.metadata?.negativePrompt && (
                 <div className={styles.detailSection}>
                   <div className={styles.sectionHeader}>
-                    <span>Negative Prompt</span>
+                    <span>{t('param.negativePrompt')}</span>
                     <button
                       className={styles.copyBtn}
                       onClick={() =>
@@ -862,11 +865,11 @@ export const PromptLibraryPage: React.FC = () => {
                     >
                       {copiedField === 'detail-neg' ? (
                         <>
-                          <CheckIcon size={12} color="#4ade80" /> Copied
+                          <CheckIcon size={12} color="#4ade80" /> {t('common.copied')}
                         </>
                       ) : (
                         <>
-                          <CopyIcon size={12} /> Copy
+                          <CopyIcon size={12} /> {t('common.copy')}
                         </>
                       )}
                     </button>
@@ -878,32 +881,32 @@ export const PromptLibraryPage: React.FC = () => {
               {/* Parameters Grid */}
               <div className={styles.detailSection}>
                 <div className={styles.sectionHeader}>
-                  <span>Generation Parameters</span>
+                  <span>{t('library.genParams')}</span>
                 </div>
                 <div className={styles.paramGrid}>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>Sampler</span>
+                    <span className={styles.paramLabel}>{t('param.sampler')}</span>
                     <span className={styles.paramVal}>{activeItem.metadata?.sampler || '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>Steps</span>
+                    <span className={styles.paramLabel}>{t('param.steps')}</span>
                     <span className={styles.paramVal}>{activeItem.metadata?.steps ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>CFG Scale</span>
+                    <span className={styles.paramLabel}>{t('param.cfgScale')}</span>
                     <span className={styles.paramVal}>{activeItem.metadata?.cfgScale ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>Seed</span>
+                    <span className={styles.paramLabel}>{t('param.seed')}</span>
                     <span className={styles.paramVal}>{activeItem.metadata?.seed ?? '—'}</span>
                   </div>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>Dimensions</span>
+                    <span className={styles.paramLabel}>{t('param.dimensions')}</span>
                     <span className={styles.paramVal}>{activeItem.dimensions}</span>
                   </div>
                   <div className={styles.paramCard}>
-                    <span className={styles.paramLabel}>Created</span>
-                    <span className={styles.paramVal}>{activeItem.date}</span>
+                    <span className={styles.paramLabel}>{t('param.created')}</span>
+                    <span className={styles.paramVal}>{formatItemDate(activeItem.date)}</span>
                   </div>
                 </div>
               </div>
@@ -912,7 +915,7 @@ export const PromptLibraryPage: React.FC = () => {
               {activeItem.metadata?.loras && activeItem.metadata.loras.length > 0 && (
                 <div className={styles.detailSection}>
                   <div className={styles.sectionHeader}>
-                    <span>Embedded LoRAs ({activeItem.metadata.loras.length})</span>
+                    <span>{t('param.embeddedLoras', { count: activeItem.metadata.loras.length })}</span>
                   </div>
                   <div className={styles.loraList}>
                     {activeItem.metadata.loras.map((lora: LoraReference, i: number) => (
@@ -927,8 +930,8 @@ export const PromptLibraryPage: React.FC = () => {
           <aside className={styles.detailPane}>
             <EmptyStatePanel
               icon={<FolderIcon size={32} />}
-              title="No Prompt Selected"
-              description="Select a prompt card or table row from the list to view its complete generation parameters and embedded LoRAs."
+              title={t('library.noSelectionTitle')}
+              description={t('library.noSelectionBody')}
             />
           </aside>
         )}
@@ -954,21 +957,19 @@ export const PromptLibraryPage: React.FC = () => {
             aria-labelledby="delete-folder-title"
           >
             <h3 id="delete-folder-title" className={styles.modalTitle}>
-              Delete folder "{folderToDelete}"?
+              {t('library.deleteFolderTitle', { folder: folderLabel(folderToDelete) })}
             </h3>
             <p className={styles.modalText}>
               {folderCounts[folderToDelete]
-                ? folderCounts[folderToDelete] === 1
-                  ? 'The saved prompt in it is not deleted; it stays in All Prompts.'
-                  : `The ${folderCounts[folderToDelete]} saved prompts in it are not deleted; they stay in All Prompts.`
-                : 'The folder is empty.'}
+                ? t('library.deleteFolderItems', { count: folderCounts[folderToDelete] })
+                : t('library.folderEmpty')}
             </p>
             <div className={styles.modalActions}>
               <SecondaryButton type="button" onClick={() => setFolderToDelete(null)} autoFocus>
-                Cancel
+                {t('common.cancel')}
               </SecondaryButton>
               <button type="button" className={styles.modalDangerBtn} onClick={confirmDeleteFolder}>
-                <TrashIcon size={14} /> Delete folder
+                <TrashIcon size={14} /> {t('library.deleteFolder')}
               </button>
             </div>
           </div>
@@ -978,20 +979,20 @@ export const PromptLibraryPage: React.FC = () => {
       {isNewFolderOpen && (
         <div className={styles.modalOverlay} onClick={() => setIsNewFolderOpen(false)}>
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Create New Folder</h3>
+            <h3 className={styles.modalTitle}>{t('library.createFolderTitle')}</h3>
             <form onSubmit={handleCreateFolder} className={styles.modalForm}>
               <GlassInput
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="e.g., Cyberpunk Series, Landscapes..."
+                placeholder={t('library.folderPlaceholder')}
                 autoFocus
               />
               <div className={styles.modalActions}>
                 <SecondaryButton type="button" onClick={() => setIsNewFolderOpen(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </SecondaryButton>
                 <PrimaryButton type="submit" disabled={!newFolderName.trim()}>
-                  Create Folder
+                  {t('library.createFolder')}
                 </PrimaryButton>
               </div>
             </form>

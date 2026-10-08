@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { UpdateStatus } from '../../types/global.js';
+import { t } from '../../i18n/index.js';
 
 export const RELEASES_URL = 'https://github.com/Kisaragi000/PromptHound/releases/latest';
 
@@ -33,48 +34,46 @@ function isReleaseReadError(message: string): boolean {
 
 /** Plain-language sentence for the current update state */
 export function describeUpdateStatus(status: UpdateStatus | null): string {
-  if (!status) return 'Updates are only available in the installed app.';
+  if (!status) return t('update.desc.none');
   switch (status.state) {
     case 'idle':
-      return 'PromptHound checks for updates when it starts and every 6 hours.';
+      return t('update.desc.idle');
     case 'checking':
-      return 'Checking for updates…';
+      return t('update.desc.checking');
     case 'up-to-date':
-      return 'You have the latest version.';
+      return t('update.desc.upToDate');
     case 'available':
-      return `Version ${status.version} found, downloading…`;
+      return t('update.desc.available', { version: status.version });
     case 'downloading':
-      return `Downloading update${status.version ? ` v${status.version}` : ''}: ${status.percent}%`;
+      return t('update.desc.downloading', { version: status.version ? ` v${status.version}` : '', percent: status.percent });
     case 'downloaded':
-      return `Version ${status.version} is ready. Restart PromptHound to install it.`;
+      return t('update.desc.downloaded', { version: status.version });
     case 'unsupported':
-      return 'The portable version cannot update itself. Download the newest one from the Releases page.';
+      return t('update.desc.unsupported');
     case 'error':
-      return isReleaseReadError(status.message)
-        ? 'Could not read the releases on GitHub. Check again later or download the newest version from the Releases page.'
-        : 'Could not check for updates. Check your internet connection and try again.';
+      return isReleaseReadError(status.message) ? t('update.desc.releasesError') : t('update.desc.networkError');
   }
 }
 
 /** A few words for tight spaces such as the sidebar */
 export function shortUpdateLabel(status: UpdateStatus | null): string {
-  if (!status) return 'Updates in the installed app';
+  if (!status) return t('update.short.none');
   switch (status.state) {
     case 'idle':
-      return 'Checks automatically';
+      return t('update.short.idle');
     case 'checking':
-      return 'Checking…';
+      return t('update.short.checking');
     case 'up-to-date':
-      return 'Up to date';
+      return t('update.short.upToDate');
     case 'available':
-      return `v${status.version} found`;
+      return t('update.short.available', { version: status.version });
     case 'downloading':
-      return `Downloading ${status.percent}%`;
+      return t('update.short.downloading', { percent: status.percent });
     case 'downloaded':
-      return `v${status.version} ready to install`;
+      return t('update.short.downloaded', { version: status.version });
     case 'unsupported':
-      return 'Portable: update by hand';
+      return t('update.short.unsupported');
     case 'error':
-      return isReleaseReadError(status.message) ? 'Releases unreachable' : 'Check failed, offline?';
+      return isReleaseReadError(status.message) ? t('update.short.releasesError') : t('update.short.networkError');
   }
 }

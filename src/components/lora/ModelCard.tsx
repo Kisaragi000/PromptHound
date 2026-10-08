@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { LoraReference } from '../../../core/types.js';
 import { ExternalLinkIcon, LayersIcon } from '../icons/Icons.js';
 import { MATCH_LABELS, NAME_MATCH_PILL_STYLE } from './LoraCard.js';
+import { useT } from '../../i18n/index.js';
 import styles from './LoraCard.module.css';
 
 interface ModelCardProps {
@@ -16,7 +17,8 @@ interface ModelCardProps {
  * the model can be recognized at a glance.
  */
 export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved }) => {
-  const displayName = resolved?.name || model || modelHash || 'Unknown checkpoint';
+  const t = useT();
+  const displayName = resolved?.name || model || modelHash || t('model.unknown');
   // Offline or a removed image: show the icon instead of broken-image alt text
   const [failedCover, setFailedCover] = useState<string | null>(null);
   const cover = resolved?.coverImageUrl;
@@ -83,9 +85,9 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
               <span
                 className={styles.tagPill}
                 style={resolved?.matchedBy === 'name-match' ? NAME_MATCH_PILL_STYLE : undefined}
-                title={matchInfo.title}
+                title={t(matchInfo.title)}
               >
-                {matchInfo.label}
+                {t(matchInfo.label)}
                 {resolved?.matchedBy === 'name-match' && resolved.matchScore !== undefined
                   ? ` ${Math.round(resolved.matchScore * 100)}%`
                   : ''}
@@ -93,8 +95,8 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
             )}
             {resolved?.baseModel && <span className={styles.tagPill}>{resolved.baseModel}</span>}
             {resolved?.versionName && <span className={styles.tagPill}>{resolved.versionName}</span>}
-            {!resolved && modelHash && <span className={styles.tagPill}>Hash: {modelHash.slice(0, 10)}</span>}
-            {!resolved && <span className={styles.tagPill}>Not identified</span>}
+            {!resolved && modelHash && <span className={styles.tagPill}>{t('model.hash', { hash: modelHash.slice(0, 10) })}</span>}
+            {!resolved && <span className={styles.tagPill}>{t('model.notIdentified')}</span>}
           </div>
         </div>
       </div>

@@ -22,6 +22,8 @@ import {
 } from '../../../core/lora-cache.js';
 import type { CandidateMatchResult } from '../../../core/similarity.js';
 import { seaartSearchUrl } from '../../../core/seaart.js';
+import { useT } from '../../i18n/index.js';
+import { translateMessage } from '../../i18n/labels.js';
 
 interface LoraDetailsModalProps {
   lora: LoraReference;
@@ -36,6 +38,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
   onClose,
   onUpdateLora,
 }) => {
+  const t = useT();
   const [searchQuery, setSearchQuery] = useState(
     lora.resolved?.name || normalizeLoraName(lora.rawName)
   );
@@ -100,7 +103,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
     };
 
     onUpdateLora(updated);
-    setFeedback(`Linked to "${model.name}"`);
+    setFeedback(t('loraModal.linked', { name: model.name }));
     setTimeout(() => onClose(), 600);
   };
 
@@ -115,7 +118,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
     };
 
     onUpdateLora(updated);
-    setFeedback('Unlinked from online catalog');
+    setFeedback(t('loraModal.unlinked'));
     setTimeout(() => onClose(), 600);
   };
 
@@ -147,13 +150,13 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
         };
 
         onUpdateLora(updated);
-        setFeedback(`Loaded ${parsed.triggerWords.length} trigger words from .safetensors`);
+        setFeedback(t('loraModal.loadedTriggers', { count: parsed.triggerWords.length }));
         setTimeout(() => onClose(), 800);
       } else {
-        setFeedback('No valid LoRA metadata found in safetensors header');
+        setFeedback(t('loraModal.noHeader'));
       }
     } catch {
-      setFeedback('Failed to read safetensors file');
+      setFeedback(t('loraModal.readFailed'));
     } finally {
       setLoading(false);
     }
@@ -203,11 +206,11 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
             <LayersIcon size={20} color="var(--color-accent, #6366f1)" />
             <div>
               <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>
-                LoRA Model Inspector & Resolver
+                {t('loraModal.title')}
               </h2>
               <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                Raw prompt tag: <code style={{ color: '#e2e8f0' }}>{lora.rawName}</code>
-                {lora.strength !== undefined && ` (weight: ${lora.strength})`}
+                {t('loraModal.rawTag')} <code style={{ color: '#e2e8f0' }}>{lora.rawName}</code>
+                {lora.strength !== undefined && ` ${t('loraModal.weight', { weight: lora.strength })}`}
               </div>
             </div>
           </div>
@@ -243,10 +246,10 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
           >
             <div>
               <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                Current Recognition State
+                {t('loraModal.state')}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc', marginTop: '2px' }}>
-                {lora.resolved?.name || 'Unresolved / Custom LoRA'}
+                {lora.resolved?.name || t('loraModal.unresolved')}
               </div>
               {lora.resolved?.modelUrl && (
                 <a
@@ -255,7 +258,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   rel="noopener noreferrer"
                   style={{ fontSize: '12px', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
                 >
-                  View on {lora.resolved.modelUrl.includes('civitai.red') ? 'Civitai.red' : 'Civitai'} <ExternalLinkIcon size={12} />
+                  {t('loraModal.viewOn', { site: lora.resolved.modelUrl.includes('civitai.red') ? 'Civitai.red' : 'Civitai' })} <ExternalLinkIcon size={12} />
                 </a>
               )}
               {seaartSearchUrl(lora.resolved?.name || lora.rawName) && (
@@ -265,7 +268,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   rel="noopener noreferrer"
                   style={{ fontSize: '12px', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', marginLeft: lora.resolved?.modelUrl ? '12px' : 0 }}
                 >
-                  Search on SeaArt <ExternalLinkIcon size={12} />
+                  {t('loraModal.searchSeaart')} <ExternalLinkIcon size={12} />
                 </a>
               )}
             </div>
@@ -284,7 +287,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                Unlink
+                {t('loraModal.unlink')}
               </button>
             )}
           </div>
@@ -292,7 +295,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
           {/* Search Bar */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Search Civitai Models or Paste Model ID / URL
+              {t('loraModal.searchLabel')}
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
               <div
@@ -313,7 +316,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && performSearch(searchQuery)}
-                  placeholder="e.g. EpiCRealism, Add Detail, Ghibli..."
+                  placeholder={t('loraModal.searchPlaceholder')}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -342,14 +345,14 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                 }}
               >
                 <RefreshIcon size={14} />
-                Search
+                {t('loraModal.search')}
               </button>
               {typeof window !== 'undefined' && window.promptHound?.safetensors && (
                 <button
                   type="button"
                   onClick={handleInspectLocalSafetensors}
                   disabled={loading}
-                  title="Inspect local .safetensors header metadata for trigger tags"
+                  title={t('loraModal.inspectFileTitle')}
                   style={{
                     padding: '8px 14px',
                     borderRadius: '8px',
@@ -366,7 +369,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   }}
                 >
                   <FolderIcon size={14} />
-                  Inspect .safetensors
+                  {t('loraModal.inspectFile')}
                 </button>
               )}
             </div>
@@ -375,7 +378,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
           {/* Candidates List */}
           <div>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-              {loading ? 'Searching Civitai catalog...' : `Matching Candidates (${candidates.length})`}
+              {loading ? t('loraModal.searching') : t('loraModal.candidates', { count: candidates.length })}
             </div>
 
             {feedback && (
@@ -463,7 +466,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                             <span>{v?.baseModel || 'LoRA'}</span>
                             <span>•</span>
                             <span style={{ color: res.score >= 0.7 ? '#4ade80' : res.score >= 0.45 ? '#fbbf24' : '#94a3b8' }}>
-                              {res.matchReason}
+                              {translateMessage(res.matchReason)}
                             </span>
                             {Boolean(m.nsfw || (m.nsfwLevel && m.nsfwLevel > 1)) && (
                               <span
@@ -502,14 +505,14 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                         }}
                       >
                         {isCurrent ? <CheckIcon size={14} /> : <SparklesIcon size={14} />}
-                        {isCurrent ? 'Linked' : 'Link Model'}
+                        {isCurrent ? t('loraModal.linkedButton') : t('loraModal.linkModel')}
                       </button>
                     </div>
                   );
                 })
               ) : (
                 <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
-                  No Civitai models found for this query. You can keep it as a custom/private LoRA.
+                  {t('loraModal.noneFound')}
                 </div>
               )}
             </div>

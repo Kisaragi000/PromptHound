@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { ExtractedMetadata, LoraReference } from '../../../core/types.js';
 import { CopyIcon, CheckIcon, SparklesIcon } from '../icons/Icons.js';
 import { IconButton } from '../primitives/IconButton.js';
+import { useT } from '../../i18n/index.js';
 import styles from './PromptFormatSelector.module.css';
 
 export type PromptSyntaxFormat = 'a1111' | 'comfyui' | 'plaintext';
@@ -15,6 +16,7 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
   metadata,
   loras = [],
 }) => {
+  const t = useT();
   const [format, setFormat] = useState<PromptSyntaxFormat>('a1111');
   const [copied, setCopied] = useState(false);
 
@@ -85,37 +87,37 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
             className={`${styles.tab} ${format === 'a1111' ? styles.tabActive : ''}`}
             onClick={() => setFormat('a1111')}
           >
-            A1111 / Forge Syntax
+            {t('format.a1111')}
           </button>
           <button
             className={`${styles.tab} ${format === 'comfyui' ? styles.tabActive : ''}`}
             onClick={() => setFormat('comfyui')}
           >
-            ComfyUI Prompt
+            {t('format.comfyui')}
           </button>
           <button
             className={`${styles.tab} ${format === 'plaintext' ? styles.tabActive : ''}`}
             onClick={() => setFormat('plaintext')}
           >
-            Clean Plaintext
+            {t('format.plain')}
           </button>
         </div>
 
         <button className={styles.copyBtn} onClick={handleCopy}>
           {copied ? (
             <>
-              <CheckIcon size={13} color="#4ade80" /> Copied!
+              <CheckIcon size={13} color="#4ade80" /> {t('common.copiedExclaim')}
             </>
           ) : (
             <>
-              <CopyIcon size={13} /> Copy Formatted
+              <CopyIcon size={13} /> {t('format.copy')}
             </>
           )}
         </button>
       </div>
 
       <div className={styles.promptBox}>
-        {formattedText || '(No prompt text available)'}
+        {formattedText || t('format.empty')}
       </div>
     </div>
   );

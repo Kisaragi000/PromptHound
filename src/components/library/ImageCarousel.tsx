@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { LibraryImage } from '../../../core/types.js';
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons/Icons.js';
+import { useT } from '../../i18n/index.js';
 import styles from './ImageCarousel.module.css';
 
 interface ImageCarouselProps {
@@ -31,6 +32,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
   onIndexChange,
   children,
 }) => {
+  const t = useT();
   const [index, setIndex] = useState(0);
   const count = images.length;
   const current = Math.min(index, Math.max(0, count - 1));
@@ -66,14 +68,14 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       {image ? (
         <img
           src={useFullSize ? image.url : image.thumbUrl}
-          alt={count > 1 ? `${alt} (${current + 1} of ${count})` : alt}
+          alt={count > 1 ? t('images.nOfCount', { alt, n: current + 1, count }) : alt}
           className={`${styles.image} ${imageClassName}`}
           draggable={false}
           loading="lazy"
           decoding="async"
         />
       ) : (
-        <div className={styles.empty}>No image</div>
+        <div className={styles.empty}>{t('images.none')}</div>
       )}
 
       {count > 1 && (
@@ -86,7 +88,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
               go(current - 1);
             }}
             onDoubleClick={stop}
-            aria-label="Previous image"
+            aria-label={t('common.previousImage')}
           >
             <ChevronLeftIcon size={16} />
           </button>
@@ -98,7 +100,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
               go(current + 1);
             }}
             onDoubleClick={stop}
-            aria-label="Next image"
+            aria-label={t('common.nextImage')}
           >
             <ChevronRightIcon size={16} />
           </button>
@@ -109,7 +111,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
                 type="button"
                 className={`${styles.dot} ${i === current ? styles.dotActive : ''}`}
                 onClick={() => go(i)}
-                aria-label={`Show image ${i + 1} of ${count}`}
+                aria-label={t('images.show', { n: i + 1, count })}
                 aria-current={i === current}
               />
             ))}

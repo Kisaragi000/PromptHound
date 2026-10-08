@@ -1,6 +1,7 @@
 import React, { forwardRef, useState } from 'react';
 import type { ExtractedMetadata, LoraReference } from '../../core/types.js';
 import { LayersIcon, PromptHoundLogo } from './icons/Icons.js';
+import { useT, getLanguage } from '../i18n/index.js';
 import styles from './ExportCard.module.css';
 
 // Generator shown in the card header; unknown formats show no badge
@@ -11,7 +12,6 @@ const FORMAT_LABELS: Partial<Record<ExtractedMetadata['detectedFormat'], string>
   invokeai: 'InvokeAI',
   swarmui: 'SwarmUI',
   fooocus: 'Fooocus',
-  'page-json': 'Web Page',
 };
 
 /** Model preview; shows an icon when there is no image or it cannot be loaded */
@@ -35,7 +35,10 @@ interface ExportCardProps {
 }
 
 export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadata, previewUrl, sourceLabel }, ref) => {
-  const formattedDate = new Date().toLocaleDateString('en-US', {
+  const t = useT();
+  const formatLabel =
+    metadata.detectedFormat === 'page-json' ? t('card.webPage') : FORMAT_LABELS[metadata.detectedFormat];
+  const formattedDate = new Date().toLocaleDateString(getLanguage() === 'ru' ? 'ru-RU' : 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -52,7 +55,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
         <div className={styles.modelBlock}>
           <Thumb url={metadata.modelResolved?.coverImageUrl} size={64} alt="Base model preview" />
           <div className={styles.modelInfo}>
-            <div className={styles.sectionLabel}>Base Model</div>
+            <div className={styles.sectionLabel}>{t('param.baseModel')}</div>
             <div className={styles.modelName}>{metadata.modelResolved?.name ?? metadata.model}</div>
             <div className={styles.chipRow}>
               {metadata.modelResolved?.versionName && (
@@ -62,7 +65,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
                 <span className={styles.chip}>{metadata.modelResolved.baseModel}</span>
               )}
               {!metadata.modelResolved && metadata.modelHash && (
-                <span className={styles.chip}>Hash {metadata.modelHash.slice(0, 10)}</span>
+                <span className={styles.chip}>{t('card.hash', { hash: metadata.modelHash.slice(0, 10) })}</span>
               )}
             </div>
           </div>
@@ -72,7 +75,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
       {/* LoRAs */}
       {metadata.loras && metadata.loras.length > 0 && (
         <div className={styles.loraSection}>
-          <div className={styles.sectionLabel}>LoRAs ({metadata.loras.length})</div>
+          <div className={styles.sectionLabel}>{t('param.loras', { count: metadata.loras.length })}</div>
           <div className={styles.loraGrid}>
             {metadata.loras.map((lora: LoraReference, idx: number) => (
               <div key={idx} className={styles.loraRow}>
@@ -104,12 +107,10 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
           <PromptHoundLogo size={32} />
           <div>
             <div className={styles.brandTitle}>PromptHound</div>
-            <div className={styles.brandSubtitle}>AI Generation Metadata Card</div>
+            <div className={styles.brandSubtitle}>{t('card.subtitle')}</div>
           </div>
         </div>
-        {FORMAT_LABELS[metadata.detectedFormat] && (
-          <div className={styles.formatBadge}>{FORMAT_LABELS[metadata.detectedFormat]}</div>
-        )}
+        {formatLabel && <div className={styles.formatBadge}>{formatLabel}</div>}
       </div>
 
       {/* Body Grid */}
@@ -123,7 +124,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
           )}
           <div className={styles.imageInfoRow}>
             <span>{metadata.width && metadata.height ? `${metadata.width} × ${metadata.height} px` : ''}</span>
-            <span>{sourceLabel ? sourceLabel.slice(0, 32) : 'Image Source'}</span>
+            <span>{sourceLabel ? sourceLabel.slice(0, 32) : t('card.imageSource')}</span>
           </div>
 
           {!isPortrait && modelAndLoras}
@@ -134,7 +135,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
           {/* Positive Prompt */}
           {metadata.prompt && (
             <div className={styles.promptBlock}>
-              <div className={styles.promptLabel}>Prompt</div>
+              <div className={styles.promptLabel}>{t('param.prompt')}</div>
               <div className={styles.promptText}>{metadata.prompt}</div>
             </div>
           )}
@@ -142,7 +143,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
           {/* Negative Prompt */}
           {metadata.negativePrompt && (
             <div className={styles.negativePromptBlock}>
-              <div className={styles.negativeLabel}>Negative Prompt</div>
+              <div className={styles.negativeLabel}>{t('param.negativePrompt')}</div>
               <div className={styles.negativeText}>{metadata.negativePrompt}</div>
             </div>
           )}
@@ -150,22 +151,22 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
           {/* Parameters Grid */}
           <div className={styles.paramsGrid}>
             <div className={styles.paramCard}>
-              <div className={styles.paramLabel}>Sampler</div>
-              <div className={styles.paramValue}>{metadata.sampler ?? 'Default'}</div>
+              <div className={styles.paramLabel}>{t('param.sampler')}</div>
+              <div className={styles.paramValue}>{metadata.sampler ?? t('card.default')}</div>
             </div>
 
             <div className={styles.paramCard}>
-              <div className={styles.paramLabel}>Steps</div>
+              <div className={styles.paramLabel}>{t('param.steps')}</div>
               <div className={styles.paramValue}>{metadata.steps ?? '-'}</div>
             </div>
 
             <div className={styles.paramCard}>
-              <div className={styles.paramLabel}>CFG Scale</div>
+              <div className={styles.paramLabel}>{t('param.cfgScale')}</div>
               <div className={styles.paramValue}>{metadata.cfgScale ?? '-'}</div>
             </div>
 
             <div className={styles.paramCard}>
-              <div className={styles.paramLabel}>Seed</div>
+              <div className={styles.paramLabel}>{t('param.seed')}</div>
               <div className={styles.paramValue}>{metadata.seed ?? '-'}</div>
             </div>
           </div>
@@ -176,7 +177,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
 
       {/* Footer */}
       <div className={styles.cardFooter}>
-        <span>Generated with PromptHound</span>
+        <span>{t('card.footer')}</span>
         <span>{formattedDate}</span>
       </div>
     </div>

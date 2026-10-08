@@ -18,38 +18,40 @@ import {
   isUpdateBusy,
   RELEASES_URL,
 } from './useUpdateStatus.js';
+import { useT, type StringKey } from '../../i18n/index.js';
 import styles from './Sidebar.module.css';
 
 interface NavEntry {
   key: RouteKey;
-  label: string;
+  label: StringKey;
   icon: React.ReactNode;
 }
 
 const mainNavItems: NavEntry[] = [
-  { key: 'home', label: 'Home', icon: <HomeIcon size={18} /> },
-  { key: 'library', label: 'Prompt Library', icon: <LibraryIcon size={18} /> },
-  { key: 'favorites', label: 'Favorites', icon: <StarIcon size={18} /> },
+  { key: 'home', label: 'nav.home', icon: <HomeIcon size={18} /> },
+  { key: 'library', label: 'nav.library', icon: <LibraryIcon size={18} /> },
+  { key: 'favorites', label: 'nav.favorites', icon: <StarIcon size={18} /> },
 ];
 
 const toolNavItems: NavEntry[] = [
-  { key: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
-  { key: 'about', label: 'About', icon: <AboutIcon size={18} /> },
+  { key: 'settings', label: 'nav.settings', icon: <SettingsIcon size={18} /> },
+  { key: 'about', label: 'nav.about', icon: <AboutIcon size={18} /> },
 ];
 
 export const Sidebar: React.FC = () => {
+  const t = useT();
   const { currentRoute, navigate } = useNavigation();
   const updateStatus = useUpdateStatus();
 
   const updateAction = (() => {
     if (updateStatus?.state === 'downloaded') {
-      return { label: 'Restart to update', onClick: () => window.promptHound?.updates?.install(), disabled: false };
+      return { label: t('update.restart'), onClick: () => window.promptHound?.updates?.install(), disabled: false };
     }
     if (updateStatus?.state === 'unsupported') {
-      return { label: 'Open Releases page', onClick: () => window.promptHound?.openExternal?.(RELEASES_URL), disabled: false };
+      return { label: t('update.openReleases'), onClick: () => window.promptHound?.openExternal?.(RELEASES_URL), disabled: false };
     }
     return {
-      label: 'Check for updates',
+      label: t('update.check'),
       onClick: () => window.promptHound?.updates?.check(),
       disabled: !canCheckForUpdates(updateStatus),
     };
@@ -67,7 +69,7 @@ export const Sidebar: React.FC = () => {
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
               <span className={styles.navItemIcon}>{item.icon}</span>
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </button>
           );
         })}
@@ -76,7 +78,7 @@ export const Sidebar: React.FC = () => {
           <CatalogSyncButton variant="sidebar" />
         </div>
 
-        <div className={styles.sectionLabel}>TOOLS</div>
+        <div className={styles.sectionLabel}>{t('nav.tools')}</div>
 
         {toolNavItems.map((item) => {
           const isActive = currentRoute === item.key;
@@ -87,7 +89,7 @@ export const Sidebar: React.FC = () => {
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
               <span className={styles.navItemIcon}>{item.icon}</span>
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </button>
           );
         })}
@@ -119,9 +121,9 @@ export const Sidebar: React.FC = () => {
         <div className={styles.utilityIconWrap}>
           <LightningIcon size={18} />
         </div>
-        <div className={styles.utilityTitle}>Extract. Organize. Create.</div>
+        <div className={styles.utilityTitle}>{t('nav.tagline')}</div>
         <div className={styles.utilityBody}>
-          Get the most out of your AI-generated images.
+          {t('nav.taglineBody')}
         </div>
       </div>
     </aside>

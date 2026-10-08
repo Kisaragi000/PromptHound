@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Russian language**: Settings has a new Language choice (English or Русский) that changes
+  every menu, label and message at once. The choice is remembered. Prompts, model names and
+  your own folder names are never translated.
+
 ## v1.1.0
 
 PromptHound is now open source, and versions move to 1.1 from here.

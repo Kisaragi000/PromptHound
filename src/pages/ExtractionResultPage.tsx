@@ -29,9 +29,12 @@ import { MultiImageSessionStrip } from '../components/recipe/MultiImageSessionSt
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { LoraReference, ExtractedMetadata } from '../../core/types.js';
+import { useT } from '../i18n/index.js';
+import { folderLabel, sourceLabel as sourceName, translateMessage } from '../i18n/labels.js';
 import styles from './ExtractionResultPage.module.css';
 
 function CopyFieldButton({ value, label }: { value: string; label?: string }): React.ReactElement {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -45,13 +48,14 @@ function CopyFieldButton({ value, label }: { value: string; label?: string }): R
   };
 
   return (
-    <IconButton aria-label={label || 'Copy to clipboard'} onClick={handleCopy}>
+    <IconButton aria-label={label || t('common.copyToClipboard')} onClick={handleCopy}>
       {copied ? <CheckIcon size={15} color="#4ade80" /> : <CopyIcon size={15} />}
     </IconButton>
   );
 }
 
 function LoraItemRow({ lora }: { lora: LoraReference }): React.ReactElement {
+  const t = useT();
   return (
     <div className={styles.loraRow}>
       <div className={styles.loraLeft}>
@@ -76,7 +80,7 @@ function LoraItemRow({ lora }: { lora: LoraReference }): React.ReactElement {
             </a>
           ) : (
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-              {lora.hash ? `Hash: ${lora.hash.slice(0, 10)}…` : 'Direct tag'}
+              {lora.hash ? t('result.hash', { hash: lora.hash.slice(0, 10) }) : t('result.directTag')}
             </span>
           )}
         </div>
@@ -89,6 +93,7 @@ function LoraItemRow({ lora }: { lora: LoraReference }): React.ReactElement {
 }
 
 export const ExtractionResultPage: React.FC = () => {
+  const t = useT();
   const {
     navigate,
     previousRoute,
@@ -171,6 +176,10 @@ export const ExtractionResultPage: React.FC = () => {
   const sourceLabel = isFromLibraryOrFavorites && selectedLibraryItem
     ? `${selectedLibraryItem.source || 'Saved'} · ${selectedLibraryItem.folder || 'Library'}`
     : (result?.source.label ?? (activeMetadata as any)?.source?.url ?? 'Imported source');
+  // The same, in the interface language (sourceLabel itself also decides the saved source below)
+  const sourceDisplay = isFromLibraryOrFavorites && selectedLibraryItem
+    ? `${selectedLibraryItem.source ? sourceName(selectedLibraryItem.source) : t('source.saved')} · ${selectedLibraryItem.folder ? folderLabel(selectedLibraryItem.folder) : t('source.library')}`
+    : (result?.source.label ?? (activeMetadata as any)?.source?.url ?? t('source.imported'));
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -252,11 +261,11 @@ export const ExtractionResultPage: React.FC = () => {
       link.download = baseFilename;
       link.href = dataUrl;
       link.click();
-      setExportFeedback('Card Saved!');
+      setExportFeedback(t('result.cardSaved'));
       setTimeout(() => setExportFeedback(null), 2500);
     } catch (err) {
       console.error('Save card image failed:', err);
-      setExportFeedback('Save Failed');
+      setExportFeedback(t('result.saveFailed'));
       setTimeout(() => setExportFeedback(null), 2500);
     } finally {
       setIsExporting(false);
@@ -269,7 +278,7 @@ export const ExtractionResultPage: React.FC = () => {
         <div className={styles.loadingWrap}>
           <div style={{ textAlign: 'center' }}>
             <div className={styles.spinner} />
-            <p className={styles.loadingText}>Extracting image metadata & resolving LoRAs…</p>
+            <p className={styles.loadingText}>{t('result.loading')}</p>
           </div>
         </div>
       </div>
@@ -293,7 +302,7 @@ export const ExtractionResultPage: React.FC = () => {
             navigate('home');
           }}
         >
-          <ChevronLeftIcon size={16} /> Back to Home
+          <ChevronLeftIcon size={16} /> {t('common.backToHome')}
         </button>
         {/* Other images in this batch stay reachable from the error screen */}
         {sessionImages.length > 1 && (
@@ -315,12 +324,12 @@ export const ExtractionResultPage: React.FC = () => {
         ) : (
         <EmptyStatePanel
           icon={<LinkIcon size={28} />}
-          title="Could Not Extract Metadata"
-          description={error?.message ?? 'An unknown error occurred while analyzing the image.'}
+          title={t('result.errorTitle')}
+          description={error?.message ? translateMessage(error.message) : t('result.unknownError')}
           action={
             <div style={{ display: 'flex', gap: '12px' }}>
               <PrimaryButton onClick={handleOpenImageClick}>
-                <ImageIcon size={16} /> Select Another Image
+                <ImageIcon size={16} /> {t('common.selectAnotherImage')}
               </PrimaryButton>
               <SecondaryButton
                 onClick={() => {
@@ -328,7 +337,7 @@ export const ExtractionResultPage: React.FC = () => {
                   navigate('home');
                 }}
               >
-                Back to Home
+                {t('common.backToHome')}
               </SecondaryButton>
             </div>
           }
@@ -350,15 +359,15 @@ export const ExtractionResultPage: React.FC = () => {
         />
         <EmptyStatePanel
           icon={<LinkIcon size={28} />}
-          title="No Image Analyzed Yet"
-          description="Drop an AI-generated image anywhere, select an image file, or paste a URL on Home."
+          title={t('result.emptyTitle')}
+          description={t('result.emptyBody')}
           action={
             <div style={{ display: 'flex', gap: '12px' }}>
               <PrimaryButton onClick={handleOpenImageClick}>
-                <ImageIcon size={16} /> Open Image
+                <ImageIcon size={16} /> {t('result.openImage')}
               </PrimaryButton>
               <SecondaryButton onClick={() => navigate('home')}>
-                Go to Home
+                {t('common.goToHome')}
               </SecondaryButton>
             </div>
           }
@@ -372,9 +381,9 @@ export const ExtractionResultPage: React.FC = () => {
       <div className={styles.page}>
         <EmptyStatePanel
           icon={<LinkIcon size={28} />}
-          title="No Result Available"
-          description="Please analyze an image first."
-          action={<PrimaryButton onClick={() => navigate('home')}>Back to Home</PrimaryButton>}
+          title={t('result.noResultTitle')}
+          description={t('result.noResultBody')}
+          action={<PrimaryButton onClick={() => navigate('home')}>{t('common.backToHome')}</PrimaryButton>}
         />
       </div>
     );
@@ -387,7 +396,7 @@ export const ExtractionResultPage: React.FC = () => {
       return;
     }
     // Generate clean descriptive title from prompt or model
-    const title = recipeTitle(metadata.prompt) || metadata.model || 'AI Generation Recipe';
+    const title = recipeTitle(metadata.prompt) || metadata.model || t('result.defaultTitle');
 
     const sourcePlatform: 'Civitai' | 'SeaArt' | 'Local File' | 'Clipboard' | 'Web' =
       sourceLabel.toLowerCase().includes('civitai')
@@ -475,12 +484,12 @@ export const ExtractionResultPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.lightboxBar}>
-              <span>{sourceLabel} {metadata.width && metadata.height ? `(${metadata.width} × ${metadata.height})` : ''}</span>
+              <span>{sourceDisplay} {metadata.width && metadata.height ? `(${metadata.width} × ${metadata.height})` : ''}</span>
               <button
                 className={styles.lightboxCloseBtn}
                 onClick={() => setIsLightboxOpen(false)}
               >
-                ✕ Close (Esc)
+                {t('result.closeEsc')}
               </button>
             </div>
             <img
@@ -508,45 +517,48 @@ export const ExtractionResultPage: React.FC = () => {
           >
             <ChevronLeftIcon size={16} />{' '}
             {previousRoute === 'library'
-              ? 'Back to Library'
+              ? t('common.backToLibrary')
               : previousRoute === 'favorites'
-              ? 'Back to Favorites'
-              : 'Back to Home'}
+              ? t('common.backToFavorites')
+              : t('common.backToHome')}
           </button>
           <div className={styles.headerTitleRow}>
             <h1 className={styles.headerTitle}>
-              {selectedLibraryItem ? selectedLibraryItem.title : 'Extraction Result'}
+              {selectedLibraryItem ? selectedLibraryItem.title : t('result.title')}
             </h1>
-            <StatusBadge status="success" label={metadata.detectedFormat || 'Extracted'} />
+            <StatusBadge status="success" label={metadata.detectedFormat || t('result.extracted')} />
           </div>
           <p className={styles.headerSubtitle}>
             {selectedLibraryItem
-              ? `${selectedLibraryItem.folder || 'Unfiled'} · ${selectedLibraryItem.model} · Parameters & LoRAs`
-              : 'Parameters and checkpoint models parsed from image metadata'}
+              ? t('result.subtitleSaved', {
+                  folder: selectedLibraryItem.folder ? folderLabel(selectedLibraryItem.folder) : t('folder.unfiled'),
+                  model: selectedLibraryItem.model,
+                })
+              : t('result.subtitle')}
           </p>
         </div>
 
         <div className={styles.headerActions}>
           <SecondaryButton onClick={handleOpenImageClick}>
-            <ImageIcon size={16} /> Open Another Image
+            <ImageIcon size={16} /> {t('result.openAnother')}
           </SecondaryButton>
           <SecondaryButton onClick={handleCopyAll}>
-            <CopyIcon size={16} /> Copy All
+            <CopyIcon size={16} /> {t('result.copyAll')}
           </SecondaryButton>
           <SecondaryButton onClick={handleSaveImageCard} disabled={isExporting}>
-            <ExportIcon size={16} /> {isExporting ? 'Saving…' : exportFeedback ?? 'Save Image Card'}
+            <ExportIcon size={16} /> {isExporting ? t('common.saving') : exportFeedback ?? t('result.saveCard')}
           </SecondaryButton>
           {savedItemId ? (
             <PrimaryButton
               onClick={handleSaveToLibrary}
               className={`${styles.savedButton} ${savePulse ? styles.savedPulse : ''}`}
-              title="Saved to My Creations. Click to open it in the Prompt Library"
+              title={t('result.savedTitle')}
             >
-              <CheckIcon size={16} /> Saved · View in Library
+              <CheckIcon size={16} /> {t('result.savedView')}
             </PrimaryButton>
           ) : (
             <PrimaryButton onClick={handleSaveToLibrary}>
-              <BookmarkIcon size={16} /> Save to Library
+              <BookmarkIcon size={16} /> {t('result.saveToLibrary')}
             </PrimaryButton>
           )}
         </div>
@@ -561,7 +573,7 @@ export const ExtractionResultPage: React.FC = () => {
             onClick={() => {
               if (previewUrl) setIsLightboxOpen(true);
             }}
-            title="Click to view full image in lightbox"
+            title={t('result.viewFull')}
           >
             {previewUrl ? (
               <img
@@ -581,7 +593,7 @@ export const ExtractionResultPage: React.FC = () => {
                 }}
               >
                 <ImageIcon size={32} />
-                <span>No preview available</span>
+                <span>{t('result.noPreview')}</span>
               </div>
             )}
           </div>
@@ -597,7 +609,7 @@ export const ExtractionResultPage: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {sourceLabel}
+                {sourceDisplay}
               </span>
             </div>
             {metadata.width && metadata.height && (
@@ -618,13 +630,13 @@ export const ExtractionResultPage: React.FC = () => {
               className={`${styles.tab} ${activeTab === 'overview' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('overview')}
             >
-              Overview
+              {t('result.tabOverview')}
             </button>
             <button
               className={`${styles.tab} ${activeTab === 'raw' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('raw')}
             >
-              Raw Parameters
+              {t('result.tabRaw')}
             </button>
           </div>
 
@@ -633,10 +645,10 @@ export const ExtractionResultPage: React.FC = () => {
               {/* Positive Prompt */}
               <div className={styles.fieldCard}>
                 <div className={styles.fieldHeader}>
-                  <span className={styles.fieldLabel}>Prompt</span>
-                  <CopyFieldButton value={metadata.prompt} label="Copy prompt" />
+                  <span className={styles.fieldLabel}>{t('param.prompt')}</span>
+                  <CopyFieldButton value={metadata.prompt} label={t('common.copyPrompt')} />
                 </div>
-                <div className={styles.fieldText}>{metadata.prompt || '(Empty prompt)'}</div>
+                <div className={styles.fieldText}>{metadata.prompt || t('param.emptyPrompt')}</div>
                 {/* One-Click Prompt Format Switcher */}
                 <PromptFormatSelector metadata={metadata} loras={displayedLoras} />
               </div>
@@ -645,8 +657,8 @@ export const ExtractionResultPage: React.FC = () => {
               {metadata.negativePrompt && (
                 <div className={styles.fieldCard}>
                   <div className={styles.fieldHeader}>
-                    <span className={styles.fieldLabel}>Negative Prompt</span>
-                    <CopyFieldButton value={metadata.negativePrompt} label="Copy negative prompt" />
+                    <span className={styles.fieldLabel}>{t('param.negativePrompt')}</span>
+                    <CopyFieldButton value={metadata.negativePrompt} label={t('result.copyNegative')} />
                   </div>
                   <div className={styles.fieldText}>{metadata.negativePrompt}</div>
                 </div>
@@ -655,19 +667,19 @@ export const ExtractionResultPage: React.FC = () => {
               {/* Generation Settings Row 1 */}
               <div className={styles.settingsGridRow1}>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Sampler</span>
+                  <span className={styles.metricLabel}>{t('param.sampler')}</span>
                   <span className={styles.metricValue}>{metadata.sampler || '—'}</span>
                 </div>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Steps</span>
+                  <span className={styles.metricLabel}>{t('param.steps')}</span>
                   <span className={styles.metricValue}>{metadata.steps ?? '—'}</span>
                 </div>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>CFG Scale</span>
+                  <span className={styles.metricLabel}>{t('param.cfgScale')}</span>
                   <span className={styles.metricValue}>{metadata.cfgScale ?? '—'}</span>
                 </div>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Seed</span>
+                  <span className={styles.metricLabel}>{t('param.seed')}</span>
                   <span className={styles.metricValue}>{metadata.seed ?? '—'}</span>
                 </div>
               </div>
@@ -675,17 +687,17 @@ export const ExtractionResultPage: React.FC = () => {
               {/* Generation Settings Row 2: Model & Resolution */}
               <div className={styles.settingsGridRow2}>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Checkpoint File</span>
+                  <span className={styles.metricLabel}>{t('result.checkpointFile')}</span>
                   <span className={styles.metricValue}>
-                    {metadata.model || metadata.modelHash || 'Unknown Checkpoint'}
+                    {metadata.model || metadata.modelHash || t('result.unknownCheckpoint')}
                   </span>
                 </div>
                 <div className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Dimensions</span>
+                  <span className={styles.metricLabel}>{t('param.dimensions')}</span>
                   <span className={styles.metricValue}>
                     {metadata.width && metadata.height
                       ? `${metadata.width} × ${metadata.height}`
-                      : 'Not specified'}
+                      : t('result.notSpecified')}
                   </span>
                 </div>
               </div>
@@ -693,7 +705,7 @@ export const ExtractionResultPage: React.FC = () => {
               {/* Base model, identified like the LoRAs, with a preview image */}
               {(metadata.model || metadata.modelHash || metadata.modelResolved) && (
                 <div style={{ marginTop: '8px' }}>
-                  <h3 className={styles.loraSectionTitle}>Base Model</h3>
+                  <h3 className={styles.loraSectionTitle}>{t('param.baseModel')}</h3>
                   <div style={{ marginTop: '8px' }}>
                     <ModelCard model={metadata.model} modelHash={metadata.modelHash} resolved={metadata.modelResolved} />
                   </div>
@@ -704,7 +716,7 @@ export const ExtractionResultPage: React.FC = () => {
               {displayedLoras.length > 0 && (
                 <div style={{ marginTop: '8px' }}>
                   <h3 className={styles.loraSectionTitle}>
-                    Embedded LoRAs ({displayedLoras.length})
+                    {t('param.embeddedLoras', { count: displayedLoras.length })}
                   </h3>
                   <div
                     style={{
@@ -740,10 +752,10 @@ export const ExtractionResultPage: React.FC = () => {
           ) : (
             <div className={styles.fieldCard}>
               <div className={styles.fieldHeader}>
-                <span className={styles.fieldLabel}>All Extracted Parameters</span>
+                <span className={styles.fieldLabel}>{t('result.allParams')}</span>
                 <CopyFieldButton
                   value={JSON.stringify(metadata, null, 2)}
-                  label="Copy JSON metadata"
+                  label={t('result.copyJson')}
                 />
               </div>
               <pre
@@ -766,20 +778,20 @@ export const ExtractionResultPage: React.FC = () => {
         <div className={styles.rightPanel}>
           <div className={styles.sideSection}>
             <div className={styles.sideSectionTitle}>
-              <span>Extraction Source</span>
+              <span>{t('result.source')}</span>
               <PromptHoundLogo size={18} />
             </div>
             <div className={styles.sourceUrlBox}>
-              <span className={styles.sourceUrlText}>{sourceLabel}</span>
+              <span className={styles.sourceUrlText}>{sourceDisplay}</span>
             </div>
           </div>
 
           <div className={styles.sideSection}>
-            <div className={styles.sideSectionTitle}>Quick Actions</div>
+            <div className={styles.sideSectionTitle}>{t('result.quickActions')}</div>
             <button className={styles.quickActionBtn} onClick={handleOpenImageClick}>
               <div className={styles.quickActionLeft}>
                 <ImageIcon size={16} />
-                <span>Open Another Image</span>
+                <span>{t('result.openAnother')}</span>
               </div>
             </button>
             <button
@@ -789,13 +801,13 @@ export const ExtractionResultPage: React.FC = () => {
             >
               <div className={styles.quickActionLeft}>
                 <ExportIcon size={16} />
-                <span>{isExporting ? 'Saving…' : (exportFeedback ?? 'Save Image Card')}</span>
+                <span>{isExporting ? t('common.saving') : (exportFeedback ?? t('result.saveCard'))}</span>
               </div>
             </button>
             <button className={styles.quickActionBtn} onClick={handleCopyAll}>
               <div className={styles.quickActionLeft}>
                 <CopyIcon size={16} />
-                <span>Copy All Settings</span>
+                <span>{t('result.copyAllSettings')}</span>
               </div>
             </button>
             <button
@@ -807,7 +819,7 @@ export const ExtractionResultPage: React.FC = () => {
             >
               <div className={styles.quickActionLeft}>
                 <LinkIcon size={16} />
-                <span>Extract from URL</span>
+                <span>{t('result.extractFromUrl')}</span>
               </div>
             </button>
           </div>
@@ -839,7 +851,7 @@ export const ExtractionResultPage: React.FC = () => {
           ref={exportCardRef}
           metadata={{ ...metadata, loras: displayedLoras }}
           previewUrl={previewUrl}
-          sourceLabel={sourceLabel}
+          sourceLabel={sourceDisplay}
         />
       </div>
     </div>

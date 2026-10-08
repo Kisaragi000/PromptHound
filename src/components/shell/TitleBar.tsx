@@ -3,21 +3,23 @@ import { PromptHoundLogo, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon } f
 import { IconButton } from '../primitives/IconButton.js';
 import { StatusBadge } from '../primitives/StatusBadge.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
+import { useT, type StringKey } from '../../i18n/index.js';
 import styles from './TitleBar.module.css';
 
-const routeTitleMap: Record<string, string> = {
-  home: 'Extract · Organize · Create',
-  result: 'AI Prompt & Metadata Extractor',
-  library: 'Prompt Library',
-  archive: 'Visual Archive Compiler',
-  favorites: 'Favorite Prompts',
-  settings: 'Preferences & Settings',
-  about: 'About PromptHound',
+const routeTitleMap: Record<string, StringKey> = {
+  home: 'title.home',
+  result: 'title.result',
+  library: 'title.library',
+  archive: 'title.archive',
+  favorites: 'title.favorites',
+  settings: 'title.settings',
+  about: 'title.about',
 };
 
 export const TitleBar: React.FC = () => {
+  const t = useT();
   const { currentRoute } = useNavigation();
-  const contextTitle = routeTitleMap[currentRoute] || 'Extract · Organize · Create';
+  const contextTitle = t(routeTitleMap[currentRoute] ?? 'title.home');
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -56,16 +58,16 @@ export const TitleBar: React.FC = () => {
       </div>
 
       <div className={`${styles.right} no-drag`}>
-        <StatusBadge label="Ready" status="success" />
+        <StatusBadge label={t('window.ready')} status="success" />
 
         <div className={styles.windowControls}>
-          <IconButton title="Minimize" onClick={handleMinimize}>
+          <IconButton title={t('window.minimize')} onClick={handleMinimize}>
             <MinimizeIcon size={14} />
           </IconButton>
-          <IconButton title={isMaximized ? 'Restore down' : 'Maximize'} onClick={handleMaximize}>
+          <IconButton title={isMaximized ? t('window.restore') : t('window.maximize')} onClick={handleMaximize}>
             {isMaximized ? <RestoreIcon size={14} /> : <MaximizeIcon size={14} />}
           </IconButton>
-          <IconButton title="Close" variant="danger" onClick={handleClose}>
+          <IconButton title={t('window.close')} variant="danger" onClick={handleClose}>
             <CloseIcon size={14} />
           </IconButton>
         </div>

@@ -6,9 +6,11 @@ import {
   describeUpdateStatus,
   canCheckForUpdates,
 } from '../components/shell/useUpdateStatus.js';
+import { useT } from '../i18n/index.js';
 import styles from './StaticPage.module.css';
 
 export const AboutPage: React.FC = () => {
+  const t = useT();
   const version = __APP_VERSION__;
   const updateStatus = useUpdateStatus();
   const canCheck = canCheckForUpdates(updateStatus);
@@ -33,31 +35,31 @@ export const AboutPage: React.FC = () => {
         <div>
           <h1 className={styles.headerTitle}>PromptHound</h1>
           <p className={styles.headerSubtitle}>
-            Universal AI Prompt & Metadata Extraction Utility for Windows Desktop
+            {t('about.tagline')}
           </p>
         </div>
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>SYSTEM SPECIFICATION</div>
+        <div className={styles.sectionTitle}>{t('about.specSection')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Phase:</strong> Phase 1 (Metadata Extraction & Desktop Shell)
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.phase')}</strong> {t('about.phaseValue')}
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Version:</strong> {version || 'unknown'}
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.version')}</strong> {version || t('about.unknown')}
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Engine:</strong> Electron + Vite + React + TypeScript
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.engine')}</strong> Electron + Vite + React + TypeScript
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Theme:</strong> Smoked Blue-Black Glass
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.theme')}</strong> {t('about.themeValue')}
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Target OS:</strong> Windows 10 / 11 (x64)
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.os')}</strong> Windows 10 / 11 (x64)
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>Repository:</strong>{' '}
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.repo')}</strong>{' '}
             <a
               href="https://github.com/Kisaragi000/PromptHound"
               target="_blank"
@@ -72,7 +74,7 @@ export const AboutPage: React.FC = () => {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>UPDATES</div>
+        <div className={styles.sectionTitle}>{t('about.updatesSection')}</div>
         <div className={styles.settingRow}>
           <div className={styles.settingInfo}>
             <span className={styles.settingLabel}>{version ? `PromptHound v${version}` : 'PromptHound'}</span>
@@ -85,10 +87,10 @@ export const AboutPage: React.FC = () => {
           </div>
           <div className={styles.settingControl}>
             {updateStatus?.state === 'downloaded' ? (
-              <SecondaryButton onClick={() => window.promptHound?.updates?.install()}>Restart to update</SecondaryButton>
+              <SecondaryButton onClick={() => window.promptHound?.updates?.install()}>{t('update.restart')}</SecondaryButton>
             ) : (
               <SecondaryButton disabled={!canCheck} onClick={() => window.promptHound?.updates?.check()}>
-                Check for updates
+                {t('update.check')}
               </SecondaryButton>
             )}
           </div>
@@ -96,12 +98,9 @@ export const AboutPage: React.FC = () => {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>ABOUT THIS SOFTWARE</div>
+        <div className={styles.sectionTitle}>{t('about.softwareSection')}</div>
         <p style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>
-          PromptHound is designed for digital artists, prompt engineers, and AI creators who require precision
-          metadata tracking. It inspects PNG/WebP chunk metadata (Automatic1111 tEXt chunks, ComfyUI node graphs,
-          Fooocus, InvokeAI, NovelAI), extracts raw parameters, and queries model indices to resolve human-readable
-          LoRA identifiers and model checkpoints.
+          {t('about.body')}
         </p>
       </div>
     </div>
