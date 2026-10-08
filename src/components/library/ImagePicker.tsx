@@ -28,6 +28,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const room = max - images.length;
+  const addLabel = busy ? t('images.adding') : images.length ? t('images.addMore') : t('images.add');
 
   const add = (files: File[]) => {
     const accepted = files.filter(isImageFile).slice(0, Math.max(0, room));
@@ -91,9 +92,16 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({ images, max, onAdd, on
         ))}
 
         {room > 0 && (
-          <button type="button" className={styles.addTile} onClick={() => inputRef.current?.click()} disabled={busy}>
+          <button
+            type="button"
+            className={styles.addTile}
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            title={addLabel}
+            aria-label={addLabel}
+          >
             {busy ? <span className={styles.spinner} /> : <PlusIcon size={18} />}
-            <span>{busy ? t('images.adding') : images.length ? t('images.addMore') : t('images.add')}</span>
+            <span className={styles.addLabel}>{addLabel}</span>
           </button>
         )}
       </div>

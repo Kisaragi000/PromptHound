@@ -126,7 +126,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
             {syncing ? t('sync.syncingCatalog') : t('sync.syncModels')}
           </span>
           <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-            {statusMessage || t('sync.offlineReady', { count: stats.count.toLocaleString() })}
+            {statusMessage || t('sync.offlineReady', { count: stats.count })}
           </span>
         </div>
       </button>
@@ -174,7 +174,7 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
             marginLeft: '4px',
           }}
         >
-          {t('sync.offlineCount', { count: stats.count.toLocaleString() })}
+          {t('sync.offlineCount', { count: stats.count })}
         </span>
       )}
     </button>

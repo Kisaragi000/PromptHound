@@ -70,11 +70,11 @@ export function t(key: StringKey, vars?: TranslateVars): string {
     text = forms[index >= 0 ? index : forms.length - 1] ?? forms[forms.length - 1];
   }
   if (vars) {
-    // Counts get thousands separators ("1,234" / "1 234"); other values are used as given
+    // Numbers get thousands separators ("1,234" / "1 234"); other values are used as given
     text = text.replace(/\{(\w+)\}/g, (match, name: string) => {
       if (!(name in vars)) return match;
       const value = vars[name];
-      return name === 'count' && typeof value === 'number' ? value.toLocaleString(current) : String(value);
+      return typeof value === 'number' ? value.toLocaleString(current) : String(value);
     });
   }
   return text;

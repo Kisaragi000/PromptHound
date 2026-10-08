@@ -210,7 +210,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
               </h2>
               <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 {t('loraModal.rawTag')} <code style={{ color: '#e2e8f0' }}>{lora.rawName}</code>
-                {lora.strength !== undefined && ` ${t('loraModal.weight', { weight: lora.strength })}`}
+                {lora.strength !== undefined && ` ${t('loraModal.weight', { weight: String(lora.strength) })}`}
               </div>
             </div>
           </div>

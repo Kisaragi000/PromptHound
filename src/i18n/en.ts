@@ -152,7 +152,7 @@ export const en = {
   'home.feature3Body': 'Full support for Automatic1111, Forge, ComfyUI, SDXL, and WebUI',
   'home.urlModalTitle': 'Extract from Web Link',
   'home.urlModalBody': 'Paste a link to a Civitai post, image page, or a direct .png/.webp image URL:',
-  'home.urlPlaceholder': 'https://civitai.com/images/4819201 or direct image link...',
+  'home.urlPlaceholder': 'https://civitai.com/images/4819201',
   'home.extractMetadata': 'Extract Metadata',
   'home.recentTitle': 'Recent Recipes & Extractions',
   'home.recentSubtitle': 'Click to instantly reload full metadata recipe',

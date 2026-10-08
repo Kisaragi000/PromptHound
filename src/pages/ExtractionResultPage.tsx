@@ -503,7 +503,7 @@ export const ExtractionResultPage: React.FC = () => {
 
       {/* Top Header */}
       <div className={styles.header}>
-        <div>
+        <div className={styles.headerTitleBlock}>
           <button
             className={styles.backBtn}
             onClick={() => {
