@@ -370,7 +370,7 @@ export const ru: Record<StringKey, string> = {
   'library.moved':
     'Перемещена {count} запись в «{folder}»|Перемещено {count} записи в «{folder}»|Перемещено {count} записей в «{folder}»',
   'library.editHelp': 'Выберите записи, чтобы переместить или удалить их. Нажмите на папку, чтобы переименовать или удалить её.',
-  'library.moveTo': 'Выбрать папку…',
+  'library.moveTo': 'Переместить',
   'library.moveToTitle': 'Папка, в которую переместить выбранные записи',
   'library.move': 'Переместить ({count})',
   'library.deselectAll': 'Снять выделение',
@@ -380,7 +380,7 @@ export const ru: Record<StringKey, string> = {
   'library.renameLabel': 'Новое название для {folder}',
   'library.selectFolderTitle': 'Выберите «{folder}», чтобы переименовать или удалить',
   'library.rename': 'Переименовать',
-  'library.deleteFolder': 'Удалить папку',
+  'library.deleteFolder': 'Удалить',
   'library.filterModel': 'Фильтр по модели',
   'library.allModels': 'Все модели',
   'library.filterLora': 'Фильтр по LoRA',

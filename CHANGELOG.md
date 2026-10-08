@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased
+## v1.1.1
 
 ### New
 - **Russian language**: Settings has a new Language choice (English or Русский) that changes
   every menu, label and message at once. The choice is remembered. Prompts, model names and
   your own folder names are never translated.
+
+### Fixed
+- **Text staying inside its boxes**: Settings descriptions wrap beside their buttons instead
+  of running under them, the result page keeps its title readable in narrower windows, and
+  image tiles, folder buttons and input hints no longer cut off long labels.
 
 ## v1.1.0
 
