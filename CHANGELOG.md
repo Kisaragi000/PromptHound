@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Chinese language**: Settings > Language now also offers 简体中文 (Simplified Chinese).
+  LoRA, CFG Scale, Checkpoint and tool names stay in English, as Chinese AI-art users write
+  them. Chinese characters, in the interface or in prompts, use the Windows Chinese font.
+
 ## v1.1.1
 
 ### New

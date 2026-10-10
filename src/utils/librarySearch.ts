@@ -50,7 +50,9 @@ interface ParsedQuery {
 export function parseQuery(query: string): ParsedQuery {
   const include: string[] = [];
   const exclude: string[] = [];
-  for (const match of fold(query).matchAll(/(-?)"([^"]+)"|(-?)(\S+)/g)) {
+  // Chinese and Russian keyboards type “curly” or «angle» quotes; treat them as plain ones
+  const normalized = fold(query).replace(/[“”„«»]/g, '"');
+  for (const match of normalized.matchAll(/(-?)"([^"]+)"|(-?)(\S+)/g)) {
     const negated = (match[1] ?? match[3]) === '-';
     const term = (match[2] ?? match[4] ?? '').trim();
     if (!term || term === '-') continue;

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { en } from '../src/i18n/en.js';
 import { ru } from '../src/i18n/ru.js';
+import { zh } from '../src/i18n/zh.js';
 import { setLanguage, t } from '../src/i18n/index.js';
 import { translateMessage } from '../src/i18n/labels.js';
 
@@ -15,6 +16,14 @@ test('every English text has a Russian one with the same placeholders', () => {
   assert.deepEqual(Object.keys(ru).sort(), Object.keys(en).sort());
 });
 
+test('every English text has a Chinese one with the same placeholders', () => {
+  for (const key of Object.keys(en) as Array<keyof typeof en>) {
+    assert.ok(zh[key], `missing Chinese text for ${key}`);
+    assert.equal(placeholders(zh[key]), placeholders(en[key]), `placeholders differ for ${key}`);
+  }
+  assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort());
+});
+
 test('plural texts have the right number of forms', () => {
   for (const key of Object.keys(en) as Array<keyof typeof en>) {
     const enForms = en[key].split('|').length;
@@ -25,10 +34,12 @@ test('plural texts have the right number of forms', () => {
     } else {
       assert.equal(ruForms, 1, `${key}: Russian has plural forms but English does not`);
     }
+    // Chinese nouns do not change with the number, so every text has one form
+    assert.equal(zh[key].split('|').length, 1, `${key}: Chinese needs 1 form`);
   }
 });
 
-test('English and Russian plurals', () => {
+test('English, Russian and Chinese plurals', () => {
   setLanguage('en');
   assert.equal(t('home.recentLoras', { count: 1 }), '+1 LoRA');
   assert.equal(t('home.recentLoras', { count: 3 }), '+3 LoRAs');
@@ -39,6 +50,9 @@ test('English and Russian plurals', () => {
   assert.equal(t('backup.promptCount', { count: 11 }), '11 промптов');
   assert.equal(t('backup.promptCount', { count: 21 }), '21 промпт');
   assert.equal(t('backup.promptCount', { count: 22 }), '22 промпта');
+  setLanguage('zh');
+  assert.equal(t('backup.promptCount', { count: 1 }), '1 条提示词');
+  assert.equal(t('backup.promptCount', { count: 1234 }), '1,234 条提示词');
   setLanguage('en');
 });
 
@@ -47,6 +61,8 @@ test('engine messages are translated and unknown ones pass through', () => {
   assert.equal(translateMessage('Failed to fetch image: HTTP 404 Not Found'), 'Не удалось загрузить изображение: HTTP 404 Not Found');
   assert.equal(translateMessage('Token similarity (72%)'), 'Сходство по словам (72%)');
   assert.equal(translateMessage('Some message nobody planned for'), 'Some message nobody planned for');
+  setLanguage('zh');
+  assert.equal(translateMessage('Failed to fetch page: HTTP 403'), '无法获取页面：HTTP 403');
   setLanguage('en');
   assert.equal(translateMessage('Failed to fetch image: HTTP 404'), 'Failed to fetch image: HTTP 404');
 });

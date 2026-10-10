@@ -35,6 +35,8 @@ describe('library search', () => {
   it('matches quoted phrases as a whole and leaves out -words', () => {
     assert.deepEqual(search('"city street"'), ['city']);
     assert.deepEqual(search('"street city"'), []);
+    assert.deepEqual(search('“city street”'), ['city']);
+    assert.deepEqual(search('«city street»'), ['city']);
     assert.deepEqual(search('hyphoria -watercolor'), []);
     assert.deepEqual(search('-fox'), ['city', 'cafe']);
   });
