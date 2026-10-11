@@ -1,4 +1,4 @@
-import { getLanguage, t, type StringKey, type TranslateVars } from './index.js';
+import { getLanguage, localeTag, t, type StringKey, type TranslateVars } from './index.js';
 
 // Folders and sources are stored in English; only their display name is translated,
 // so libraries and backups stay the same whichever language the app is in
@@ -37,7 +37,7 @@ export function formatItemDate(date: string): string {
   const parsed = new Date(date);
   return Number.isNaN(parsed.getTime())
     ? date
-    : parsed.toLocaleDateString(getLanguage(), { year: 'numeric', month: 'short', day: 'numeric' });
+    : parsed.toLocaleDateString(localeTag(), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /**

@@ -63,7 +63,9 @@
   --space-8: 44px;
 
   /* Typography — UI_SPEC.md §2.3 */
-  --font-family-base: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  /* Chinese characters (interface or prompts) fall through to the CJK fonts */
+  --font-family-base: 'Inter', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC',
+    system-ui, sans-serif;
 
   --font-size-display: 32px;
   --font-size-h1: 27px;

@@ -38,7 +38,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(({ metadat
   const t = useT();
   const formatLabel =
     metadata.detectedFormat === 'page-json' ? t('card.webPage') : FORMAT_LABELS[metadata.detectedFormat];
-  const formattedDate = new Date().toLocaleDateString(getLanguage() === 'ru' ? 'ru-RU' : 'en-US', {
+  const formattedDate = new Date().toLocaleDateString({ en: 'en-US', ru: 'ru-RU', zh: 'zh-CN' }[getLanguage()], {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
