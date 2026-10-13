@@ -16,6 +16,7 @@ import { PrimaryButton } from '../components/primitives/PrimaryButton.js';
 import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
 import { GlassInput } from '../components/primitives/GlassInput.js';
 import { InstallWizardModal } from '../components/setup/InstallWizardModal.js';
+import { NewPromptModal } from '../components/library/NewPromptModal.js';
 import { BatchExtractionQueue, type BatchItem } from '../components/home/BatchExtractionQueue.js';
 import { RecentExtractionsStrip } from '../components/home/RecentExtractionsStrip.js';
 import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
@@ -32,6 +33,7 @@ export const HomePage: React.FC = () => {
     libraryItems,
     saveToLibrary,
     openRecipeInResult,
+    showInLibrary,
     setActiveMetadata,
     setActivePreviewUrl,
   } = useNavigation();
@@ -39,6 +41,7 @@ export const HomePage: React.FC = () => {
   const { extractFromFile, extractMultipleFiles, extractFromFilePath, extractFromUrl } = useExtraction();
 
   const [showUrlModal, setShowUrlModal] = useState(false);
+  const [isNewPromptOpen, setIsNewPromptOpen] = useState(false);
   const [inputUrl, setInputUrl] = useState('');
   const [isCardHovered, setIsCardHovered] = useState(false);
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
@@ -337,24 +340,24 @@ export const HomePage: React.FC = () => {
           </div>
         </GlassCard>
 
-        {/* Card C: Explore Library */}
-        <GlassCard className={styles.actionCard} interactive onClick={() => navigate('library')}>
+        {/* Card C: add a prompt by hand (the Library itself is one click away in the sidebar) */}
+        <GlassCard className={styles.actionCard} interactive onClick={() => setIsNewPromptOpen(true)}>
           <div className={styles.actionIconWrap}>
             <BookmarkIcon size={24} />
           </div>
-          <h3 className={styles.actionTitle}>{t('nav.library')}</h3>
+          <h3 className={styles.actionTitle}>{t('library.newPrompt')}</h3>
           <p className={styles.actionDescription}>
-            {t('home.libraryBody')}
+            {t('home.newPromptBody')}
           </p>
           <div className={styles.actionButtonRow}>
             <SecondaryButton
               fullWidth
               onClick={(e) => {
                 e.stopPropagation();
-                navigate('library');
+                setIsNewPromptOpen(true);
               }}
             >
-              {t('home.openLibrary')}
+              {t('library.newPrompt')}
             </SecondaryButton>
           </div>
         </GlassCard>
@@ -430,6 +433,18 @@ export const HomePage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* New Prompt (manual) Modal */}
+      {isNewPromptOpen && (
+        <NewPromptModal
+          defaultFolder="All Prompts"
+          onClose={() => setIsNewPromptOpen(false)}
+          onSaved={(item) => {
+            setIsNewPromptOpen(false);
+            showInLibrary(item.id);
+          }}
+        />
       )}
 
       {/* Install / First-Flight Setup Wizard Modal */}

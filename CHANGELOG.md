@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.4
+
+### Changed
+- **New Prompt on the Home screen**: the third Home card now opens the New Prompt form, so a
+  prompt can be added by hand in one click. The Library is still one click away in the sidebar.
+- **Shorter Home card texts** in every language, so the cards read at a glance.
+- **One delete button per card**: in Edit Library, the small red trash icon in the corner of
+  each card is gone. Each card keeps its "Delete Image" button.
+
 ## v1.1.3
 
 ### Fixed
