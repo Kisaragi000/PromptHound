@@ -402,7 +402,7 @@ export const ru: Record<StringKey, string> = {
   'library.clickSelect': 'Нажмите, чтобы выбрать (оранжевая рамка), ещё раз — чтобы открыть полностью',
   'library.clickAgainOpenItem': 'Нажмите ещё раз, чтобы открыть полный результат «{title}»',
   'library.clickSelectItem': 'Нажмите, чтобы выбрать «{title}» (оранжевая рамка), ещё раз — чтобы открыть полностью',
-  'library.selectToDelete': 'Выбрать для удаления',
+  'library.selectToDelete': 'Выбрать, чтобы переместить или удалить',
   'library.selectForDiff': 'Выбрать для сравнения',
   'library.noPromptText': '(Нет текста промпта)',
   'library.deleteImageFromLibrary': 'Удалить изображение из библиотеки',

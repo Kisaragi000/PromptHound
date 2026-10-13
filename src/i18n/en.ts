@@ -398,7 +398,7 @@ export const en = {
   'library.clickSelect': 'Click to select (orange border), click again to open full',
   'library.clickAgainOpenItem': 'Click again to open full scan results for {title}',
   'library.clickSelectItem': 'Click to select {title} (orange border), click again to open full',
-  'library.selectToDelete': 'Select to delete',
+  'library.selectToDelete': 'Select to move or delete',
   'library.selectForDiff': 'Select for Diff Comparison',
   'library.noPromptText': '(No prompt text)',
   'library.deleteImageFromLibrary': 'Delete image from library',

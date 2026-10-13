@@ -398,7 +398,7 @@ export const zh: Record<StringKey, string> = {
   'library.clickSelect': '点击选中（橙色边框），再次点击打开完整结果',
   'library.clickAgainOpenItem': '再次点击打开“{title}”的完整提取结果',
   'library.clickSelectItem': '点击选中“{title}”（橙色边框），再次点击打开完整结果',
-  'library.selectToDelete': '选择以删除',
+  'library.selectToDelete': '选择以移动或删除',
   'library.selectForDiff': '选择以进行对比',
   'library.noPromptText': '（没有提示词文本）',
   'library.deleteImageFromLibrary': '从提示词库中删除图片',

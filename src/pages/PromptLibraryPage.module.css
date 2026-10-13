@@ -370,18 +370,19 @@
 
 /* Edit Mode Card Styles */
 .cardEditMode {
-  border-color: rgba(239, 68, 68, 0.3) !important;
+  border-color: rgba(245, 154, 36, 0.25) !important;
 }
 
 .cardEditMode:hover {
-  border-color: rgba(239, 68, 68, 0.6) !important;
+  border-color: rgba(245, 154, 36, 0.55) !important;
   transform: translateY(-2px);
 }
 
+/* Selected in edit mode (to move or delete): orange, not red, since it isn't a delete yet */
 .cardMarkedDelete {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35) !important;
-  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: var(--color-amber-primary) !important;
+  box-shadow: 0 0 16px rgba(245, 154, 36, 0.3) !important;
+  background: rgba(245, 154, 36, 0.06) !important;
 }
 
 .cardDeleteCheckboxWrap {
@@ -401,7 +402,7 @@
 
 .cardDeleteCheckboxWrap input {
   cursor: pointer;
-  accent-color: #ef4444;
+  accent-color: var(--color-amber-primary);
 }
 
 .cardDirectDeleteBtn {
@@ -470,8 +471,8 @@
 }
 
 .tableRowMarkedDelete {
-  background: rgba(239, 68, 68, 0.12) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
+  background: rgba(245, 154, 36, 0.12) !important;
+  border-color: rgba(245, 154, 36, 0.4) !important;
 }
 
 .cardBody {
@@ -1065,4 +1066,8 @@
 
 .filterClear:hover {
   text-decoration: underline;
+}
+
+.tableRow input[type='checkbox'] {
+  accent-color: var(--color-amber-primary);
 }
