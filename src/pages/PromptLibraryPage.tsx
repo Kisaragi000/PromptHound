@@ -68,7 +68,7 @@ export const PromptLibraryPage: React.FC = () => {
   const [selectedForDeletion, setSelectedForDeletion] = useState<string[]>([]);
   // Edit mode: move the selected items to an existing folder or a new one
   const NEW_FOLDER_OPTION = '__new_folder__';
-  const [moveTarget, setMoveTarget] = useState('');
+  const [isMoveNewFolderOpen, setIsMoveNewFolderOpen] = useState(false);
   const [moveNewFolderName, setMoveNewFolderName] = useState('');
   const [moveFeedback, setMoveFeedback] = useState<string | null>(null);
   // Edit mode: rename / delete the selected folder (not "All Prompts")
@@ -174,18 +174,31 @@ export const PromptLibraryPage: React.FC = () => {
     setSelectedForDeletion([]);
   };
 
-  const moveDestination = moveTarget === NEW_FOLDER_OPTION ? moveNewFolderName.trim() : moveTarget;
-
-  const handleMoveSelected = () => {
-    if (selectedForDeletion.length === 0 || !moveDestination) return;
-    if (moveTarget === NEW_FOLDER_OPTION) addFolder(moveDestination);
-    selectedForDeletion.forEach((id) => updateLibraryItem(id, { folder: moveDestination }));
+  const moveSelectedTo = (folder: string) => {
+    if (selectedForDeletion.length === 0 || !folder) return;
+    selectedForDeletion.forEach((id) => updateLibraryItem(id, { folder }));
     const count = selectedForDeletion.length;
     setSelectedForDeletion([]);
-    setMoveTarget('');
+    setIsMoveNewFolderOpen(false);
     setMoveNewFolderName('');
-    setMoveFeedback(t('library.moved', { count, folder: moveDestination }));
+    setMoveFeedback(t('library.moved', { count, folder }));
     setTimeout(() => setMoveFeedback(null), 2500);
+  };
+
+  // Picking a folder in the "Move to folder" menu moves right away; "New folder…" asks for a name first
+  const handleMovePick = (value: string) => {
+    if (value === NEW_FOLDER_OPTION) {
+      setIsMoveNewFolderOpen(true);
+      return;
+    }
+    moveSelectedTo(value);
+  };
+
+  const handleMoveToNewFolder = () => {
+    const name = moveNewFolderName.trim();
+    if (!name) return;
+    addFolder(name);
+    moveSelectedTo(name);
   };
 
   const startRename = (folder: string) => {
@@ -248,7 +261,10 @@ export const PromptLibraryPage: React.FC = () => {
             className={`${styles.editLibraryBtn} ${isEditMode ? styles.editLibraryBtnActive : ''}`}
             onClick={() => {
               setIsEditMode(!isEditMode);
-              if (isEditMode) setSelectedForDeletion([]);
+              if (isEditMode) {
+                setSelectedForDeletion([]);
+                setIsMoveNewFolderOpen(false);
+              }
             }}
             title={isEditMode ? t('library.finishEditing') : t('library.editTitle')}
           >
@@ -315,41 +331,58 @@ export const PromptLibraryPage: React.FC = () => {
             </span>
           </div>
           <div className={styles.editModeToolbarRight}>
-            <Dropdown
-              size="sm"
-              className={styles.toolbarDropdown}
-              value={moveTarget}
-              placeholder={t('library.moveTo')}
-              title={t('library.moveToTitle')}
-              ariaLabel={t('library.moveToTitle')}
-              options={[
-                ...folders
-                  .filter((f) => f !== 'All Prompts')
-                  .map((f) => ({ value: f, label: folderLabel(f), icon: <FolderIcon size={13} /> })),
-                { value: NEW_FOLDER_OPTION, label: t('common.newFolderOption'), icon: <PlusIcon size={13} />, isAction: true },
-              ]}
-              onChange={setMoveTarget}
-            />
-            {moveTarget === NEW_FOLDER_OPTION && (
-              <input
-                className={styles.toolbarInput}
-                value={moveNewFolderName}
-                onChange={(e) => setMoveNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleMoveSelected();
-                }}
-                placeholder={t('common.newFolderName')}
-                autoFocus
+            {isMoveNewFolderOpen ? (
+              <>
+                <input
+                  className={styles.toolbarInput}
+                  value={moveNewFolderName}
+                  onChange={(e) => setMoveNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleMoveToNewFolder();
+                    if (e.key === 'Escape') setIsMoveNewFolderOpen(false);
+                  }}
+                  placeholder={t('common.newFolderName')}
+                  aria-label={t('common.newFolderName')}
+                  autoFocus
+                />
+                <button
+                  className={styles.toolbarMoveBtn}
+                  disabled={selectedForDeletion.length === 0 || !moveNewFolderName.trim()}
+                  onClick={handleMoveToNewFolder}
+                >
+                  <FolderIcon size={14} />
+                  <span>{t('library.moveConfirm')}</span>
+                </button>
+                <button
+                  className={styles.toolbarSecondaryBtn}
+                  onClick={() => {
+                    setIsMoveNewFolderOpen(false);
+                    setMoveNewFolderName('');
+                  }}
+                >
+                  {t('common.cancel')}
+                </button>
+              </>
+            ) : (
+              <Dropdown
+                menu
+                className={styles.toolbarMoveMenu}
+                triggerClassName={styles.toolbarMoveTrigger}
+                disabled={selectedForDeletion.length === 0}
+                value=""
+                icon={<FolderIcon size={14} />}
+                placeholder={t('library.move', { count: selectedForDeletion.length })}
+                title={selectedForDeletion.length === 0 ? t('library.moveSelectFirst') : t('library.moveToTitle')}
+                ariaLabel={t('library.moveToTitle')}
+                options={[
+                  ...folders
+                    .filter((f) => f !== 'All Prompts')
+                    .map((f) => ({ value: f, label: folderLabel(f), icon: <FolderIcon size={13} /> })),
+                  { value: NEW_FOLDER_OPTION, label: t('common.newFolderOption'), icon: <PlusIcon size={13} />, isAction: true },
+                ]}
+                onChange={handleMovePick}
               />
             )}
-            <button
-              className={styles.toolbarMoveBtn}
-              disabled={selectedForDeletion.length === 0 || !moveDestination}
-              onClick={handleMoveSelected}
-            >
-              <FolderIcon size={14} />
-              <span>{t('library.move', { count: selectedForDeletion.length })}</span>
-            </button>
             <button
               className={styles.toolbarSecondaryBtn}
               onClick={handleSelectAllForDeletion}

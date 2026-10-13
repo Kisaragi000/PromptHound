@@ -370,9 +370,10 @@ export const ru: Record<StringKey, string> = {
   'library.moved':
     'Перемещена {count} запись в «{folder}»|Перемещено {count} записи в «{folder}»|Перемещено {count} записей в «{folder}»',
   'library.editHelp': 'Выберите записи, чтобы переместить или удалить их. Нажмите на папку, чтобы переименовать или удалить её.',
-  'library.moveTo': 'Переместить',
+  'library.moveSelectFirst': 'Сначала выберите записи, затем папку',
   'library.moveToTitle': 'Папка, в которую переместить выбранные записи',
   'library.move': 'Переместить ({count})',
+  'library.moveConfirm': 'Переместить',
   'library.deselectAll': 'Снять выделение',
   'library.selectAll': 'Выбрать все ({count})',
   'library.deleteSelected': 'Удалить выбранные ({count})',
