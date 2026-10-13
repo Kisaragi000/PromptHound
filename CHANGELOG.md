@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.3
 
 ### Fixed
 - **Moving items to a folder**: in Edit Library, the faint folder list and the separate Move
