@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **One delete button per card**: in Edit Library, the small red trash icon in the corner of
+  each card is gone. Each card keeps its "Delete Image" button.
+
 ## v1.1.3
 
 ### Fixed

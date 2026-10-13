@@ -407,7 +407,6 @@ export const ru: Record<StringKey, string> = {
   'library.noPromptText': '(Нет текста промпта)',
   'library.deleteImageFromLibrary': 'Удалить изображение из библиотеки',
   'library.inspectFull': 'Открыть полный результат',
-  'library.deleteThisImage': 'Удалить это изображение',
   'library.removeFavorite': 'Убрать из избранного',
   'library.addFavorite': 'Добавить в избранное',
   'library.diffOn': '✓ Сравн.',

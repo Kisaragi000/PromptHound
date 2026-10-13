@@ -405,29 +405,7 @@
   accent-color: var(--color-amber-primary);
 }
 
-.cardDirectDeleteBtn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: #dc2626;
-  border: 1px solid #ef4444;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #fff;
-  transition: all 0.15s ease;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
 
-.cardDirectDeleteBtn:hover {
-  background: #b91c1c;
-  transform: scale(1.1);
-}
 
 .cardInlineDeleteBtn {
   display: flex;

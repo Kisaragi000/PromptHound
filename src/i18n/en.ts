@@ -403,7 +403,6 @@ export const en = {
   'library.noPromptText': '(No prompt text)',
   'library.deleteImageFromLibrary': 'Delete image from library',
   'library.inspectFull': 'Inspect full extraction',
-  'library.deleteThisImage': 'Delete this image',
   'library.removeFavorite': 'Remove from favorites',
   'library.addFavorite': 'Add to favorites',
   'library.diffOn': '✓ Diff',

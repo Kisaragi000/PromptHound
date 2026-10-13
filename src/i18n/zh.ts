@@ -403,7 +403,6 @@ export const zh: Record<StringKey, string> = {
   'library.noPromptText': '（没有提示词文本）',
   'library.deleteImageFromLibrary': '从提示词库中删除图片',
   'library.inspectFull': '查看完整提取结果',
-  'library.deleteThisImage': '删除这张图片',
   'library.removeFavorite': '取消收藏',
   'library.addFavorite': '加入收藏',
   'library.diffOn': '✓ 对比',

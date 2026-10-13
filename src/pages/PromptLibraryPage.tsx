@@ -704,18 +704,6 @@ export const PromptLibraryPage: React.FC = () => {
                             onChange={() => toggleSelectForDeletion(item.id)}
                           />
                         </div>
-
-                        {/* Direct Delete Badge */}
-                        <button
-                          className={styles.cardDirectDeleteBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteItem(item.id);
-                          }}
-                          title={t('library.deleteThisImage')}
-                        >
-                          <TrashIcon size={14} />
-                        </button>
                       </>
                     ) : (
                       <>
