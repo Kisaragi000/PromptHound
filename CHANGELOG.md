@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- **New Prompt on the Home screen**: the third Home card now opens the New Prompt form, so a
+  prompt can be added by hand in one click. The Library is still one click away in the sidebar.
 - **One delete button per card**: in Edit Library, the small red trash icon in the corner of
   each card is gone. Each card keeps its "Delete Image" button.
 
