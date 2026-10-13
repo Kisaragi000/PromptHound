@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **Home buttons line up**: the three Home card buttons now sit on one line at any window
+  size, even when a card's text wraps onto more lines.
+
 ## v1.1.4
 
 ### Changed

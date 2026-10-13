@@ -179,7 +179,9 @@
 
 .actionButtonRow {
   width: 100%;
-  margin-top: 4px;
+  /* Push the button to the card's bottom so all three line up whatever the text length */
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .featureStrip {
