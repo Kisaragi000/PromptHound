@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.3
+
+### Fixed
+- **Moving items to a folder**: in Edit Library, the faint folder list and the separate Move
+  button are now one clear "Move to folder" button. Pick a folder from it and the selected
+  items move right away; "New folder…" asks for a name first. The button stays greyed out
+  until something is selected.
+- **Calmer selection colour**: selected images in Edit Library are marked in orange instead of
+  red, since selecting is not deleting. Delete buttons stay red.
+
 ## v1.1.2
 
 ### New

@@ -21,6 +21,10 @@ interface DropdownProps {
   title?: string;
   size?: 'md' | 'sm';
   className?: string;
+  /** Action menu: the trigger always shows the placeholder as a plain label and picking runs onChange */
+  menu?: boolean;
+  triggerClassName?: string;
+  disabled?: boolean;
 }
 
 /** Themed replacement for <select>: the native list is drawn by Windows and ignores the theme */
@@ -34,13 +38,16 @@ export const Dropdown: React.FC<DropdownProps> = ({
   title,
   size = 'md',
   className = '',
+  menu = false,
+  triggerClassName = '',
+  disabled = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
-  const selected = options.find((o) => o.value === value && !o.isAction);
+  const selected = menu ? undefined : options.find((o) => o.value === value && !o.isAction);
   const regular = options.filter((o) => !o.isAction);
   const actions = options.filter((o) => o.isAction);
   const ordered = [...regular, ...actions];
@@ -53,6 +60,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (open) listRef.current?.querySelector<HTMLElement>(`[data-index="${highlight}"]`)?.scrollIntoView({ block: 'nearest' });
@@ -93,7 +104,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
   const renderOption = (option: DropdownOption) => {
     const index = ordered.indexOf(option);
-    const isSelected = option.value === value && !option.isAction;
+    const isSelected = !menu && option.value === value && !option.isAction;
     return (
       <li
         key={`${option.isAction ? 'action' : 'opt'}-${option.value}`}
@@ -117,7 +128,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
     <div ref={rootRef} className={`${styles.root} ${size === 'sm' ? styles.small : ''} ${className}`}>
       <button
         type="button"
-        className={`${styles.trigger} ${open ? styles.triggerOpen : ''}`}
+        className={`${styles.trigger} ${open ? styles.triggerOpen : ''} ${triggerClassName}`}
+        disabled={disabled}
         onClick={() => (open ? setOpen(false) : openList())}
         onKeyDown={onKeyDown}
         aria-haspopup="listbox"
@@ -128,7 +140,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         title={title}
       >
         {(selected?.icon ?? icon) && <span className={styles.triggerIcon}>{selected?.icon ?? icon}</span>}
-        <span className={selected ? styles.triggerLabel : styles.placeholder}>{selected?.label ?? placeholder}</span>
+        <span className={selected || menu ? styles.triggerLabel : styles.placeholder}>{selected?.label ?? placeholder}</span>
         <svg className={styles.chevron} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>
