@@ -20,6 +20,7 @@ import { ExportCard } from '../components/ExportCard.js';
 import { ContentCredentialsPanel } from '../components/recipe/ContentCredentialsPanel.js';
 import { recipeTitle } from '../utils/recipeTitle.js';
 import { imageToDataUrl } from '../utils/images.js';
+import { itemImages } from '../utils/libraryImages.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
@@ -172,6 +173,9 @@ export const ExtractionResultPage: React.FC = () => {
   const previewUrl = isViewingSavedRecipe
     ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || (activeMetadata as any)?.image?.url || null)
     : (result?.previewUrl ?? null);
+
+  // All images of the library entry being viewed; the strip under the preview switches between them
+  const entryImages = selectedLibraryItem ? itemImages(selectedLibraryItem) : [];
 
   const sourceLabel = isFromLibraryOrFavorites && selectedLibraryItem
     ? `${selectedLibraryItem.source || 'Saved'} · ${selectedLibraryItem.folder || 'Library'}`
@@ -618,6 +622,22 @@ export const ExtractionResultPage: React.FC = () => {
               </span>
             )}
           </div>
+
+          {entryImages.length > 1 && (
+            <div className={styles.entryImages}>
+              {entryImages.map((img, idx) => (
+                <button
+                  key={img.url}
+                  type="button"
+                  className={`${styles.entryThumb} ${img.url === previewUrl ? styles.entryThumbActive : ''}`}
+                  onClick={() => setActivePreviewUrl(img.url)}
+                  title={t('result.imageOf', { n: idx + 1, total: entryImages.length })}
+                >
+                  <img src={img.thumbUrl || img.url} alt="" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Multi-Image Session Carousel & Switcher Strip */}
           {!isFromLibraryOrFavorites && <MultiImageSessionStrip />}

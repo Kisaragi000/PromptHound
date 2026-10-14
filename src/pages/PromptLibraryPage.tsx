@@ -91,6 +91,10 @@ export const PromptLibraryPage: React.FC = () => {
   const [detailImageIndex, setDetailImageIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isEditingImages, setIsEditingImages] = useState(false);
+  // Detail pane: rename the item and change its base model by hand
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [detailsTitle, setDetailsTitle] = useState('');
+  const [detailsModel, setDetailsModel] = useState('');
 
   // Folder counts in one pass over the library
   const folderCounts = useMemo(() => {
@@ -130,7 +134,27 @@ export const PromptLibraryPage: React.FC = () => {
   useEffect(() => {
     setDetailImageIndex(0);
     setIsEditingImages(false);
+    setIsEditingDetails(false);
   }, [activeItemId]);
+
+  const startEditDetails = (item: SavedPromptItem) => {
+    setDetailsTitle(item.title);
+    setDetailsModel(item.model || item.metadata?.model || '');
+    setIsEditingDetails(true);
+  };
+
+  const saveDetails = (item: SavedPromptItem) => {
+    const title = detailsTitle.trim();
+    if (!title) return;
+    const model = detailsModel.trim();
+    const modelChanged = model !== (item.model || item.metadata?.model || '');
+    // A model typed by hand replaces the identified one, which described the old name
+    const metadata = modelChanged
+      ? { ...item.metadata, model: model || undefined, modelResolved: undefined, modelHash: undefined, modelVersionId: undefined }
+      : item.metadata;
+    updateLibraryItem(item.id, { title, model, metadata });
+    setIsEditingDetails(false);
+  };
 
   const copyText = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -636,12 +660,6 @@ export const PromptLibraryPage: React.FC = () => {
                                 >
                                   <EyeIcon size={13} />
                                 </IconButton>
-                                <IconButton
-                                  title={t('common.delete')}
-                                  onClick={() => handleDeleteItem(item.id)}
-                                >
-                                  <TrashIcon size={13} />
-                                </IconButton>
                               </>
                             )}
                           </div>
@@ -774,15 +792,6 @@ export const PromptLibraryPage: React.FC = () => {
                           >
                             <EyeIcon size={14} />
                           </IconButton>
-                          <IconButton
-                            title={t('library.deleteFromLibrary')}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteItem(item.id);
-                            }}
-                          >
-                            <TrashIcon size={14} />
-                          </IconButton>
                         </>
                       )}
                     </div>
@@ -833,20 +842,65 @@ export const PromptLibraryPage: React.FC = () => {
             )}
 
             <div className={styles.detailContent}>
-              <div className={styles.detailTitleRow}>
-                <h3 className={styles.detailTitle}>{activeItem.title}</h3>
-                <IconButton
-                  title={t('library.openInspector')}
-                  onClick={() => openRecipeInResult(activeItem)}
+              {isEditingDetails ? (
+                <form
+                  className={styles.detailsEditor}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveDetails(activeItem);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setIsEditingDetails(false);
+                  }}
                 >
-                  <ExternalLinkIcon size={16} />
-                </IconButton>
-              </div>
+                  <label className={styles.detailsField}>
+                    <span>{t('library.nameLabel')}</span>
+                    <input
+                      className={styles.folderRenameInput}
+                      value={detailsTitle}
+                      onChange={(e) => setDetailsTitle(e.target.value)}
+                      autoFocus
+                    />
+                  </label>
+                  <label className={styles.detailsField}>
+                    <span>{t('param.baseModel')}</span>
+                    <input
+                      className={styles.folderRenameInput}
+                      value={detailsModel}
+                      onChange={(e) => setDetailsModel(e.target.value)}
+                      placeholder={t('library.baseModelPlaceholder')}
+                    />
+                  </label>
+                  <div className={styles.detailsActions}>
+                    <button type="button" className={styles.detailImagesBtn} onClick={() => setIsEditingDetails(false)}>
+                      {t('common.cancel')}
+                    </button>
+                    <button type="submit" className={styles.detailsSaveBtn} disabled={!detailsTitle.trim()}>
+                      {t('common.save')}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className={styles.detailTitleRow}>
+                  <h3 className={styles.detailTitle}>{activeItem.title}</h3>
+                  <div className={styles.detailTitleActions}>
+                    <IconButton title={t('library.editDetails')} onClick={() => startEditDetails(activeItem)}>
+                      <EditIcon size={15} />
+                    </IconButton>
+                    <IconButton
+                      title={t('library.openInspector')}
+                      onClick={() => openRecipeInResult(activeItem)}
+                    >
+                      <ExternalLinkIcon size={16} />
+                    </IconButton>
+                  </div>
+                </div>
+              )}
 
               <div className={styles.detailChips}>
                 {activeItem.folder && <span className={styles.chip}>{folderLabel(activeItem.folder)}</span>}
                 <span className={styles.chip}>{sourceLabel(activeItem.source)}</span>
-                <span className={styles.chip}>{activeItem.model}</span>
+                {activeItem.model && <span className={styles.chip}>{activeItem.model}</span>}
               </div>
 
               {/* Prompt Section */}

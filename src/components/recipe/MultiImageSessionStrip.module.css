@@ -225,6 +225,8 @@
 
 .saveAllRow {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
   align-items: center;
   justify-content: space-between;
   margin-top: 4px;
@@ -244,6 +246,18 @@
   gap: 4px;
   padding: 2px 4px;
   border-radius: 4px;
+}
+
+.saveButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 10px;
+}
+
+.saveAllBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .saveAllBtn:hover {

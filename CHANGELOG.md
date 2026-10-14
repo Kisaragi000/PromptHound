@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+- **Rename a library entry and change its base model**: the pencil button next to an entry's
+  title in the Library opens a small form for its name and base model.
+- **Save several images as one entry**: after dropping several images, "Save as one entry"
+  keeps them together in one library entry (up to 5 images). "Save each separately" still
+  saves one entry per image.
+- **See every image of an entry**: opening a library entry with several images shows them as
+  thumbnails under the main image; click one to view it.
+
+### Changed
+- **No quick delete icon on library cards**: the trash icon deleted without asking. Delete
+  entries from Edit Library instead.
+
 ### Fixed
 - **Home buttons line up**: the three Home card buttons now sit on one line at any window
   size, even when a card's text wraps onto more lines.
