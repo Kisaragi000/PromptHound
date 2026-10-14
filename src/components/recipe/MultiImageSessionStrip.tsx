@@ -10,6 +10,9 @@ import {
 import { useExtraction, type SessionImageItem } from '../../extraction/ExtractionContext.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { useT } from '../../i18n/index.js';
+import { recipeTitle } from '../../utils/recipeTitle.js';
+import { storeLibraryImageFromUrl } from '../../utils/libraryImages.js';
+import { MAX_LIBRARY_IMAGES, type LibraryImage } from '../../../core/types.js';
 import styles from './MultiImageSessionStrip.module.css';
 
 export const MultiImageSessionStrip: React.FC = () => {
@@ -25,6 +28,8 @@ export const MultiImageSessionStrip: React.FC = () => {
   const { saveToLibrary } = useNavigation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [savedAllCount, setSavedAllCount] = React.useState<number | null>(null);
+  const [isSavingOne, setIsSavingOne] = React.useState(false);
+  const [savedOneCount, setSavedOneCount] = React.useState<number | null>(null);
 
   // Keyboard navigation support: Left / Right arrow keys
   useEffect(() => {
@@ -99,6 +104,36 @@ export const MultiImageSessionStrip: React.FC = () => {
 
     setSavedAllCount(count);
     setTimeout(() => setSavedAllCount(null), 3000);
+  };
+
+  // Saves the recipe shown now with the session's images (shown image first) as one library entry
+  const handleSaveAsOne = async () => {
+    const active = sessionImages[activeImageIndex];
+    const meta = active?.result?.metadata ?? sessionImages.find((i) => i.result?.metadata)?.result?.metadata;
+    if (!meta || isSavingOne) return;
+    setIsSavingOne(true);
+    try {
+      const ordered = [active, ...sessionImages.filter((i) => i !== active)].slice(0, MAX_LIBRARY_IMAGES);
+      const id = `prompt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const stored = await Promise.all(ordered.map((i) => storeLibraryImageFromUrl(id, i.previewUrl, i.label)));
+      const images = stored.filter((img): img is LibraryImage => !!img);
+      saveToLibrary({
+        id,
+        title: recipeTitle(meta.prompt) || meta.model || t('session.defaultTitle'),
+        folder: 'My Creations',
+        source: 'Local File',
+        model: meta.model || 'Stable Diffusion',
+        dimensions: meta.width && meta.height ? `${meta.width} × ${meta.height}` : '1024 × 1024',
+        isFavorite: false,
+        thumbnailUrl: images[0]?.thumbUrl || active.previewUrl,
+        images: images.length ? images : undefined,
+        metadata: meta,
+      });
+      setSavedOneCount(images.length);
+      setTimeout(() => setSavedOneCount(null), 3000);
+    } finally {
+      setIsSavingOne(false);
+    }
   };
 
   return (
@@ -211,10 +246,29 @@ export const MultiImageSessionStrip: React.FC = () => {
       {/* Footer bar with Save All & Shortcut hint */}
       <div className={styles.saveAllRow}>
         <span className={styles.hintText}>{t('session.hint')}</span>
-        <button type="button" className={styles.saveAllBtn} onClick={handleSaveAll}>
-          <BookmarkIcon size={13} />
-          {savedAllCount !== null ? t('session.savedAll', { count: savedAllCount }) : t('session.saveAll')}
-        </button>
+        <div className={styles.saveButtons}>
+          <button
+            type="button"
+            className={styles.saveAllBtn}
+            onClick={handleSaveAsOne}
+            disabled={isSavingOne}
+            title={t('session.saveAsOneTitle', { max: MAX_LIBRARY_IMAGES })}
+          >
+            <BookmarkIcon size={13} />
+            {savedOneCount !== null
+              ? t('session.savedAsOne', { count: savedOneCount })
+              : t('session.saveAsOne', { count: Math.min(sessionImages.length, MAX_LIBRARY_IMAGES) })}
+          </button>
+          <button
+            type="button"
+            className={styles.saveAllBtn}
+            onClick={handleSaveAll}
+            title={t('session.saveAllTitle')}
+          >
+            <BookmarkIcon size={13} />
+            {savedAllCount !== null ? t('session.savedAll', { count: savedAllCount }) : t('session.saveAll')}
+          </button>
+        </div>
       </div>
     </div>
   );

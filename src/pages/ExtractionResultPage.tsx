@@ -5,6 +5,7 @@ import {
   CopyIcon,
   CheckIcon,
   ExternalLinkIcon,
+  EditIcon,
   BookmarkIcon,
   ImageIcon,
   LinkIcon,
@@ -20,6 +21,7 @@ import { ExportCard } from '../components/ExportCard.js';
 import { ContentCredentialsPanel } from '../components/recipe/ContentCredentialsPanel.js';
 import { recipeTitle } from '../utils/recipeTitle.js';
 import { imageToDataUrl } from '../utils/images.js';
+import { itemImages } from '../utils/libraryImages.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
@@ -107,6 +109,7 @@ export const ExtractionResultPage: React.FC = () => {
     saveToLibrary,
     libraryItems,
     showInLibrary,
+    updateLibraryItem,
   } = useNavigation();
   const {
     status,
@@ -129,6 +132,8 @@ export const ExtractionResultPage: React.FC = () => {
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [inspectingLora, setInspectingLora] = useState<LoraReference | null>(null);
   const [customLoras, setCustomLoras] = useState<LoraReference[] | null>(null);
+  const [isEditingModel, setIsEditingModel] = useState(false);
+  const [modelDraft, setModelDraft] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
 
@@ -163,6 +168,26 @@ export const ExtractionResultPage: React.FC = () => {
 
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
 
+  const libraryItemId = selectedLibraryItem?.id;
+  useEffect(() => setIsEditingModel(false), [libraryItemId]);
+
+  // Base model typed by hand for a library entry; it replaces the identified model,
+  // which described the old name
+  const saveModel = () => {
+    setIsEditingModel(false);
+    if (!selectedLibraryItem || !metadata) return;
+    const model = modelDraft.trim();
+    if (model === (metadata.model || '')) return;
+    const updated: ExtractedMetadata = {
+      ...metadata,
+      model: model || undefined,
+      modelResolved: undefined,
+      modelHash: undefined,
+    };
+    updateLibraryItem(selectedLibraryItem.id, { model, metadata: updated });
+    setActiveMetadata(updated);
+  };
+
   const handleUpdateLora = (updatedLora: LoraReference) => {
     const list = displayedLoras.map((l) =>
       l.rawName === updatedLora.rawName ? updatedLora : l
@@ -172,6 +197,9 @@ export const ExtractionResultPage: React.FC = () => {
   const previewUrl = isViewingSavedRecipe
     ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || (activeMetadata as any)?.image?.url || null)
     : (result?.previewUrl ?? null);
+
+  // All images of the library entry being viewed; the strip under the preview switches between them
+  const entryImages = selectedLibraryItem ? itemImages(selectedLibraryItem) : [];
 
   const sourceLabel = isFromLibraryOrFavorites && selectedLibraryItem
     ? `${selectedLibraryItem.source || 'Saved'} · ${selectedLibraryItem.folder || 'Library'}`
@@ -619,6 +647,22 @@ export const ExtractionResultPage: React.FC = () => {
             )}
           </div>
 
+          {entryImages.length > 1 && (
+            <div className={styles.entryImages}>
+              {entryImages.map((img, idx) => (
+                <button
+                  key={img.url}
+                  type="button"
+                  className={`${styles.entryThumb} ${img.url === previewUrl ? styles.entryThumbActive : ''}`}
+                  onClick={() => setActivePreviewUrl(img.url)}
+                  title={t('result.imageOf', { n: idx + 1, total: entryImages.length })}
+                >
+                  <img src={img.thumbUrl || img.url} alt="" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Multi-Image Session Carousel & Switcher Strip */}
           {!isFromLibraryOrFavorites && <MultiImageSessionStrip />}
         </div>
@@ -703,11 +747,60 @@ export const ExtractionResultPage: React.FC = () => {
               </div>
 
               {/* Base model, identified like the LoRAs, with a preview image */}
-              {(metadata.model || metadata.modelHash || metadata.modelResolved) && (
+              {(metadata.model || metadata.modelHash || metadata.modelResolved || selectedLibraryItem) && (
                 <div style={{ marginTop: '8px' }}>
                   <h3 className={styles.loraSectionTitle}>{t('param.baseModel')}</h3>
                   <div style={{ marginTop: '8px' }}>
-                    <ModelCard model={metadata.model} modelHash={metadata.modelHash} resolved={metadata.modelResolved} />
+                    {isEditingModel ? (
+                      <form
+                        className={styles.modelEditor}
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          saveModel();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setIsEditingModel(false);
+                        }}
+                      >
+                        <input
+                          className={styles.modelInput}
+                          value={modelDraft}
+                          onChange={(e) => setModelDraft(e.target.value)}
+                          placeholder={t('library.baseModelPlaceholder')}
+                          aria-label={t('param.baseModel')}
+                          autoFocus
+                        />
+                        <div className={styles.modelEditorActions}>
+                          <button type="button" className={styles.modelCancelBtn} onClick={() => setIsEditingModel(false)}>
+                            {t('common.cancel')}
+                          </button>
+                          <button type="submit" className={styles.modelSaveBtn}>
+                            {t('common.save')}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <ModelCard
+                        model={metadata.model}
+                        modelHash={metadata.modelHash}
+                        resolved={metadata.modelResolved}
+                        action={
+                          selectedLibraryItem && (
+                            <button
+                              type="button"
+                              className={styles.modelEditBtn}
+                              onClick={() => {
+                                setModelDraft(metadata.model || '');
+                                setIsEditingModel(true);
+                              }}
+                            >
+                              <EditIcon size={13} />
+                              {t('result.editModel')}
+                            </button>
+                          )
+                        }
+                      />
+                    )}
                   </div>
                 </div>
               )}

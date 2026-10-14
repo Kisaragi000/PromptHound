@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.1.5
+
+### Added
+- **Rename a library entry**: in Edit Library each card has a Rename button, or double-click
+  an entry's name in the side panel.
+- **Change the base model by hand**: open a library entry and press Edit on its Base Model card.
+- **Save several images as one entry**: after dropping several images, "Save as one entry"
+  keeps them together in one library entry (up to 5 images). "Save each separately" still
+  saves one entry per image.
+- **See every image of an entry**: opening a library entry with several images shows them as
+  thumbnails under the main image; click one to view it.
+
+### Changed
+- **Empty folders show a searching hound**: the note for an empty folder (or a search with no
+  matches) is centered, with a picture above it.
+- **No quick delete icon on library cards**: the trash icon deleted without asking. Delete
+  entries from Edit Library instead.
+
+### Fixed
+- **Long folder names** wrap onto a new line and stay left-aligned like the others.
+- **Rename and Delete on one line** on Edit Library cards, the same height on every card.
+- **Home buttons line up**: the three Home card buttons now sit on one line at any window
+  size, even when a card's text wraps onto more lines.
+
 ## v1.1.4
 
 ### Changed

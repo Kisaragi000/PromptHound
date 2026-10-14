@@ -273,9 +273,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  /* Long names wrap onto more lines, left-aligned like the short ones */
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.folderLeft svg {
+  flex-shrink: 0;
 }
 
 .folderCount {
+  flex-shrink: 0;
+  margin-left: 8px;
   font-size: 11px;
   color: #64748b;
 }
@@ -290,6 +300,36 @@
   align-content: start;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.gridAreaEmpty {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty folder or no search matches: hound and note centered in the free space */
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.emptyState p {
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+.emptyImage {
+  width: min(260px, 70%);
+  height: auto;
+  opacity: 0.9;
 }
 
 .promptCard {
@@ -412,7 +452,11 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
+  /* Rename and Delete share the row equally; a long label wraps inside its button */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #fca5a5;
@@ -422,6 +466,49 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.cardInlineRenameBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Rename and Delete share the row equally; a long label wraps inside its button */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cardInlineRenameBtn:hover {
+  color: var(--color-amber-primary);
+  border-color: var(--color-amber-primary);
+}
+
+.renameQuickBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.renameQuickBtn:hover {
+  color: var(--color-amber-primary);
+  border-color: var(--color-amber-primary);
 }
 
 .cardInlineDeleteBtn:hover {
@@ -454,6 +541,7 @@
 }
 
 .cardBody {
+  flex: 1;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -464,6 +552,7 @@
   font-size: 13px;
   font-weight: 700;
   color: #f1f5f9;
+  line-height: 18px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -494,12 +583,29 @@
 
 .cardActionsRow {
   display: flex;
-  align-items: center;
+  /* Buttons share one height even when a label wraps */
+  align-items: stretch;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 6px;
-  margin-top: 2px;
+  /* Pinned to the card bottom, so buttons line up across a row */
+  margin-top: auto;
+}
+
+/* Name field on a card: the same height as the name it replaces */
+.cardRenameInput {
+  width: 100%;
+  margin: -3px 0;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(245, 154, 36, 0.45);
+  background: rgba(0, 0, 0, 0.3);
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  outline: none;
 }
 
 /* Compact Table View */
@@ -639,6 +745,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .detailTitle {
@@ -646,6 +753,8 @@
   font-weight: 700;
   color: #f8fafc;
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .detailChips {
@@ -1048,4 +1157,9 @@
 
 .tableRow input[type='checkbox'] {
   accent-color: var(--color-amber-primary);
+}
+
+.cardInlineRenameBtn svg,
+.cardInlineDeleteBtn svg {
+  flex-shrink: 0;
 }
