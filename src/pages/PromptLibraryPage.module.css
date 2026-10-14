@@ -273,9 +273,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  /* Long names wrap onto more lines, left-aligned like the short ones */
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.folderLeft svg {
+  flex-shrink: 0;
 }
 
 .folderCount {
+  flex-shrink: 0;
+  margin-left: 8px;
   font-size: 11px;
   color: #64748b;
 }
@@ -442,7 +452,11 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  flex: 1 1 auto;
+  /* Rename and Delete share the row equally; a long label wraps inside its button */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #fca5a5;
@@ -459,7 +473,11 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  flex: 1 1 auto;
+  /* Rename and Delete share the row equally; a long label wraps inside its button */
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
@@ -565,8 +583,8 @@
 
 .cardActionsRow {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  /* Buttons share one height even when a label wraps */
+  align-items: stretch;
   justify-content: flex-end;
   gap: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -1139,4 +1157,9 @@
 
 .tableRow input[type='checkbox'] {
   accent-color: var(--color-amber-primary);
+}
+
+.cardInlineRenameBtn svg,
+.cardInlineDeleteBtn svg {
+  flex-shrink: 0;
 }

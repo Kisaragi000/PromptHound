@@ -19,6 +19,8 @@
   entries from Edit Library instead.
 
 ### Fixed
+- **Long folder names** wrap onto a new line and stay left-aligned like the others.
+- **Rename and Delete on one line** on Edit Library cards, the same height on every card.
 - **Home buttons line up**: the three Home card buttons now sit on one line at any window
   size, even when a card's text wraps onto more lines.
 

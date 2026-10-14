@@ -416,7 +416,7 @@ export const ru: Record<StringKey, string> = {
   'library.addFavorite': 'Добавить в избранное',
   'library.diffOn': '✓ Сравн.',
   'library.diffOff': '+ Сравн.',
-  'library.deleteImage': 'Удалить изображение',
+  'library.deleteImage': 'Удалить',
   'library.viewFull': 'Нажмите, чтобы открыть в полном размере',
   'library.imagesCount': 'Изображений: {count} / {max}',
   'library.editImages': 'Изменить изображения',
