@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.5
 
 ### Added
 - **Rename a library entry**: in Edit Library each card has a Rename button, or double-click
