@@ -777,7 +777,7 @@ export const PromptLibraryPage: React.FC = () => {
 
                   <div className={styles.cardBody}>
                     {renaming?.id === item.id && renaming.at === 'list' ? (
-                      entryRenameInput(styles.folderRenameInput)
+                      entryRenameInput(styles.cardRenameInput)
                     ) : (
                       <div className={styles.cardTitle}>{item.title}</div>
                     )}

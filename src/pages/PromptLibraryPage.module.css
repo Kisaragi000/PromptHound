@@ -523,6 +523,7 @@
 }
 
 .cardBody {
+  flex: 1;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -533,6 +534,7 @@
   font-size: 13px;
   font-weight: 700;
   color: #f1f5f9;
+  line-height: 18px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -569,7 +571,23 @@
   gap: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 6px;
-  margin-top: 2px;
+  /* Pinned to the card bottom, so buttons line up across a row */
+  margin-top: auto;
+}
+
+/* Name field on a card: the same height as the name it replaces */
+.cardRenameInput {
+  width: 100%;
+  margin: -3px 0;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(245, 154, 36, 0.45);
+  background: rgba(0, 0, 0, 0.3);
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  outline: none;
 }
 
 /* Compact Table View */
