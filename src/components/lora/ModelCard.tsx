@@ -10,13 +10,15 @@ interface ModelCardProps {
   model?: string;
   modelHash?: string;
   resolved?: LoraReference['resolved'];
+  /** Shown at the right end of the card, e.g. an Edit button */
+  action?: React.ReactNode;
 }
 
 /**
  * The image's base model (checkpoint), shown like a LoRA card with a larger preview so
  * the model can be recognized at a glance.
  */
-export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved }) => {
+export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved, action }) => {
   const t = useT();
   const displayName = resolved?.name || model || modelHash || t('model.unknown');
   // Offline or a removed image: show the icon instead of broken-image alt text
@@ -35,7 +37,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
 
   return (
     <div className={styles.card}>
-      <div className={styles.mainRow}>
+      <div className={styles.mainRow} style={action ? { flexWrap: 'wrap' } : undefined}>
         <div className={styles.thumbWrapper} style={{ width: 72, height: 72 }}>
           {cover && cover !== failedCover ? (
             <img
@@ -53,7 +55,8 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
           {resolved?.source && <span className={styles.sourceBadge}>{resolved.source}</span>}
         </div>
 
-        <div className={styles.infoColumn}>
+        {/* With an action, the name keeps room for itself and the action moves below when narrow */}
+        <div className={styles.infoColumn} style={action ? { flex: '1 1 140px' } : undefined}>
           <div className={styles.titleRow}>
             {resolved?.modelUrl ? (
               <a
@@ -99,6 +102,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
             {!resolved && <span className={styles.tagPill}>{t('model.notIdentified')}</span>}
           </div>
         </div>
+        {action}
       </div>
     </div>
   );

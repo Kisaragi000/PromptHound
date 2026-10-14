@@ -92,9 +92,10 @@ export const PromptLibraryPage: React.FC = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isEditingImages, setIsEditingImages] = useState(false);
   // Detail pane: rename the item and change its base model by hand
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [detailsTitle, setDetailsTitle] = useState('');
-  const [detailsModel, setDetailsModel] = useState('');
+  // Entry being renamed (from its card in Edit Library, or by double-clicking its name),
+  // and where its name field is, so only that one field opens
+  const [renaming, setRenaming] = useState<{ id: string; at: 'list' | 'detail' } | null>(null);
+  const [entryTitleDraft, setEntryTitleDraft] = useState('');
 
   // Folder counts in one pass over the library
   const folderCounts = useMemo(() => {
@@ -134,27 +135,35 @@ export const PromptLibraryPage: React.FC = () => {
   useEffect(() => {
     setDetailImageIndex(0);
     setIsEditingImages(false);
-    setIsEditingDetails(false);
   }, [activeItemId]);
 
-  const startEditDetails = (item: SavedPromptItem) => {
-    setDetailsTitle(item.title);
-    setDetailsModel(item.model || item.metadata?.model || '');
-    setIsEditingDetails(true);
+  const startEntryRename = (item: SavedPromptItem, at: 'list' | 'detail') => {
+    setEntryTitleDraft(item.title);
+    setRenaming({ id: item.id, at });
   };
 
-  const saveDetails = (item: SavedPromptItem) => {
-    const title = detailsTitle.trim();
-    if (!title) return;
-    const model = detailsModel.trim();
-    const modelChanged = model !== (item.model || item.metadata?.model || '');
-    // A model typed by hand replaces the identified one, which described the old name
-    const metadata = modelChanged
-      ? { ...item.metadata, model: model || undefined, modelResolved: undefined, modelHash: undefined, modelVersionId: undefined }
-      : item.metadata;
-    updateLibraryItem(item.id, { title, model, metadata });
-    setIsEditingDetails(false);
+  const finishEntryRename = (save: boolean) => {
+    const title = entryTitleDraft.trim();
+    if (save && renaming && title) updateLibraryItem(renaming.id, { title });
+    setRenaming(null);
   };
+
+  const entryRenameInput = (className: string) => (
+    <input
+      className={className}
+      value={entryTitleDraft}
+      onChange={(e) => setEntryTitleDraft(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') finishEntryRename(true);
+        if (e.key === 'Escape') finishEntryRename(false);
+      }}
+      onBlur={() => finishEntryRename(true)}
+      aria-label={t('library.rename')}
+      autoFocus
+    />
+  );
 
   const copyText = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -500,7 +509,7 @@ export const PromptLibraryPage: React.FC = () => {
         </aside>
 
         {/* Column 2: Prompt Card Grid OR Compact Table */}
-        <div className={styles.gridArea}>
+        <div className={`${styles.gridArea} ${filteredItems.length === 0 ? styles.gridAreaEmpty : ''}`}>
           {(facets.models.length > 0 || facets.loras.length > 0) && (
             <div className={styles.filterBar}>
               {facets.models.length > 0 && (
@@ -542,10 +551,13 @@ export const PromptLibraryPage: React.FC = () => {
             </div>
           )}
           {filteredItems.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              {isFiltering
-                ? t('library.noMatches')
-                : t('library.emptyFolder', { folder: folderLabel(selectedFolder) })}
+            <div className={styles.emptyState}>
+              <img src="empty-folder.svg" alt="" className={styles.emptyImage} />
+              <p>
+                {isFiltering
+                  ? t('library.noMatches')
+                  : t('library.emptyFolder', { folder: folderLabel(selectedFolder) })}
+              </p>
             </div>
           ) : viewMode === 'table' ? (
             <div className={styles.tableWrapper}>
@@ -623,7 +635,11 @@ export const PromptLibraryPage: React.FC = () => {
                           </div>
                         </td>
                         <td>
-                          <div className={styles.tableTitle}>{item.title}</div>
+                          {renaming?.id === item.id && renaming.at === 'list' ? (
+                            entryRenameInput(styles.folderRenameInput)
+                          ) : (
+                            <div className={styles.tableTitle}>{item.title}</div>
+                          )}
                           <div className={styles.tablePromptSnippet}>
                             {item.metadata?.prompt || t('library.noPromptText')}
                           </div>
@@ -635,6 +651,14 @@ export const PromptLibraryPage: React.FC = () => {
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className={styles.tableActions}>
                             {isEditMode ? (
+                              <>
+                              <button
+                                className={styles.renameQuickBtn}
+                                onClick={() => startEntryRename(item, 'list')}
+                                title={t('library.rename')}
+                              >
+                                <EditIcon size={14} />
+                              </button>
                               <button
                                 className={styles.deleteQuickBtn}
                                 onClick={() => handleDeleteItem(item.id)}
@@ -642,6 +666,7 @@ export const PromptLibraryPage: React.FC = () => {
                               >
                                 <TrashIcon size={14} />
                               </button>
+                              </>
                             ) : (
                               <>
                                 <IconButton
@@ -751,7 +776,11 @@ export const PromptLibraryPage: React.FC = () => {
                   </div>
 
                   <div className={styles.cardBody}>
-                    <div className={styles.cardTitle}>{item.title}</div>
+                    {renaming?.id === item.id && renaming.at === 'list' ? (
+                      entryRenameInput(styles.folderRenameInput)
+                    ) : (
+                      <div className={styles.cardTitle}>{item.title}</div>
+                    )}
                     <div className={styles.cardChipsRow}>
                       {item.folder && <span className={styles.chip}>{folderLabel(item.folder)}</span>}
                       <span className={styles.chip}>{sourceLabel(item.source)}</span>
@@ -762,6 +791,17 @@ export const PromptLibraryPage: React.FC = () => {
                     </div>
                     <div className={styles.cardActionsRow}>
                       {isEditMode ? (
+                        <>
+                        <button
+                          className={styles.cardInlineRenameBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEntryRename(item, 'list');
+                          }}
+                        >
+                          <EditIcon size={13} />
+                          <span>{t('library.rename')}</span>
+                        </button>
                         <button
                           className={styles.cardInlineDeleteBtn}
                           onClick={(e) => {
@@ -772,6 +812,7 @@ export const PromptLibraryPage: React.FC = () => {
                           <TrashIcon size={13} />
                           <span>{t('library.deleteImage')}</span>
                         </button>
+                        </>
                       ) : (
                         <>
                           <IconButton
@@ -842,60 +883,25 @@ export const PromptLibraryPage: React.FC = () => {
             )}
 
             <div className={styles.detailContent}>
-              {isEditingDetails ? (
-                <form
-                  className={styles.detailsEditor}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    saveDetails(activeItem);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') setIsEditingDetails(false);
-                  }}
+              <div className={styles.detailTitleRow}>
+                {renaming?.id === activeItem.id && renaming.at === 'detail' ? (
+                  entryRenameInput(styles.folderRenameInput)
+                ) : (
+                  <h3
+                    className={styles.detailTitle}
+                    onDoubleClick={() => startEntryRename(activeItem, 'detail')}
+                    title={t('library.renameHint')}
+                  >
+                    {activeItem.title}
+                  </h3>
+                )}
+                <IconButton
+                  title={t('library.openInspector')}
+                  onClick={() => openRecipeInResult(activeItem)}
                 >
-                  <label className={styles.detailsField}>
-                    <span>{t('library.nameLabel')}</span>
-                    <input
-                      className={styles.folderRenameInput}
-                      value={detailsTitle}
-                      onChange={(e) => setDetailsTitle(e.target.value)}
-                      autoFocus
-                    />
-                  </label>
-                  <label className={styles.detailsField}>
-                    <span>{t('param.baseModel')}</span>
-                    <input
-                      className={styles.folderRenameInput}
-                      value={detailsModel}
-                      onChange={(e) => setDetailsModel(e.target.value)}
-                      placeholder={t('library.baseModelPlaceholder')}
-                    />
-                  </label>
-                  <div className={styles.detailsActions}>
-                    <button type="button" className={styles.detailImagesBtn} onClick={() => setIsEditingDetails(false)}>
-                      {t('common.cancel')}
-                    </button>
-                    <button type="submit" className={styles.detailsSaveBtn} disabled={!detailsTitle.trim()}>
-                      {t('common.save')}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className={styles.detailTitleRow}>
-                  <h3 className={styles.detailTitle}>{activeItem.title}</h3>
-                  <div className={styles.detailTitleActions}>
-                    <IconButton title={t('library.editDetails')} onClick={() => startEditDetails(activeItem)}>
-                      <EditIcon size={15} />
-                    </IconButton>
-                    <IconButton
-                      title={t('library.openInspector')}
-                      onClick={() => openRecipeInResult(activeItem)}
-                    >
-                      <ExternalLinkIcon size={16} />
-                    </IconButton>
-                  </div>
-                </div>
-              )}
+                  <ExternalLinkIcon size={16} />
+                </IconButton>
+              </div>
 
               <div className={styles.detailChips}>
                 {activeItem.folder && <span className={styles.chip}>{folderLabel(activeItem.folder)}</span>}

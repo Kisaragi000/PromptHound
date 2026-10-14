@@ -3,8 +3,9 @@
 ## Unreleased
 
 ### Added
-- **Rename a library entry and change its base model**: the pencil button next to an entry's
-  title in the Library opens a small form for its name and base model.
+- **Rename a library entry**: in Edit Library each card has a Rename button, or double-click
+  an entry's name in the side panel.
+- **Change the base model by hand**: open a library entry and press Edit on its Base Model card.
 - **Save several images as one entry**: after dropping several images, "Save as one entry"
   keeps them together in one library entry (up to 5 images). "Save each separately" still
   saves one entry per image.
@@ -12,6 +13,8 @@
   thumbnails under the main image; click one to view it.
 
 ### Changed
+- **Empty folders show a searching hound**: the note for an empty folder (or a search with no
+  matches) is centered, with a picture above it.
 - **No quick delete icon on library cards**: the trash icon deleted without asking. Delete
   entries from Edit Library instead.
 
