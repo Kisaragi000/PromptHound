@@ -2,23 +2,25 @@ import { useSyncExternalStore } from 'react';
 import { en, type StringKey } from './en.js';
 import { ru } from './ru.js';
 import { zh } from './zh.js';
+import { ja } from './ja.js';
 
 export type { StringKey };
-export type Language = 'en' | 'ru' | 'zh';
+export type Language = 'en' | 'ru' | 'zh' | 'ja';
 
 export const LANGUAGES: { value: Language; label: string }[] = [
   { value: 'en', label: 'English' },
   { value: 'ru', label: 'Русский' },
   { value: 'zh', label: '简体中文' },
+  { value: 'ja', label: '日本語' },
 ];
 
 const STORAGE_KEY = 'prompthound_language';
-const dictionaries: Record<Language, Partial<Record<StringKey, string>>> = { en, ru, zh };
+const dictionaries: Record<Language, Partial<Record<StringKey, string>>> = { en, ru, zh, ja };
 
 function readStoredLanguage(): Language {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'en' || stored === 'ru' || stored === 'zh') return stored;
+    if (stored === 'en' || stored === 'ru' || stored === 'zh' || stored === 'ja') return stored;
   } catch {
     // storage unavailable
   }
@@ -28,9 +30,9 @@ function readStoredLanguage(): Language {
 let current: Language = readStoredLanguage();
 const listeners = new Set<() => void>();
 
-/** BCP 47 tag for dates, numbers and the page's lang attribute (which picks Chinese fonts) */
+/** BCP 47 tag for dates, numbers and the page's lang attribute (which picks CJK fonts) */
 export function localeTag(language: Language = current): string {
-  return language === 'zh' ? 'zh-CN' : language;
+  return language === 'zh' ? 'zh-CN' : language === 'ja' ? 'ja-JP' : language;
 }
 
 function applyDocumentLanguage(): void {
@@ -65,14 +67,14 @@ export type TranslateVars = Record<string, string | number>;
 /**
  * Text for a key in the current language, falling back to English.
  * `{name}` is replaced by vars.name. A text with `|` holds plural forms chosen by
- * vars.count: English "one|other", Russian "one|few|many"; Chinese has a single form.
+ * vars.count: English "one|other", Russian "one|few|many"; Chinese and Japanese have a single form.
  */
 export function t(key: StringKey, vars?: TranslateVars): string {
   let text = dictionaries[current][key] ?? en[key];
   if (text.includes('|') && vars && typeof vars.count === 'number') {
     const forms = text.split('|');
     const category = new Intl.PluralRules(localeTag()).select(vars.count);
-    const order = current === 'ru' ? ['one', 'few', 'many'] : current === 'zh' ? ['other'] : ['one', 'other'];
+    const order = current === 'ru' ? ['one', 'few', 'many'] : current === 'zh' || current === 'ja' ? ['other'] : ['one', 'other'];
     const index = order.indexOf(category);
     text = forms[index >= 0 ? index : forms.length - 1] ?? forms[forms.length - 1];
   }

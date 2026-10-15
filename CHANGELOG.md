@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Japanese interface (日本語)**: choose it in Settings > Language.
+- **LoRAs in New Prompt**: add LoRAs with their weights when filling in a prompt by hand. They
+  are looked up on Civitai like extracted ones, and so is the base model you type.
+- **Fill in manually**: when an image has no generation data, one click opens the New Prompt
+  form with that image already attached.
+
+### Fixed
+- Opening a library entry right after a failed extraction no longer shows the old error screen.
+
 ## v1.1.5
 
 ### Added

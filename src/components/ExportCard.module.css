@@ -316,3 +316,9 @@
   font-size: 11px;
   color: #687386;
 }
+
+/* Japanese interface: Japanese fonts first */
+:root:lang(ja) .exportCard {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Yu Gothic UI', 'Meiryo', 'Hiragino Sans',
+    'Noto Sans CJK JP', sans-serif;
+}

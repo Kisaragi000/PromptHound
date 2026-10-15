@@ -85,3 +85,9 @@
   --detail-pane-width: 396px;
   --folder-rail-width: 220px;
 }
+
+/* Japanese interface: Japanese fonts first, so shared kanji take Japanese glyph shapes */
+:root:lang(ja) {
+  --font-family-base: 'Inter', 'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', 'Meiryo', 'Hiragino Sans', 'Noto Sans CJK JP',
+    'Microsoft YaHei UI', system-ui, sans-serif;
+}
