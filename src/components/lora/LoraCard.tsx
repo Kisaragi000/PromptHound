@@ -5,6 +5,23 @@ import styles from './LoraCard.module.css';
 import { seaartSearchUrl } from '../../../core/seaart.js';
 import { useT, type StringKey } from '../../i18n/index.js';
 
+/** Site name for a model page link: "Civitai", "Civitai.red", or the host ("huggingface.co") */
+export function linkSiteName(url: string): string {
+  if (url.includes('civitai.red')) return 'Civitai.red';
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return /(^|\.)civitai\.(com|green)$/.test(host) ? 'Civitai' : host;
+  } catch {
+    return 'Civitai';
+  }
+}
+
+/** Corner badge on the cover: where the model was found; a hand-pasted link to another site shows "link" */
+export function sourceBadgeText(resolved: NonNullable<LoraReference['resolved']>): string {
+  if (resolved.source !== 'link') return resolved.source;
+  return linkSiteName(resolved.modelUrl).startsWith('Civitai') ? 'civitai' : 'link';
+}
+
 export const MATCH_LABELS: Record<LoraMatchMethod, { label: StringKey; title: StringKey }> = {
   hash: { label: 'lora.match.hash', title: 'lora.match.hashTitle' },
   'civitai-version': { label: 'lora.match.civitai', title: 'lora.match.civitaiTitle' },
@@ -84,7 +101,7 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
             </div>
           )}
           {lora.resolved?.source && (
-            <span className={styles.sourceBadge}>{lora.resolved.source}</span>
+            <span className={styles.sourceBadge}>{sourceBadgeText(lora.resolved)}</span>
           )}
         </div>
 

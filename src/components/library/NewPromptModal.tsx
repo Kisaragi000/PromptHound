@@ -4,7 +4,7 @@ import { MAX_LIBRARY_IMAGES } from '../../../core/types.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { storeLibraryImage } from '../../utils/libraryImages.js';
 import { recipeTitle } from '../../utils/recipeTitle.js';
-import { CloseIcon, FolderIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
+import { CloseIcon, FolderIcon, LinkIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
 import { Dropdown } from '../primitives/Dropdown.js';
 import { GlassInput } from '../primitives/GlassInput.js';
 import { PrimaryButton } from '../primitives/PrimaryButton.js';
@@ -45,13 +45,43 @@ interface DraftLora {
   id: string;
   name: string;
   strength: string;
+  /** Model page link pasted by the user; saved with the entry */
+  link: string;
+  linkOpen: boolean;
 }
 
 const newLoraRow = (name = '', strength = '1'): DraftLora => ({
   id: Math.random().toString(36).slice(2, 9),
   name,
   strength,
+  link: '',
+  linkOpen: false,
 });
+
+const isWebLink = (text: string) => /^https?:\/\/\S+$/i.test(text);
+
+/** A web link on the clipboard, so the link button can paste it straight away */
+async function clipboardLink(): Promise<string> {
+  try {
+    const text = (await withTimeout(navigator.clipboard.readText(), 1000, '')).trim();
+    return isWebLink(text) ? text : '';
+  } catch {
+    return '';
+  }
+}
+
+/** Link button that shows the model's link field; amber once a link is set */
+const LinkButton: React.FC<{ active: boolean; label: string; onClick: () => void }> = ({ active, label, onClick }) => (
+  <button
+    type="button"
+    className={`${styles.linkBtn} ${active ? styles.linkBtnActive : ''}`}
+    onClick={onClick}
+    title={label}
+    aria-label={label}
+  >
+    <LinkIcon size={14} />
+  </button>
+);
 
 /** Waits for a lookup at most `ms`, so saving never hangs on a slow network */
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -182,8 +212,24 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
     void handleAdd(initialFiles);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updateLora = (id: string, key: 'name' | 'strength', value: string) =>
-    setLoras((prev) => prev.map((l) => (l.id === id ? { ...l, [key]: value } : l)));
+  const updateLora = (id: string, changes: Partial<DraftLora>) =>
+    setLoras((prev) => prev.map((l) => (l.id === id ? { ...l, ...changes } : l)));
+  const toggleLoraLink = async (l: DraftLora) => {
+    if (l.linkOpen && !l.link) return updateLora(l.id, { linkOpen: false });
+    updateLora(l.id, { linkOpen: true });
+    if (l.link) return;
+    const pasted = await clipboardLink();
+    if (pasted) setLoras((prev) => prev.map((x) => (x.id === l.id && !x.link ? { ...x, link: pasted } : x)));
+  };
+  const [modelLink, setModelLink] = useState('');
+  const [modelLinkOpen, setModelLinkOpen] = useState(false);
+  const toggleModelLink = async () => {
+    if (modelLinkOpen && !modelLink) return setModelLinkOpen(false);
+    setModelLinkOpen(true);
+    if (modelLink) return;
+    const pasted = await clipboardLink();
+    if (pasted) setModelLink((current) => current || pasted);
+  };
 
   const handleRemove = (id: string) => {
     setImages((prev) => {
@@ -205,6 +251,11 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
+    const links = [modelLink, ...loras.map((l) => l.link)].map((x) => x.trim());
+    if (links.some((x) => x && !isWebLink(x))) {
+      setSaveError(t('newPrompt.linkInvalid'));
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -226,21 +277,38 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       if (newFolderName !== null) addFolder(targetFolder);
 
       // LoRAs typed by hand; ones that came from an image keep what was identified about them
-      const loraRefs: LoraReference[] = loras
-        .filter((l) => l.name.trim())
-        .map((l) => {
-          const rawName = l.name.trim();
-          const fromImage = extracted?.loras.find((x) => x.rawName === rawName);
-          return { ...fromImage, rawName, strength: toNumber(l.strength) };
-        });
-      const model = form.model.trim() || undefined;
-      const { resolveLoras, resolveBaseModel } = await import('../../../core/lora-resolution.js');
+      // A pasted link decides which model it is; otherwise the name is looked up
+      const { resolveLoras, resolveBaseModel, resolveFromModelLink, withLinkOnly } = await import('../../../core/lora-resolution.js');
+      const fromLink = (ref: LoraReference, link: string, kind: 'lora' | 'checkpoint') =>
+        withTimeout(resolveFromModelLink(ref, link, kind), 8000, withLinkOnly(ref, link));
+      const loraDrafts = loras.filter((l) => l.name.trim() || l.link.trim());
+      const loraRefs: LoraReference[] = loraDrafts.map((l) => {
+        const rawName = l.name.trim();
+        const fromImage = rawName ? extracted?.loras.find((x) => x.rawName === rawName) : undefined;
+        return { ...fromImage, rawName, strength: toNumber(l.strength) };
+      });
+      const typedModel = form.model.trim() || undefined;
       const [resolvedLoras, modelResolved] = await Promise.all([
-        withTimeout(resolveLoras(loraRefs), 8000, loraRefs),
-        model && model !== extracted?.model
-          ? withTimeout(resolveBaseModel({ model }), 8000, undefined)
+        Promise.all(
+          loraRefs.map((ref, i) => {
+            const link = loraDrafts[i].link.trim();
+            if (link) return fromLink(ref, link, 'lora');
+            return withTimeout(resolveLoras([ref]).then((r) => r[0] ?? ref), 8000, ref);
+          })
+        ),
+        modelLink.trim()
+          ? fromLink({ rawName: typedModel ?? '' }, modelLink.trim(), 'checkpoint').then((r) => r.resolved)
+          : typedModel && typedModel !== extracted?.model
+          ? withTimeout(resolveBaseModel({ model: typedModel }), 8000, undefined)
           : Promise.resolve(extracted?.modelResolved),
       ]);
+      // A link with no name typed takes the name found for it
+      for (const ref of resolvedLoras) {
+        if (!ref.rawName) ref.rawName = ref.resolved?.name || ref.resolved?.modelUrl || '';
+        if (ref.resolved && !ref.resolved.name) ref.resolved.name = ref.rawName;
+      }
+      const model = typedModel ?? (modelResolved?.name || undefined);
+      if (modelResolved && !modelResolved.name) modelResolved.name = modelResolved.modelUrl;
 
       const metadata: ExtractedMetadata = {
         ...(extracted ?? { loras: [], detectedFormat: 'unknown' as const }),
@@ -360,7 +428,10 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
               <label className={pageStyles.label} htmlFor="new-prompt-model">
                 {t('newPrompt.modelCheckpoint')}
               </label>
-              <GlassInput id="new-prompt-model" value={form.model} onChange={set('model')} placeholder={t('newPrompt.modelPlaceholder')} />
+              <div className={styles.inputWithLink}>
+                <GlassInput id="new-prompt-model" value={form.model} onChange={set('model')} placeholder={t('newPrompt.modelPlaceholder')} />
+                <LinkButton active={Boolean(modelLink.trim())} label={t('newPrompt.modelLink')} onClick={toggleModelLink} />
+              </div>
             </div>
             <div className={pageStyles.formField}>
               <label className={pageStyles.label} htmlFor="new-prompt-sampler">
@@ -376,34 +447,60 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
             </div>
           </div>
 
+          {(modelLinkOpen || modelLink) && (
+            <div className={styles.linkField}>
+              <GlassInput
+                value={modelLink}
+                onChange={(e) => setModelLink(e.target.value)}
+                placeholder={t('newPrompt.linkPlaceholder')}
+                aria-label={`${t('newPrompt.modelCheckpoint')}: ${t('newPrompt.modelLink')}`}
+                autoFocus={!modelLink}
+              />
+            </div>
+          )}
+
           <div className={pageStyles.formField}>
             <span className={pageStyles.label}>{t('newPrompt.loras')}</span>
             {loras.map((l) => (
-              <div key={l.id} className={styles.loraRow}>
-                <GlassInput
-                  value={l.name}
-                  onChange={(e) => updateLora(l.id, 'name', e.target.value)}
-                  placeholder={t('newPrompt.loraName')}
-                  aria-label={t('newPrompt.loraName')}
-                />
-                <GlassInput
-                  type="number"
-                  step={0.05}
-                  value={l.strength}
-                  onChange={(e) => updateLora(l.id, 'strength', e.target.value)}
-                  aria-label={t('newPrompt.loraWeight')}
-                  title={t('newPrompt.loraWeight')}
-                />
-                <button
-                  type="button"
-                  className={styles.loraRemove}
-                  onClick={() => setLoras((prev) => prev.filter((x) => x.id !== l.id))}
-                  title={t('newPrompt.removeLora')}
-                  aria-label={t('newPrompt.removeLora')}
-                >
-                  <CloseIcon size={14} />
-                </button>
-              </div>
+              <React.Fragment key={l.id}>
+                <div className={styles.loraRow}>
+                  <GlassInput
+                    value={l.name}
+                    onChange={(e) => updateLora(l.id, { name: e.target.value })}
+                    placeholder={t('newPrompt.loraName')}
+                    aria-label={t('newPrompt.loraName')}
+                  />
+                  <LinkButton active={Boolean(l.link.trim())} label={t('newPrompt.modelLink')} onClick={() => void toggleLoraLink(l)} />
+                  <GlassInput
+                    type="number"
+                    step={0.05}
+                    value={l.strength}
+                    onChange={(e) => updateLora(l.id, { strength: e.target.value })}
+                    aria-label={t('newPrompt.loraWeight')}
+                    title={t('newPrompt.loraWeight')}
+                  />
+                  <button
+                    type="button"
+                    className={styles.loraRemove}
+                    onClick={() => setLoras((prev) => prev.filter((x) => x.id !== l.id))}
+                    title={t('newPrompt.removeLora')}
+                    aria-label={t('newPrompt.removeLora')}
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                </div>
+                {(l.linkOpen || l.link) && (
+                  <div className={styles.linkField}>
+                    <GlassInput
+                      value={l.link}
+                      onChange={(e) => updateLora(l.id, { link: e.target.value })}
+                      placeholder={t('newPrompt.linkPlaceholder')}
+                      aria-label={`${l.name || 'LoRA'}: ${t('newPrompt.modelLink')}`}
+                      autoFocus={!l.link}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
             ))}
             <button type="button" className={styles.addLoraBtn} onClick={() => setLoras((prev) => [...prev, newLoraRow()])}>
               <PlusIcon size={13} /> {t('newPrompt.addLora')}

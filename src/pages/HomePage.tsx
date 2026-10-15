@@ -28,6 +28,8 @@ import styles from './HomePage.module.css';
 
 export const HomePage: React.FC = () => {
   const t = useT();
+  // The app name is styled separately, so the welcome text is split around {app}
+  const [welcomeBefore, welcomeAfter = ''] = t('home.welcome').split('{app}');
   const {
     navigate,
     libraryItems,
@@ -273,7 +275,7 @@ export const HomePage: React.FC = () => {
           <PromptHoundLogo size={56} />
         </div>
         <h1 className={styles.heroTitle}>
-          {t('home.welcome')} Prompt<span className={styles.heroTitleAccent}>Hound</span>
+          {welcomeBefore}Prompt<span className={styles.heroTitleAccent}>Hound</span>{welcomeAfter}
         </h1>
         <p className={styles.heroSubtitle}>
           {t('home.subtitle1')}

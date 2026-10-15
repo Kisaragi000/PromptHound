@@ -42,7 +42,8 @@ export interface LoraReference {
   civitaiVersionId?: number;
   resolved?: {
     name: string;
-    source: 'civitai' | 'local';
+    /** 'link': a page the user linked by hand that PromptHound could not look up */
+    source: 'civitai' | 'local' | 'link';
     modelUrl: string;
     coverImageId?: string;
     coverImageUrl?: string;

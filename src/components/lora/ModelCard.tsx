@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { LoraReference } from '../../../core/types.js';
 import { ExternalLinkIcon, LayersIcon } from '../icons/Icons.js';
-import { MATCH_LABELS, NAME_MATCH_PILL_STYLE } from './LoraCard.js';
+import { MATCH_LABELS, NAME_MATCH_PILL_STYLE, sourceBadgeText } from './LoraCard.js';
 import { useT } from '../../i18n/index.js';
 import styles from './LoraCard.module.css';
 
@@ -52,7 +52,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({ model, modelHash, resolved
               <LayersIcon size={26} />
             </div>
           )}
-          {resolved?.source && <span className={styles.sourceBadge}>{resolved.source}</span>}
+          {resolved?.source && <span className={styles.sourceBadge}>{sourceBadgeText(resolved)}</span>}
         </div>
 
         {/* With an action, the name keeps room for itself and the action moves below when narrow */}

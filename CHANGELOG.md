@@ -8,6 +8,12 @@
   are looked up on Civitai like extracted ones, and so is the base model you type.
 - **Fill in manually**: when an image has no generation data, one click opens the New Prompt
   form with that image already attached.
+- **Model links**: the link button next to a LoRA or the model in New Prompt takes a model page
+  link (Civitai, Hugging Face or any site). A Civitai link fills in the exact model; the entry's
+  model card opens the link.
+
+### Changed
+- Japanese texts reviewed by a proofreader.
 
 ### Fixed
 - Opening a library entry right after a failed extraction no longer shows the old error screen.

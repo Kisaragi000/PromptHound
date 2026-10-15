@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { civitaiOriginal, civitaiThumbnail } from '../core/civitai-images.ts';
 import { isDirectImageUrl } from '../core/link-fetch.ts';
+import { parseCivitaiModelLink, resolveFromModelLink } from '../core/lora-resolution.ts';
 import { copiedImagePath, isHttpUrl } from '../src/utils/pasteSources.ts';
 
 const CDN = 'https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/3144e0a7-a26b-4eef-93c1-2975285197f4';
@@ -51,5 +52,25 @@ describe('paste sources', () => {
     assert.equal(copiedImagePath('C:\\Users\\me\\notes.txt'), null);
     assert.equal(copiedImagePath('a cat.png'), null);
     assert.equal(copiedImagePath('C:\\a.png\nC:\\b.png'), null);
+  });
+});
+
+describe('Pasted model links', () => {
+  it('gives the model and version ids of a pasted Civitai link', () => {
+    assert.deepEqual(parseCivitaiModelLink('https://civitai.com/models/58390/detail-tweaker-lora-lora?modelVersionId=62833'), {
+      modelId: 58390,
+      versionId: 62833,
+    });
+    assert.deepEqual(parseCivitaiModelLink('https://civitai.red/models/4384/dreamshaper'), { modelId: 4384, versionId: undefined });
+    assert.equal(parseCivitaiModelLink('https://huggingface.co/some/model'), undefined);
+    assert.equal(parseCivitaiModelLink('not a link'), undefined);
+  });
+
+  it('saves a link that is not Civitai as the link alone', async () => {
+    const ref = await resolveFromModelLink({ rawName: 'my_lora', strength: 0.8 }, 'https://huggingface.co/user/my_lora');
+    assert.equal(ref.resolved?.modelUrl, 'https://huggingface.co/user/my_lora');
+    assert.equal(ref.resolved?.source, 'link');
+    assert.equal(ref.resolved?.name, 'my_lora');
+    assert.equal(ref.strength, 0.8);
   });
 });

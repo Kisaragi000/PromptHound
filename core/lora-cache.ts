@@ -344,6 +344,11 @@ export function getCachedLoraByVersionId(versionId: number): ModelCatalogRecord 
   return versionIndex.get(versionId) ?? recordForOlderVersion(versionId);
 }
 
+/** Newest version id of a Civitai model in the bundled catalog, for links that name only the model */
+export function getCatalogNewestVersionId(modelId: number): number | undefined {
+  return modelRecords.get(modelId)?.civitaiVersionId ?? compactModels.get(modelId)?.newestVersionId;
+}
+
 /**
  * Lookup by normalized alias name (Tier 1) with strict token similarity
  */
