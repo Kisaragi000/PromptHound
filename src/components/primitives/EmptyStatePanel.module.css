@@ -7,7 +7,8 @@
 }
 
 .panel {
-  max-width: 420px;
+  /* Wide enough for three buttons on one line; the text keeps its narrower measure */
+  max-width: 760px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -32,6 +33,7 @@
 }
 
 .description {
+  max-width: 420px;
   font-size: var(--font-size-body);
   color: var(--color-text-secondary);
   line-height: var(--line-height-body);

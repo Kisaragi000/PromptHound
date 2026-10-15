@@ -43,3 +43,50 @@
   color: #fca5a5;
   font-size: 12.5px;
 }
+
+/* LoRAs typed by hand: name, weight, remove */
+.loraRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.loraRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.loraRemove:hover {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.addLoraBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addLoraBtn:hover {
+  color: var(--color-amber-primary);
+  border-color: var(--color-amber-primary);
+}

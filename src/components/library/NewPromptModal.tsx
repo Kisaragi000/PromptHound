@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { ExtractedMetadata, SavedPromptItem } from '../../../core/types.js';
+import type { ExtractedMetadata, LoraReference, SavedPromptItem } from '../../../core/types.js';
 import { MAX_LIBRARY_IMAGES } from '../../../core/types.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { storeLibraryImage } from '../../utils/libraryImages.js';
 import { recipeTitle } from '../../utils/recipeTitle.js';
-import { FolderIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
+import { CloseIcon, FolderIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
 import { Dropdown } from '../primitives/Dropdown.js';
 import { GlassInput } from '../primitives/GlassInput.js';
 import { PrimaryButton } from '../primitives/PrimaryButton.js';
@@ -19,6 +19,8 @@ interface NewPromptModalProps {
   defaultFolder: string;
   onClose: () => void;
   onSaved: (item: SavedPromptItem) => void;
+  /** Images to start with, e.g. the one whose extraction failed */
+  initialFiles?: File[];
 }
 
 interface DraftImage extends PickerImage {
@@ -38,6 +40,23 @@ const EMPTY_FORM = {
 type FormState = typeof EMPTY_FORM;
 
 const NEW_FOLDER = '__new_folder__';
+
+interface DraftLora {
+  id: string;
+  name: string;
+  strength: string;
+}
+
+const newLoraRow = (name = '', strength = '1'): DraftLora => ({
+  id: Math.random().toString(36).slice(2, 9),
+  name,
+  strength,
+});
+
+/** Waits for a lookup at most `ms`, so saving never hangs on a slow network */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([promise.catch(() => fallback), new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+}
 
 /** Reads generation data from an image, or null when it has none */
 async function readImageMetadata(file: File): Promise<ExtractedMetadata | null> {
@@ -62,7 +81,7 @@ async function imageSize(url: string): Promise<{ width: number; height: number }
 }
 
 /** "Save Custom Prompt Recipe": a prompt typed by hand, with up to five images */
-export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, onClose, onSaved }) => {
+export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, onClose, onSaved, initialFiles }) => {
   const t = useT();
   const { folders, addFolder, saveToLibrary } = useNavigation();
   const folderOptions = folders.filter((f) => f !== 'All Prompts');
@@ -70,6 +89,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
   const [folder, setFolder] = useState(folderOptions.includes(defaultFolder) ? defaultFolder : folderOptions[0] ?? 'My Creations');
   const [newFolderName, setNewFolderName] = useState<string | null>(null);
   const [images, setImages] = useState<DraftImage[]>([]);
+  const [loras, setLoras] = useState<DraftLora[]>([]);
   const [extracted, setExtracted] = useState<ExtractedMetadata | null>(null);
   const [autofillNote, setAutofillNote] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
@@ -79,6 +99,8 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
   formRef.current = form;
   const imagesRef = useRef(images);
   imagesRef.current = images;
+  const lorasRef = useRef(loras);
+  lorasRef.current = loras;
 
   // Free the image previews when the dialog closes
   useEffect(() => () => imagesRef.current.forEach((img) => URL.revokeObjectURL(img.previewUrl)), []);
@@ -117,6 +139,9 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       }
     }
     setForm(next);
+    if (meta.loras.length && !lorasRef.current.some((l) => l.name.trim())) {
+      setLoras(meta.loras.map((l) => newLoraRow(l.rawName, l.strength !== undefined ? String(l.strength) : '1')));
+    }
     setExtracted(meta);
     setAutofillNote(
       filled.length
@@ -148,6 +173,17 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       setReading(false);
     }
   };
+
+  // Start with the given images (once; the dialog opens fresh each time)
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (startedRef.current || !initialFiles?.length) return;
+    startedRef.current = true;
+    void handleAdd(initialFiles);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateLora = (id: string, key: 'name' | 'strength', value: string) =>
+    setLoras((prev) => prev.map((l) => (l.id === id ? { ...l, [key]: value } : l)));
 
   const handleRemove = (id: string) => {
     setImages((prev) => {
@@ -189,18 +225,37 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
           : null;
       if (newFolderName !== null) addFolder(targetFolder);
 
+      // LoRAs typed by hand; ones that came from an image keep what was identified about them
+      const loraRefs: LoraReference[] = loras
+        .filter((l) => l.name.trim())
+        .map((l) => {
+          const rawName = l.name.trim();
+          const fromImage = extracted?.loras.find((x) => x.rawName === rawName);
+          return { ...fromImage, rawName, strength: toNumber(l.strength) };
+        });
+      const model = form.model.trim() || undefined;
+      const { resolveLoras, resolveBaseModel } = await import('../../../core/lora-resolution.js');
+      const [resolvedLoras, modelResolved] = await Promise.all([
+        withTimeout(resolveLoras(loraRefs), 8000, loraRefs),
+        model && model !== extracted?.model
+          ? withTimeout(resolveBaseModel({ model }), 8000, undefined)
+          : Promise.resolve(extracted?.modelResolved),
+      ]);
+
       const metadata: ExtractedMetadata = {
         ...(extracted ?? { loras: [], detectedFormat: 'unknown' as const }),
         prompt: form.prompt.trim(),
         negativePrompt: form.negativePrompt.trim() || undefined,
-        model: form.model.trim() || undefined,
+        model,
+        modelResolved,
+        modelHash: model && model === extracted?.model ? extracted?.modelHash : undefined,
         sampler: form.sampler.trim() || undefined,
         steps: toNumber(form.steps),
         cfgScale: toNumber(form.cfgScale),
         seed: form.seed.trim() || undefined,
         width: size?.width,
         height: size?.height,
-        loras: extracted?.loras ?? [],
+        loras: resolvedLoras,
       };
 
       const item = saveToLibrary({
@@ -319,6 +374,40 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
               </label>
               <GlassInput id="new-prompt-steps" type="number" min={1} value={form.steps} onChange={set('steps')} placeholder={t('newPrompt.stepsPlaceholder')} />
             </div>
+          </div>
+
+          <div className={pageStyles.formField}>
+            <span className={pageStyles.label}>{t('newPrompt.loras')}</span>
+            {loras.map((l) => (
+              <div key={l.id} className={styles.loraRow}>
+                <GlassInput
+                  value={l.name}
+                  onChange={(e) => updateLora(l.id, 'name', e.target.value)}
+                  placeholder={t('newPrompt.loraName')}
+                  aria-label={t('newPrompt.loraName')}
+                />
+                <GlassInput
+                  type="number"
+                  step={0.05}
+                  value={l.strength}
+                  onChange={(e) => updateLora(l.id, 'strength', e.target.value)}
+                  aria-label={t('newPrompt.loraWeight')}
+                  title={t('newPrompt.loraWeight')}
+                />
+                <button
+                  type="button"
+                  className={styles.loraRemove}
+                  onClick={() => setLoras((prev) => prev.filter((x) => x.id !== l.id))}
+                  title={t('newPrompt.removeLora')}
+                  aria-label={t('newPrompt.removeLora')}
+                >
+                  <CloseIcon size={14} />
+                </button>
+              </div>
+            ))}
+            <button type="button" className={styles.addLoraBtn} onClick={() => setLoras((prev) => [...prev, newLoraRow()])}>
+              <PlusIcon size={13} /> {t('newPrompt.addLora')}
+            </button>
           </div>
 
           {saveError && <div className={styles.error}>{saveError}</div>}

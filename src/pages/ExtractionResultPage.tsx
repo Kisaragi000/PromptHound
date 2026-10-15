@@ -28,6 +28,7 @@ import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
 import { PromptFormatSelector } from '../components/recipe/PromptFormatSelector.js';
 import { LoraMixerPanel } from '../components/recipe/LoraMixerPanel.js';
 import { MultiImageSessionStrip } from '../components/recipe/MultiImageSessionStrip.js';
+import { NewPromptModal } from '../components/library/NewPromptModal.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { LoraReference, ExtractedMetadata } from '../../core/types.js';
@@ -133,6 +134,8 @@ export const ExtractionResultPage: React.FC = () => {
   const [inspectingLora, setInspectingLora] = useState<LoraReference | null>(null);
   const [customLoras, setCustomLoras] = useState<LoraReference[] | null>(null);
   const [isEditingModel, setIsEditingModel] = useState(false);
+  // New Prompt form opened from the failed-extraction screen, with that image attached
+  const [manualFiles, setManualFiles] = useState<File[] | null>(null);
   const [modelDraft, setModelDraft] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
@@ -224,6 +227,12 @@ export const ExtractionResultPage: React.FC = () => {
     }
   };
 
+  // The failed image (when the app still has it) goes into the form as the entry's picture
+  const openManualForm = () => {
+    const file = sessionImages[activeImageIndex]?.file;
+    setManualFiles(file ? [file] : []);
+  };
+
   const handleOpenImageClick = async () => {
     if (window.promptHound?.extraction?.openFileDialog) {
       const selected = await window.promptHound.extraction.openFileDialog();
@@ -300,7 +309,7 @@ export const ExtractionResultPage: React.FC = () => {
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' && !isViewingSavedRecipe) {
     return (
       <div className={styles.page}>
         <div className={styles.loadingWrap}>
@@ -313,7 +322,7 @@ export const ExtractionResultPage: React.FC = () => {
     );
   }
 
-  if (status === 'error') {
+  if (status === 'error' && !isViewingSavedRecipe) {
     return (
       <div className={styles.page}>
         <input
@@ -344,6 +353,7 @@ export const ExtractionResultPage: React.FC = () => {
             previewUrl={sessionImages[activeImageIndex]?.previewUrl}
             fileName={sessionImages[activeImageIndex]?.file?.name}
             onSelectAnother={handleOpenImageClick}
+            onFillManually={openManualForm}
             onBackHome={() => {
               reset();
               navigate('home');
@@ -355,10 +365,13 @@ export const ExtractionResultPage: React.FC = () => {
           title={t('result.errorTitle')}
           description={error?.message ? translateMessage(error.message) : t('result.unknownError')}
           action={
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
               <PrimaryButton onClick={handleOpenImageClick}>
                 <ImageIcon size={16} /> {t('common.selectAnotherImage')}
               </PrimaryButton>
+              <SecondaryButton onClick={openManualForm}>
+                <EditIcon size={16} /> {t('result.fillManually')}
+              </SecondaryButton>
               <SecondaryButton
                 onClick={() => {
                   reset();
@@ -370,6 +383,17 @@ export const ExtractionResultPage: React.FC = () => {
             </div>
           }
         />
+        )}
+        {manualFiles && (
+          <NewPromptModal
+            defaultFolder="All Prompts"
+            initialFiles={manualFiles}
+            onClose={() => setManualFiles(null)}
+            onSaved={(item) => {
+              setManualFiles(null);
+              showInLibrary(item.id);
+            }}
+          />
         )}
       </div>
     );

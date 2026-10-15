@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ContentCredentials } from '../../../core/types.js';
-import { CheckIcon, ImageIcon, SparklesIcon } from '../icons/Icons.js';
+import { CheckIcon, EditIcon, ImageIcon, SparklesIcon } from '../icons/Icons.js';
 import { PrimaryButton } from '../primitives/PrimaryButton.js';
 import { SecondaryButton } from '../primitives/SecondaryButton.js';
 import { useT, type StringKey } from '../../i18n/index.js';
@@ -12,6 +12,7 @@ interface ContentCredentialsPanelProps {
   fileName?: string;
   onSelectAnother: () => void;
   onBackHome: () => void;
+  onFillManually?: () => void;
 }
 
 // IPTC digital source types in plain words
@@ -45,6 +46,7 @@ export const ContentCredentialsPanel: React.FC<ContentCredentialsPanelProps> = (
   fileName,
   onSelectAnother,
   onBackHome,
+  onFillManually,
 }) => {
   const t = useT();
   const { aiGenerated, product } = credentials;
@@ -113,6 +115,11 @@ export const ContentCredentialsPanel: React.FC<ContentCredentialsPanelProps> = (
           <PrimaryButton onClick={onSelectAnother}>
             <ImageIcon size={16} /> {t('common.selectAnotherImage')}
           </PrimaryButton>
+          {onFillManually && (
+            <SecondaryButton onClick={onFillManually}>
+              <EditIcon size={16} /> {t('result.fillManually')}
+            </SecondaryButton>
+          )}
           <SecondaryButton onClick={onBackHome}>{t('common.backToHome')}</SecondaryButton>
         </div>
       </div>
