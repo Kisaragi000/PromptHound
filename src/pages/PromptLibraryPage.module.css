@@ -340,9 +340,13 @@
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   position: relative;
   width: 100%;
+  /* Cards out of view skip layout and painting, so fast scrolling through a big library stays
+     smooth; the browser remembers each card's real height once it has been shown */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 380px;
 }
 
 .promptCard:hover {

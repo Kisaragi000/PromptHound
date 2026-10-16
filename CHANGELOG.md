@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.7
+
+### Fixed
+- **Library images are always kept in the app's own folder.** An image opened with Select file
+  (or Explorer's menu), from a web link, or pasted, was saved only as a pointer to the original
+  file or web address, so moving or deleting the original broke the entry. New entries now get a
+  copy, and existing entries are copied once when the app starts (while the original still exists).
+- Sync Models now counts only models that are actually new, says "Catalog up to date" when there
+  are none, and fetches the newest LoRAs instead of the most downloaded ones the app already has.
+- Scrolling fast through a big Prompt Library no longer stutters: cards out of view are skipped
+  until they scroll in.
+
 ## v1.1.6
 
 ### Added

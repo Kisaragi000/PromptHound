@@ -765,6 +765,15 @@ function registerExtractionHandlers(): void {
   // Lets the renderer embed local images (exports, library thumbnails). Image files only.
   ipcMain.handle('file:read-image-data-url', async (_event, fileUrl: string): Promise<string | null> => {
     try {
+      // Web images (kept in the library) are fetched here, where page CORS rules do not apply
+      if (/^https?:\/\//i.test(fileUrl)) {
+        const response = await fetch(fileUrl, { signal: AbortSignal.timeout(30000) });
+        const type = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+        if (!response.ok || !type.startsWith('image/')) return null;
+        const data = Buffer.from(await response.arrayBuffer());
+        if (data.length > 60 * 1024 * 1024) return null;
+        return `data:${type};base64,${data.toString('base64')}`;
+      }
       const filePath = fileURLToPath(fileUrl);
       const ext = path.extname(filePath).toLowerCase();
       const mime: Record<string, string> = {
