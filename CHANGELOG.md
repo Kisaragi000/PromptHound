@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.9
 
 ### Added
 - **Name and Folder on the result page.** Under Quick Actions there is a Name field and a Folder
