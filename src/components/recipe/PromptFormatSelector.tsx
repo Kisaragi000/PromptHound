@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import type { ExtractedMetadata, LoraReference } from '../../../core/types.js';
 import { CopyIcon, CheckIcon, SparklesIcon } from '../icons/Icons.js';
 import { IconButton } from '../primitives/IconButton.js';
+import { readablePrompt } from '../../../core/prompt-readable.js';
 import { useT } from '../../i18n/index.js';
 import styles from './PromptFormatSelector.module.css';
 
-export type PromptSyntaxFormat = 'a1111' | 'comfyui' | 'plaintext';
+export type PromptSyntaxFormat = 'a1111' | 'readable' | 'comfyui' | 'plaintext';
 
 interface PromptFormatSelectorProps {
   metadata: ExtractedMetadata;
@@ -34,7 +35,7 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
         .trim();
     }
 
-    if (format === 'a1111') {
+    if (format === 'a1111' || format === 'readable') {
       // Append any missing LoRA tags in A1111 syntax if not already present
       let result = rawPrompt;
       loras.forEach((l) => {
@@ -43,6 +44,10 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
           result += `, ${tag}`;
         }
       });
+      if (format === 'readable') {
+        // Same tags, grouped: style and triggers, character, pose, background, quality
+        return readablePrompt(result, loras.flatMap((l) => l.resolved?.triggerWords ?? []));
+      }
       return result.trim();
     }
 
@@ -90,6 +95,13 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
             {t('format.a1111')}
           </button>
           <button
+            className={`${styles.tab} ${format === 'readable' ? styles.tabActive : ''}`}
+            onClick={() => setFormat('readable')}
+            title={t('format.readableTitle')}
+          >
+            {t('format.readable')}
+          </button>
+          <button
             className={`${styles.tab} ${format === 'comfyui' ? styles.tabActive : ''}`}
             onClick={() => setFormat('comfyui')}
           >
@@ -116,7 +128,7 @@ export const PromptFormatSelector: React.FC<PromptFormatSelectorProps> = ({
         </button>
       </div>
 
-      <div className={styles.promptBox}>
+      <div className={`${styles.promptBox} ${format === 'readable' ? styles.promptBoxTall : ''}`}>
         {formattedText || t('format.empty')}
       </div>
     </div>

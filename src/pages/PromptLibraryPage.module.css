@@ -290,6 +290,45 @@
   color: #64748b;
 }
 
+/* Edit mode: folders can be dragged to change their order */
+.folderDraggable {
+  position: relative;
+  cursor: grab;
+}
+
+.folderDraggable .folderItem {
+  cursor: grab;
+}
+
+.folderGrip {
+  color: #64748b;
+}
+
+.folderDragging {
+  opacity: 0.4;
+}
+
+/* Amber line where the dragged folder will land */
+.folderDropBefore::before,
+.folderDropAfter::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-amber-primary);
+  pointer-events: none;
+}
+
+.folderDropBefore::before {
+  top: -1px;
+}
+
+.folderDropAfter::after {
+  bottom: -1px;
+}
+
 /* Grid Area */
 .gridArea {
   display: grid;

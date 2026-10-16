@@ -332,8 +332,14 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
                     aria-label={t('common.newFolderName')}
                     autoFocus
                   />
-                  <button type="button" className={styles.linkBtn} onClick={() => setNewFolderName(null)}>
-                    {t('common.cancel')}
+                  <button
+                    type="button"
+                    className={styles.newFolderCancel}
+                    onClick={() => setNewFolderName(null)}
+                    title={t('common.cancel')}
+                    aria-label={t('common.cancel')}
+                  >
+                    <CloseIcon size={14} />
                   </button>
                 </div>
               )}

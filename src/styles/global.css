@@ -77,3 +77,16 @@ input {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Number fields (Steps, CFG, LoRA weight) without the browser's spin arrows; the value is typed,
+   and the arrow keys still step it */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

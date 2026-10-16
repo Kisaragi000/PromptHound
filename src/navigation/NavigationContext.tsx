@@ -56,6 +56,8 @@ interface NavigationContextType {
   renameFolder: (oldName: string, newName: string) => boolean;
   /** Removes a folder; its items are kept (they stay in All Prompts, unfiled) */
   deleteFolder: (folderName: string) => void;
+  /** Puts a folder just before or after another one; "All Prompts" stays first */
+  moveFolder: (folderName: string, target: string, after: boolean) => void;
   toggleFavorite: (id: string) => void;
   /** Adds items restored from a backup (ids not already in the library) and their folders */
   importLibraryItems: (items: SavedPromptItem[], folders: string[]) => void;
@@ -327,6 +329,19 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
     reassignFolder(folderName, '');
   };
 
+  const moveFolder = (folderName: string, target: string, after: boolean) => {
+    setFolders((prev) => {
+      if (folderName === target || folderName === ALL_PROMPTS_FOLDER || !prev.includes(folderName) || !prev.includes(target)) {
+        return prev;
+      }
+      const rest = prev.filter((f) => f !== folderName);
+      let index = rest.indexOf(target) + (after ? 1 : 0);
+      if (rest[0] === ALL_PROMPTS_FOLDER) index = Math.max(index, 1);
+      rest.splice(index, 0, folderName);
+      return rest;
+    });
+  };
+
   const importLibraryItems = (items: SavedPromptItem[], importedFolders: string[]) => {
     const folderNames = [...importedFolders, ...items.map((i) => i.folder)]
       .map((f) => (typeof f === 'string' ? f.trim() : ''))
@@ -410,6 +425,7 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
         addFolder,
         renameFolder,
         deleteFolder,
+        moveFolder,
         toggleFavorite,
         importLibraryItems,
         openRecipeInResult,

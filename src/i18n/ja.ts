@@ -218,6 +218,8 @@ export const ja: Record<StringKey, string> = {
 
   // Prompt format switcher
   'format.a1111': 'A1111 / Forge 構文',
+  'format.readable': '読みやすく',
+  'format.readableTitle': 'タグをグループ分け：画風とトリガー、キャラクター、ポーズ、背景、品質',
   'format.comfyui': 'ComfyUI プロンプト',
   'format.plain': 'プレーンテキスト',
   'format.copy': 'この形式でコピー',
@@ -374,7 +376,7 @@ export const ja: Record<StringKey, string> = {
   'library.newFolder': '新規フォルダー',
   'library.newPrompt': '新規プロンプト',
   'library.moved': '{count} 件を「{folder}」に移動しました',
-  'library.editHelp': '項目を選択して移動または削除します。フォルダーをクリックすると名前の変更や削除ができます。',
+  'library.editHelp': '項目を選択して移動または削除します。フォルダーはクリックで名前の変更や削除、ドラッグで並べ替えができます。',
   'library.moveSelectFirst': '先に項目を選択してから、フォルダーを選んでください',
   'library.moveToTitle': '選択した項目の移動先フォルダー',
   'library.move': 'フォルダーへ移動 ({count})',

@@ -7,6 +7,15 @@
   Base Model has "+ Add LoRA" (or Edit when it already has some): the same rows as the New Prompt
   form, with name, weight and a model page link for each.
 - The Base Model's Edit button also takes a model page link now.
+- **Readable prompt layout.** The prompt format menu has a Readable tab that regroups the tags,
+  with a blank line between groups: style, artist and trigger words; character; pose and
+  expression; background; quality tags. A name it doesn't know stays with the tag before it.
+- **Reorder folders.** In Edit Library, drag a folder up or down the folder list.
+
+### Changed
+- Number fields (Steps, LoRA weight) no longer show the browser's spin arrows.
+- The new-folder field in the New Prompt form has an X instead of a Cancel button that
+  overflowed its border.
 
 ## v1.1.7
 

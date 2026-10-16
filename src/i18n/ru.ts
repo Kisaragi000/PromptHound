@@ -217,6 +217,8 @@ export const ru: Record<StringKey, string> = {
 
   // Prompt format switcher
   'format.a1111': 'Синтаксис A1111 / Forge',
+  'format.readable': 'Читаемый вид',
+  'format.readableTitle': 'Группирует теги: стиль и триггеры, персонаж, поза, фон, качество',
   'format.comfyui': 'Промпт для ComfyUI',
   'format.plain': 'Чистый текст',
   'format.copy': 'Копировать в этом формате',
@@ -375,7 +377,7 @@ export const ru: Record<StringKey, string> = {
   'library.newPrompt': 'Новый промпт',
   'library.moved':
     'Перемещена {count} запись в «{folder}»|Перемещено {count} записи в «{folder}»|Перемещено {count} записей в «{folder}»',
-  'library.editHelp': 'Выберите записи, чтобы переместить или удалить их. Нажмите на папку, чтобы переименовать или удалить её.',
+  'library.editHelp': 'Выберите записи, чтобы переместить или удалить их. Нажмите на папку, чтобы переименовать или удалить её, или перетащите, чтобы изменить порядок.',
   'library.moveSelectFirst': 'Сначала выберите записи, затем папку',
   'library.moveToTitle': 'Папка, в которую переместить выбранные записи',
   'library.move': 'Переместить ({count})',

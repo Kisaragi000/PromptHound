@@ -215,6 +215,8 @@ export const en = {
 
   // Prompt format switcher
   'format.a1111': 'A1111 / Forge Syntax',
+  'format.readable': 'Readable',
+  'format.readableTitle': 'Groups the tags: style and triggers, character, pose, background, quality',
   'format.comfyui': 'ComfyUI Prompt',
   'format.plain': 'Clean Plaintext',
   'format.copy': 'Copy Formatted',
@@ -371,7 +373,7 @@ export const en = {
   'library.newFolder': 'New Folder',
   'library.newPrompt': 'New Prompt',
   'library.moved': 'Moved {count} item to "{folder}"|Moved {count} items to "{folder}"',
-  'library.editHelp': 'Select items to move or delete them. Click a folder to rename or delete it.',
+  'library.editHelp': 'Select items to move or delete them. Click a folder to rename or delete it, or drag it to reorder.',
   'library.moveSelectFirst': 'Select items first, then pick a folder',
   'library.moveToTitle': 'Folder to move the selected items to',
   'library.move': 'Move to folder ({count})',
