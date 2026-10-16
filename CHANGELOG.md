@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.8
 
 ### Added
 - **Add or change LoRAs on saved entries.** On a library entry's page, the LoRAs section under the
@@ -9,7 +9,8 @@
 - The Base Model's Edit button also takes a model page link now.
 - **Readable prompt layout.** The prompt format menu has a Readable tab that regroups the tags,
   with a blank line between groups: style, artist and trigger words; character; pose and
-  expression; background; quality tags. A name it doesn't know stays with the tag before it.
+  expression; background; quality tags. Unknown single words (like LoRA trigger words) go to the
+  top group; other unknown names stay with the tag before them.
 - **Reorder folders.** In Edit Library, drag a folder up or down the folder list.
 
 ### Changed

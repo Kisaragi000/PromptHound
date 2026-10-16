@@ -51,4 +51,11 @@ describe('Readable prompt layout', () => {
     assert.deepEqual(groups.style, ['some_artist']);
     assert.deepEqual(groups.quality, ['masterpiece', 'best quality']);
   });
+
+  it('sends unknown single words (LoRA triggers) to the top group', () => {
+    const groups = groupPromptTags('1girl, blonde hair, zkz, hiroi_kikuri, smiling, ohwx_style2, shu_\\(arknights\\)');
+    assert.deepEqual(groups.style, ['zkz', 'ohwx_style2']);
+    assert.deepEqual(groups.character, ['1girl', 'blonde hair', 'hiroi_kikuri']);
+    assert.deepEqual(groups.action, ['smiling', 'shu_\\(arknights\\)']);
+  });
 });

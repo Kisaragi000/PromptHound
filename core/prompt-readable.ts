@@ -7,8 +7,9 @@
  *   background and setting
  *   quality tags
  *
- * Tags are sorted by keywords. A tag no rule knows (an artist or character name, a typo)
- * stays with the tag before it, so names written next to what they belong to stay there.
+ * Tags are sorted by keywords. An unknown single word (usually a LoRA trigger like "zkz" or an
+ * artist) goes to the top group; other unknown tags (character names like "shu (arknights)")
+ * stay with the tag before them, so names written next to what they belong to stay there.
  */
 
 export type TagGroup = 'style' | 'character' | 'action' | 'scene' | 'quality';
@@ -147,6 +148,13 @@ export function classifyTag(tag: string, triggerWords: string[] = []): TagGroup 
   return null;
 }
 
+/** A LoRA trigger-like word: one word ("zkz"), or one token with a digit ("ohwx_style2"), no brackets */
+function isLoneWord(tag: string): boolean {
+  const w = normalizeTag(tag);
+  if (/[()]/.test(w)) return false;
+  return !w.includes(' ') || (!/\s/.test(tag.trim()) && /\d/.test(w));
+}
+
 /** Sorts the tags into groups, in prompt order within each group */
 export function groupPromptTags(prompt: string, triggerWords: string[] = []): Record<TagGroup, string[]> {
   const groups: Record<TagGroup, string[]> = { style: [], character: [], action: [], scene: [], quality: [] };
@@ -154,6 +162,11 @@ export function groupPromptTags(prompt: string, triggerWords: string[] = []): Re
   for (const tag of splitPromptTags(prompt)) {
     if (/^BREAK$/.test(tag)) continue;
     const known = classifyTag(tag, triggerWords);
+    if (!known && isLoneWord(tag)) {
+      // Trigger words go on top, and don't pull the next unknown name up with them
+      groups.style.push(tag);
+      continue;
+    }
     // A name next to quality tags is usually an artist, not a quality tag
     const group: TagGroup = known ?? (previous === 'quality' ? 'style' : previous);
     groups[group].push(tag);
