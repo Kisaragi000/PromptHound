@@ -30,6 +30,7 @@ export interface PromptHoundAPI {
     fromFilePath: (filePath: string) => Promise<ExtractionResult | ExtractionError>;
     fromClipboard: () => Promise<ExtractionResult | ExtractionError>;
     fromUrl: (url: string) => Promise<ExtractionResult | ExtractionError>;
+    modelPage?: (url: string) => Promise<{ name?: string; coverImageUrl?: string }>;
     getPathForFile: (file: File) => string;
     openFileDialog: () => Promise<string | null>;
     readImageAsDataUrl?: (fileUrl: string) => Promise<string | null>;

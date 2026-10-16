@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { en } from '../src/i18n/en.js';
 import { ru } from '../src/i18n/ru.js';
 import { zh } from '../src/i18n/zh.js';
+import { ja } from '../src/i18n/ja.js';
 import { setLanguage, t } from '../src/i18n/index.js';
 import { translateMessage } from '../src/i18n/labels.js';
 
@@ -24,6 +25,14 @@ test('every English text has a Chinese one with the same placeholders', () => {
   assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort());
 });
 
+test('every English text has a Japanese one with the same placeholders', () => {
+  for (const key of Object.keys(en) as Array<keyof typeof en>) {
+    assert.ok(ja[key], `missing Japanese text for ${key}`);
+    assert.equal(placeholders(ja[key]), placeholders(en[key]), `placeholders differ for ${key}`);
+  }
+  assert.deepEqual(Object.keys(ja).sort(), Object.keys(en).sort());
+});
+
 test('plural texts have the right number of forms', () => {
   for (const key of Object.keys(en) as Array<keyof typeof en>) {
     const enForms = en[key].split('|').length;
@@ -36,6 +45,7 @@ test('plural texts have the right number of forms', () => {
     }
     // Chinese nouns do not change with the number, so every text has one form
     assert.equal(zh[key].split('|').length, 1, `${key}: Chinese needs 1 form`);
+    assert.equal(ja[key].split('|').length, 1, `${key}: Japanese needs 1 form`);
   }
 });
 

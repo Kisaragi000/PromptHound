@@ -42,6 +42,8 @@ const extraction = {
     ipcRenderer.invoke('extraction:from-clipboard'),
   fromUrl: (url: string): Promise<ExtractionResult | ExtractionError> =>
     ipcRenderer.invoke('extraction:from-url', url),
+  modelPage: (url: string): Promise<{ name?: string; coverImageUrl?: string }> =>
+    ipcRenderer.invoke('extraction:model-page', url),
   getPathForFile: (file: File): string => {
     try {
       return webUtils.getPathForFile(file);

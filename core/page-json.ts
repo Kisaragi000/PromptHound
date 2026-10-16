@@ -116,3 +116,20 @@ export function scrapePageMetadata(html: string): PageScrapeResult {
 
   return { metadata, primaryImageUrl };
 }
+
+/**
+ * Name and cover of a model page (SeaArt has no public API), from the tags a page carries
+ * for link previews. A title that only names the site is not a model name.
+ */
+export function scrapeModelPage(html: string): { name?: string; coverImageUrl?: string } {
+  const $ = cheerio.load(html);
+  const meta = (key: string) =>
+    ($(`meta[property="${key}"]`).attr('content') ?? $(`meta[name="${key}"]`).attr('content') ?? '').trim();
+  const title = meta('og:title') || meta('twitter:title') || $('title').first().text().trim();
+  const name = title.replace(/\s*[|\-–—]\s*SeaArt\b.*$/i, '').trim();
+  const cover = meta('og:image') || meta('twitter:image');
+  return {
+    name: name && !/^seaart\b/i.test(name) ? name : undefined,
+    coverImageUrl: /^https:\/\//i.test(cover) ? cover : undefined,
+  };
+}

@@ -4,6 +4,7 @@ import {
   findLoraByHash,
   findLoraByAlias,
   findLoraByVersionId,
+  getCatalogNewestVersionId,
   normalizeHash,
   type CatalogKind,
   findMatchingSeedLorasInText,
@@ -569,4 +570,70 @@ export async function resolveBaseModel(
     'checkpoint'
   );
   return resolved.resolved;
+}
+
+/** Civitai model id and version id from a model page link (civitai.com, .red or .green) */
+export function parseCivitaiModelLink(link: string): { modelId: number; versionId?: number } | undefined {
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    return undefined;
+  }
+  if (!/(^|\.)civitai\.(com|red|green)$/i.test(url.hostname)) return undefined;
+  const match = url.pathname.match(/\/models\/(\d+)/);
+  if (!match) return undefined;
+  const versionId = Number(url.searchParams.get('modelVersionId'));
+  return { modelId: Number(match[1]), versionId: Number.isInteger(versionId) && versionId > 0 ? versionId : undefined };
+}
+
+/** The reference tied to a pasted link with nothing looked up about it */
+export function withLinkOnly(lora: LoraReference, link: string): LoraReference {
+  return { ...lora, resolved: { name: lora.rawName, source: 'link', modelUrl: link, matchedBy: 'manual' } };
+}
+
+/**
+ * Ties a LoRA or checkpoint to a model page link the user pasted. A Civitai link is looked up
+ * by its version (a link without one gets the model's newest version) to fill in the name,
+ * cover and trigger words; any other http(s) link, or a failed lookup, is saved as the link alone.
+ * The pasted link is always the one the entry opens.
+ */
+export async function resolveFromModelLink(
+  lora: LoraReference,
+  link: string,
+  kind: CatalogKind = 'lora'
+): Promise<LoraReference> {
+  const linkOnly = withLinkOnly(lora, link);
+  const ids = parseCivitaiModelLink(link);
+  if (!ids) return linkOnly;
+
+  let versionId = ids.versionId ?? getCatalogNewestVersionId(ids.modelId);
+  if (versionId === undefined) {
+    try {
+      const apiKey = getCivitaiApiKey();
+      const res = await fetch(`https://civitai.com/api/v1/models/${ids.modelId}`, {
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept': 'application/json',
+          ...(apiKey ? { Authorization: `Bearer ${apiKey.trim()}` } : {}),
+        },
+      });
+      if (res.ok) {
+        const model = (await res.json()) as { modelVersions?: { id?: number }[] };
+        versionId = model.modelVersions?.[0]?.id;
+      }
+    } catch {
+      // Offline: keep the link alone
+    }
+  }
+  if (versionId === undefined) return linkOnly;
+
+  // A placeholder name keeps the lookup to this exact version, never a name search
+  const found = await resolveSingleLora({ rawName: `Civitai model version ${versionId}`, civitaiVersionId: versionId }, kind);
+  if (!found.resolved) return { ...linkOnly, civitaiVersionId: versionId };
+  return {
+    ...lora,
+    civitaiVersionId: versionId,
+    resolved: { ...found.resolved, modelUrl: link, matchedBy: 'manual' },
+  };
 }

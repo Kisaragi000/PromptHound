@@ -23,6 +23,7 @@ import {
 import type { CandidateMatchResult } from '../../../core/similarity.js';
 import { seaartSearchUrl } from '../../../core/seaart.js';
 import { useT } from '../../i18n/index.js';
+import { linkSiteName } from './LoraCard.js';
 import { translateMessage } from '../../i18n/labels.js';
 
 interface LoraDetailsModalProps {
@@ -258,7 +259,7 @@ export const LoraDetailsModal: React.FC<LoraDetailsModalProps> = ({
                   rel="noopener noreferrer"
                   style={{ fontSize: '12px', color: '#818cf8', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
                 >
-                  {t('loraModal.viewOn', { site: lora.resolved.modelUrl.includes('civitai.red') ? 'Civitai.red' : 'Civitai' })} <ExternalLinkIcon size={12} />
+                  {t('loraModal.viewOn', { site: linkSiteName(lora.resolved.modelUrl) })} <ExternalLinkIcon size={12} />
                 </a>
               )}
               {seaartSearchUrl(lora.resolved?.name || lora.rawName) && (

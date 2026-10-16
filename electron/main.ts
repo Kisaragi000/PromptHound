@@ -10,6 +10,8 @@ import {
   type ExtractionError,
 } from '../core/index.js';
 import { analyzeSafetensorsMetadata } from '../core/safetensors.js';
+import { scrapeModelPage } from '../core/page-json.js';
+import { isSeaArtLink } from '../core/seaart.js';
 import {
   configureLoraPersistence,
   upsertLoraRecord,
@@ -727,6 +729,23 @@ function registerExtractionHandlers(): void {
       result.previewUrl = image.toDataURL();
     }
     return result;
+  });
+
+  // Model page name and cover for a pasted SeaArt link (the renderer cannot fetch other sites)
+  ipcMain.handle('extraction:model-page', async (_event, url: string) => {
+    if (typeof url !== 'string' || !isSeaArtLink(url)) return {};
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      return response.ok ? scrapeModelPage(await response.text()) : {};
+    } catch {
+      return {};
+    }
   });
 
   ipcMain.handle(
