@@ -4,6 +4,7 @@ import { MAX_LIBRARY_IMAGES } from '../../../core/types.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { storeLibraryImage } from '../../utils/libraryImages.js';
 import { recipeTitle } from '../../utils/recipeTitle.js';
+import { isSeaArtLink } from '../../../core/seaart.js';
 import { CloseIcon, FolderIcon, LinkIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
 import { Dropdown } from '../primitives/Dropdown.js';
 import { GlassInput } from '../primitives/GlassInput.js';
@@ -279,8 +280,21 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       // LoRAs typed by hand; ones that came from an image keep what was identified about them
       // A pasted link decides which model it is; otherwise the name is looked up
       const { resolveLoras, resolveBaseModel, resolveFromModelLink, withLinkOnly } = await import('../../../core/lora-resolution.js');
-      const fromLink = (ref: LoraReference, link: string, kind: 'lora' | 'checkpoint') =>
-        withTimeout(resolveFromModelLink(ref, link, kind), 8000, withLinkOnly(ref, link));
+      const fromLink = async (ref: LoraReference, link: string, kind: 'lora' | 'checkpoint') => {
+        const found = await withTimeout(resolveFromModelLink(ref, link, kind), 8000, withLinkOnly(ref, link));
+        // SeaArt has no API: its page gives the model's name and cover
+        const readPage = window.promptHound?.extraction?.modelPage;
+        if (found.resolved?.source !== 'link' || !isSeaArtLink(link) || !readPage) return found;
+        const page = await withTimeout(readPage(link), 9000, {});
+        return {
+          ...found,
+          resolved: {
+            ...found.resolved,
+            name: page.name || found.resolved.name,
+            coverImageUrl: page.coverImageUrl,
+          },
+        };
+      };
       const loraDrafts = loras.filter((l) => l.name.trim() || l.link.trim());
       const loraRefs: LoraReference[] = loraDrafts.map((l) => {
         const rawName = l.name.trim();

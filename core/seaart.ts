@@ -19,3 +19,13 @@ export function seaartSearchUrl(name: string): string | undefined {
   const term = seaartSearchTerm(name);
   return term ? `${SEAART_SEARCH}?keyword=${encodeURIComponent(term)}` : undefined;
 }
+
+/** A SeaArt page link (seaart.ai and its regional sites) */
+export function isSeaArtLink(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return /^https?:$/.test(protocol) && /(^|\.)seaart\.(ai|me)$/i.test(hostname);
+  } catch {
+    return false;
+  }
+}
