@@ -76,3 +76,8 @@
   max-height: 160px;
   overflow-y: auto;
 }
+
+/* The grouped layout has blank lines between groups, so it gets more room */
+.promptBoxTall {
+  max-height: 280px;
+}

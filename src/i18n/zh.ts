@@ -217,6 +217,8 @@ export const zh: Record<StringKey, string> = {
 
   // Prompt format switcher
   'format.a1111': 'A1111 / Forge 语法',
+  'format.readable': '易读排版',
+  'format.readableTitle': '按组排列标签：风格与触发词、角色、动作、背景、画质',
   'format.comfyui': 'ComfyUI 提示词',
   'format.plain': '纯文本',
   'format.copy': '按此格式复制',
@@ -371,7 +373,7 @@ export const zh: Record<StringKey, string> = {
   'library.newFolder': '新建文件夹',
   'library.newPrompt': '新建提示词',
   'library.moved': '已将 {count} 项移动到“{folder}”',
-  'library.editHelp': '选择条目以移动或删除。点击文件夹可重命名或删除它。',
+  'library.editHelp': '选择条目以移动或删除。点击文件夹可重命名或删除，拖动可调整顺序。',
   'library.moveSelectFirst': '请先选择条目，然后选择文件夹',
   'library.moveToTitle': '要将所选条目移动到的文件夹',
   'library.move': '移动到文件夹 ({count})',

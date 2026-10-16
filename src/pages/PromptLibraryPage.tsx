@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   FolderIcon,
+  GripIcon,
   SearchIcon,
   FilterIcon,
   PlusIcon,
@@ -49,6 +50,7 @@ export const PromptLibraryPage: React.FC = () => {
     addFolder,
     renameFolder,
     deleteFolder,
+    moveFolder,
     openRecipeInResult,
     libraryFocusId,
   } = useNavigation();
@@ -75,6 +77,13 @@ export const PromptLibraryPage: React.FC = () => {
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  // Edit mode: folders are dragged to change their order; the line shows where one will land
+  const [draggedFolder, setDraggedFolder] = useState<string | null>(null);
+  const [folderDrop, setFolderDrop] = useState<{ folder: string; after: boolean } | null>(null);
+  const endFolderDrag = () => {
+    setDraggedFolder(null);
+    setFolderDrop(null);
+  };
 
   // View Layout mode: 'grid' or 'table'
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -473,8 +482,38 @@ export const PromptLibraryPage: React.FC = () => {
                 </div>
               );
             }
+            const draggable = isEditMode && f !== 'All Prompts';
+            const dropLine = draggedFolder && draggedFolder !== f && folderDrop?.folder === f;
             return (
-              <div key={f} className={editable ? styles.folderEditBox : undefined}>
+              <div
+                key={f}
+                className={[
+                  editable ? styles.folderEditBox : '',
+                  draggable ? styles.folderDraggable : '',
+                  draggedFolder === f ? styles.folderDragging : '',
+                  dropLine ? (folderDrop.after ? styles.folderDropAfter : styles.folderDropBefore) : '',
+                ].join(' ')}
+                draggable={draggable}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', f);
+                  setDraggedFolder(f);
+                }}
+                onDragOver={(e) => {
+                  if (!draggedFolder) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  const box = e.currentTarget.getBoundingClientRect();
+                  const after = f === 'All Prompts' || e.clientY > box.top + box.height / 2;
+                  if (folderDrop?.folder !== f || folderDrop.after !== after) setFolderDrop({ folder: f, after });
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedFolder && folderDrop) moveFolder(draggedFolder, folderDrop.folder, folderDrop.after);
+                  endFolderDrag();
+                }}
+                onDragEnd={endFolderDrag}
+              >
                 <button
                   className={`${styles.folderItem} ${selectedFolder === f ? styles.activeFolder : ''}`}
                   onClick={() => {
@@ -484,7 +523,7 @@ export const PromptLibraryPage: React.FC = () => {
                   title={isEditMode && f !== 'All Prompts' ? t('library.selectFolderTitle', { folder: folderLabel(f) }) : undefined}
                 >
                   <div className={styles.folderLeft}>
-                    <FolderIcon size={16} />
+                    {draggable ? <GripIcon size={14} className={styles.folderGrip} /> : <FolderIcon size={16} />}
                     <span>{folderLabel(f)}</span>
                   </div>
                   <span className={styles.folderCount}>{folderCounts[f] || 0}</span>
