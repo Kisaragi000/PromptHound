@@ -1,5 +1,6 @@
 import type { LibraryImage } from '../../core/types.js';
-import { makeThumbnail } from './images.js';
+import { civitaiOriginal } from '../../core/civitai-images.js';
+import { imageToDataUrl, isSessionOnlyUrl, makeThumbnail, needsOwnCopy } from './images.js';
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
   'image/png': 'png',
@@ -43,14 +44,43 @@ export async function storeLibraryImage(itemId: string, file: Blob, name?: strin
   }
 }
 
-/** Stores an image the app currently shows by URL (e.g. a blob: preview of a dropped file) */
-export async function storeLibraryImageFromUrl(itemId: string, url: string, name?: string): Promise<LibraryImage | null> {
+/** The image behind a URL as a Blob: blob:/data: URLs directly, files and web images via the app */
+async function imageBlob(url: string): Promise<Blob | null> {
+  // Civitai shows resized copies; keep the original upload
+  const source = civitaiOriginal(url);
   try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return await storeLibraryImage(itemId, await response.blob(), name);
+    const response = await fetch(source);
+    if (response.ok) return await response.blob();
+  } catch {
+    // file: URLs and web images without CORS are read by the main process below
+  }
+  const dataUrl = await imageToDataUrl(source);
+  if (!dataUrl) return null;
+  try {
+    return await (await fetch(dataUrl)).blob();
   } catch {
     return null;
+  }
+}
+
+/** Stores a copy of an image the app shows by URL (a dropped file's preview, a file on disk, a web image) */
+export async function storeLibraryImageFromUrl(itemId: string, url: string, name?: string): Promise<LibraryImage | null> {
+  try {
+    const blob = await imageBlob(url);
+    return blob ? await storeLibraryImage(itemId, blob, name ?? fileNameFromUrl(url)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** File name in a file: or web URL ("00029-1201710852.png"), so the stored copy keeps its extension */
+function fileNameFromUrl(url: string): string | undefined {
+  if (!/^(file|https?):/i.test(url)) return undefined;
+  try {
+    const last = decodeURIComponent(new URL(url).pathname.split('/').pop() ?? '');
+    return /\.(png|jpe?g|jfif|webp|avif|gif)$/i.test(last) ? last : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -68,3 +98,30 @@ export function itemImages(item: { images?: LibraryImage[]; thumbnailUrl?: strin
 
 export const isImageFile = (file: File) =>
   file.type.startsWith('image/') || /\.(png|jpe?g|jfif|webp|avif|gif)$/i.test(file.name);
+
+/**
+ * Copies an entry's images that live outside the app (files elsewhere on disk, web images,
+ * images embedded in the library data, session previews) into the app's own folder, so the
+ * entry keeps them when the original is moved, deleted or taken offline. Returns the new
+ * images, or null when nothing was copied; an image that cannot be read is left as it is.
+ */
+export async function keepItemImages(item: {
+  id: string;
+  images?: LibraryImage[];
+  thumbnailUrl?: string;
+}): Promise<{ images: LibraryImage[]; thumbnailUrl: string } | null> {
+  // The web preview cannot write files: only session previews must be turned into data there
+  const desktop = Boolean(window.promptHound?.library?.storeImage);
+  const mustCopy = (url: string) => (desktop ? needsOwnCopy(url) : isSessionOnlyUrl(url));
+  const images = itemImages(item);
+  if (!images.some((img) => mustCopy(img.url))) return null;
+
+  let copied = false;
+  const kept: LibraryImage[] = [];
+  for (const image of images) {
+    const stored = mustCopy(image.url) ? await storeLibraryImageFromUrl(item.id, image.url, image.name) : null;
+    if (stored) copied = true;
+    kept.push(stored ?? image);
+  }
+  return copied ? { images: kept, thumbnailUrl: kept[0].thumbUrl } : null;
+}

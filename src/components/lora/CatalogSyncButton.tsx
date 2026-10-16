@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshIcon, CheckIcon } from '../icons/Icons.js';
-import { getLoraCacheStats, upsertLoraRecord } from '../../../core/lora-cache.js';
+import { findLoraByVersionId, getLoraCacheStats, upsertLoraRecord } from '../../../core/lora-cache.js';
 import { normalizeLoraName } from '../../../core/lora-resolution.js';
 import { getCivitaiApiKey } from '../../../core/lora-resolution.js';
 import { useT } from '../../i18n/index.js';
@@ -31,9 +31,9 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
     setProgress({ current: 0, total: 100 });
 
     try {
-      // Simulate incremental fetch of trending/latest LoRAs
+      // The newest LoRAs on Civitai: the bundled catalog already has the most downloaded ones
       const apiKey = getCivitaiApiKey() || '';
-      const url = `https://civitai.com/api/v1/models?types=LORA&types=LoCon&types=DoRA&sort=Most%20Downloaded&limit=50`;
+      const url = `https://civitai.com/api/v1/models?types=LORA&types=LoCon&types=DoRA&sort=Newest&limit=100`;
 
       setProgress({ current: 30, total: 100 });
 
@@ -54,6 +54,8 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
             const version = model.modelVersions?.[0];
             if (!version) continue;
 
+            // Only models the app did not know yet count as new
+            const isNew = !(await findLoraByVersionId(version.id));
             const coverImage = version.images?.[0];
             upsertLoraRecord({
               civitaiModelId: model.id,
@@ -70,10 +72,10 @@ export const CatalogSyncButton: React.FC<CatalogSyncButtonProps> = ({
               source: 'civitai',
               modelUrl: `https://civitai.com/models/${model.id}?modelVersionId=${version.id}`,
             });
-            added++;
+            if (isNew) added++;
           }
           setStats(getLoraCacheStats());
-          setStatusMessage(t('sync.synced', { count: added }));
+          setStatusMessage(added > 0 ? t('sync.synced', { count: added }) : t('sync.upToDate'));
           setSynced(true);
         } else {
           setStatusMessage(t('sync.upToDate'));

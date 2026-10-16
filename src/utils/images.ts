@@ -26,10 +26,12 @@ export async function imageToDataUrl(url: string | undefined | null): Promise<st
     // Fall through: file: URLs may be refused by fetch
   }
 
-  // Desktop app: local files are read by the main process (image files only)
-  if (absolute.startsWith('file:') && window.promptHound?.extraction?.readImageAsDataUrl) {
+  // Desktop app: local files, and web images the page may not fetch (no CORS), are read by
+  // the main process (image files only)
+  const read = window.promptHound?.extraction?.readImageAsDataUrl;
+  if (read && /^(file|https?):/i.test(absolute)) {
     try {
-      return (await window.promptHound.extraction.readImageAsDataUrl(absolute)) ?? undefined;
+      return (await read(absolute)) ?? undefined;
     } catch {
       return undefined;
     }
@@ -60,3 +62,11 @@ export async function makeThumbnail(url: string | undefined | null, maxSize = 64
 
 /** URLs that stop working after a restart and must not be stored. */
 export const isSessionOnlyUrl = (url: string | undefined | null) => Boolean(url && url.startsWith('blob:'));
+
+/**
+ * Images the library must copy into the app's own folder to keep them: session previews,
+ * files elsewhere on disk (they can be moved or deleted), web images (they can go offline)
+ * and images embedded in the library data. Kept images (ph-image:) and the bundled samples
+ * (relative paths) are already safe.
+ */
+export const needsOwnCopy = (url: string | undefined | null) => Boolean(url && /^(blob|file|data|https?):/i.test(url));

@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ExtractedMetadata, ExtractionResult, SavedPromptItem } from '../../core/types.js';
 import { INITIAL_SAMPLE_PROMPTS, isLegacyPlaceholderSample } from './samplePrompts.js';
-import { isSessionOnlyUrl } from '../utils/images.js';
-import { storeLibraryImageFromUrl, itemImages } from '../utils/libraryImages.js';
+import { keepItemImages, itemImages } from '../utils/libraryImages.js';
 
 export type RouteKey =
   | 'home'
@@ -16,6 +15,9 @@ export type RouteKey =
 const STORAGE_KEY_PROMPTS = 'prompthound_library_items_v9';
 const STORAGE_KEY_FOLDERS = 'prompthound_folders_v2';
 const STORAGE_KEY_FAVORITES = 'prompthound_favorites_v2';
+
+/** The one-time copy of old entries' outside images runs once per app start */
+let keepingStarted = false;
 
 /**
  * Replaces the placeholder samples shipped before v1.0.8 (stock photos with made-up
@@ -137,6 +139,16 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
           setLibraryItems(upgraded.items);
           const favs = upgraded.items.filter((i) => i.isFavorite).map((i) => i.id);
           setFavorites(favs);
+          // Entries saved by older versions may only point at a file elsewhere on disk or a web
+          // image; copy those into the app's folder once, one entry at a time
+          if (keepingStarted) return;
+          keepingStarted = true;
+          void (async () => {
+            for (const item of upgraded.items) {
+              const updates = await keepItemImages(item).catch(() => null);
+              if (updates) applyKeptImages(item.id, item.thumbnailUrl, updates);
+            }
+          })();
         } else {
           // Initialize native DB with initial sample prompts
           for (const sample of INITIAL_SAMPLE_PROMPTS) {
@@ -233,24 +245,25 @@ export const NavigationProvider: React.FC<{ children: ReactNode }> = ({ children
       window.promptHound.library.savePrompt(newItem);
     }
 
-    // Previews of dropped files are blob: URLs that die with the session; keep the file
+    // Keep a copy of the image in the app's folder: previews of dropped files die with the
+    // session, and files chosen from disk or web images can be moved, deleted or taken offline
     // (desktop app: original + thumbnail on disk; web preview: small embedded copies)
-    if (isSessionOnlyUrl(newItem.thumbnailUrl) && !newItem.images?.length) {
-      const sessionUrl = newItem.thumbnailUrl;
-      void storeLibraryImageFromUrl(id, sessionUrl).then((image) => {
-        if (!image) return;
-        const updates = { thumbnailUrl: image.thumbUrl, images: [image] };
-        setLibraryItems((prev) => {
-          const next = prev.map((item) => (item.id === id && item.thumbnailUrl === sessionUrl ? { ...item, ...updates } : item));
-          const updated = next.find((item) => item.id === id);
-          if (updated && window.promptHound?.library?.savePrompt) window.promptHound.library.savePrompt(updated);
-          return next;
-        });
-        setSelectedLibraryItem((prev) => (prev?.id === id ? { ...prev, ...updates } : prev));
-      });
-    }
+    void keepItemImages(newItem).then((updates) => {
+      if (updates) applyKeptImages(id, newItem.thumbnailUrl, updates);
+    });
 
     return newItem;
+  };
+
+  /** Swaps in kept copies, unless the entry's images were changed meanwhile */
+  const applyKeptImages = (id: string, previousCover: string | undefined, updates: Pick<SavedPromptItem, 'images' | 'thumbnailUrl'>) => {
+    setLibraryItems((prev) => {
+      const next = prev.map((item) => (item.id === id && item.thumbnailUrl === previousCover ? { ...item, ...updates } : item));
+      const updated = next.find((item) => item.id === id);
+      if (updated && updated.thumbnailUrl === updates.thumbnailUrl) window.promptHound?.library?.savePrompt?.(updated);
+      return next;
+    });
+    setSelectedLibraryItem((prev) => (prev?.id === id && prev.thumbnailUrl === previousCover ? { ...prev, ...updates } : prev));
   };
 
   const deleteFromLibrary = (id: string) => {
