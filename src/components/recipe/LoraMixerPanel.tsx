@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { LoraReference } from '../../../core/types.js';
-import { SparklesIcon, CopyIcon, CheckIcon, CpuIcon } from '../icons/Icons.js';
+import { SparklesIcon, CopyIcon, CheckIcon, ChevronRightIcon } from '../icons/Icons.js';
 import { useT } from '../../i18n/index.js';
+import { MAX_WEIGHT, SNAP_WEIGHTS, snapWeight } from '../../utils/loraWeights.js';
 import styles from './LoraMixerPanel.module.css';
+
+const OPEN_KEY = 'prompthound_mixer_open';
+
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface LoraMixerPanelProps {
   loras: LoraReference[];
@@ -26,15 +37,28 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
     return initial;
   });
 
-  const [localStrengths, setLocalStrengths] = useState<Record<string, number>>(() => {
-    const initial: Record<string, number> = {};
-    loras.forEach((l) => {
-      initial[l.rawName] = l.strength ?? 0.8;
-    });
-    return initial;
+  // Weights come from the LoRAs, so a weight changed elsewhere on the page shows here too
+  const localStrengths: Record<string, number> = {};
+  loras.forEach((l) => {
+    localStrengths[l.rawName] = l.strength ?? 0.8;
   });
 
   const [copied, setCopied] = useState(false);
+  // Folded unless it was left open last time
+  const [open, setOpen] = useState(readOpen);
+  // Snapping applies to dragging only, so arrow keys can still step past a snap weight
+  const dragging = useRef(false);
+
+  const toggleOpen = () => {
+    setOpen((prev) => {
+      try {
+        localStorage.setItem(OPEN_KEY, prev ? '0' : '1');
+      } catch {
+        // ignore
+      }
+      return !prev;
+    });
+  };
 
   if (!loras || loras.length === 0) return null;
 
@@ -43,10 +67,7 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
   };
 
   const handleStrengthChange = (rawName: string, val: number) => {
-    setLocalStrengths((prev) => ({ ...prev, [rawName]: val }));
-    if (onUpdateLoraStrength) {
-      onUpdateLoraStrength(rawName, val);
-    }
+    onUpdateLoraStrength?.(rawName, dragging.current ? snapWeight(val) : Math.round(val * 100) / 100);
   };
 
   // Generate weighted prompt string
@@ -65,7 +86,8 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
 
   const snippet = generateSnippet();
 
-  const handleCopy = async () => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       await navigator.clipboard.writeText(snippet);
       setCopied(true);
@@ -76,9 +98,24 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
   };
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
+    <div className={`${styles.panel} ${open ? '' : styles.panelFolded}`}>
+      <div
+        className={styles.header}
+        onClick={toggleOpen}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        title={t('mixer.foldTitle')}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleOpen();
+          }
+        }}
+      >
         <div className={styles.titleRow}>
+          <ChevronRightIcon size={14} className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} />
           <SparklesIcon size={16} />
           <h4 className={styles.title}>{t('mixer.title')}</h4>
         </div>
@@ -88,6 +125,8 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
         </button>
       </div>
 
+      {open && (
+      <>
       <div className={styles.loraList}>
         {loras.map((lora) => {
           const strength = localStrengths[lora.rawName] ?? lora.strength ?? 0.8;
@@ -106,13 +145,28 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
               <div className={styles.sliderRow}>
                 <input
                   type="range"
-                  min="0.0"
-                  max="2.0"
-                  step="0.05"
-                  value={strength}
+                  min="0"
+                  max={MAX_WEIGHT}
+                  step="0.01"
+                  value={Math.min(Math.max(strength, 0), MAX_WEIGHT)}
+                  onPointerDown={() => (dragging.current = true)}
+                  onPointerUp={() => (dragging.current = false)}
+                  onPointerCancel={() => (dragging.current = false)}
+                  onKeyDown={() => (dragging.current = false)}
                   onChange={(e) => handleStrengthChange(lora.rawName, parseFloat(e.target.value))}
                   className={styles.slider}
+                  aria-label={lora.resolved?.name || lora.rawName}
                 />
+                {/* Marks at the snap weights */}
+                <div className={styles.ticks} aria-hidden="true">
+                  {SNAP_WEIGHTS.map((w) => (
+                    <span
+                      key={w}
+                      className={`${styles.tick} ${Math.abs(strength - w) < 0.001 ? styles.tickOn : ''}`}
+                      style={{ left: `calc(${(w / MAX_WEIGHT) * 100}% + ${8 - (w / MAX_WEIGHT) * 16}px)` }}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Trigger Words Toggle Pills */}
@@ -145,6 +199,8 @@ export const LoraMixerPanel: React.FC<LoraMixerPanelProps> = ({
       <div className={styles.snippetPreview}>
         <span className={styles.snippetCode}>{snippet}</span>
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -210,6 +210,7 @@ export const ja: Record<StringKey, string> = {
   'result.copyJson': 'JSON メタデータをコピー',
   'result.source': '抽出元',
   'result.quickActions': 'クイック操作',
+  'result.name': '名前',
   'result.copyAllSettings': '全設定をコピー',
   'result.extractFromUrl': 'URL から抽出',
   'result.defaultTitle': 'AI 生成レシピ',
@@ -229,6 +230,7 @@ export const ja: Record<StringKey, string> = {
   'mixer.title': 'LoRA のウェイトとトリガーワードの調整',
   'mixer.copy': 'LoRA 一式をコピー',
   'mixer.toggle': 'クリックすると、コピーするプロンプトにこのトリガーワードを含めるかどうかを切り替えます',
+  'mixer.foldTitle': 'クリックで表示/非表示',
 
   // Batch strip on the result page
   'session.title': '一括プレビュー',
@@ -295,6 +297,7 @@ export const ja: Record<StringKey, string> = {
   'lora.inspectTitle': 'クリックで LoRA モデルを確認または再リンク',
   'lora.inspectSearch': 'モデルを確認・検索',
   'lora.inspect': '確認',
+  'lora.changeWeight': 'クリックしてウェイトを変更',
   'lora.link': 'リンク',
   'lora.searchSeaart': 'SeaArt で「{name}」を検索',
   'lora.redTitle': 'Civitai Red (NSFW) 経由でモデルを表示',
@@ -456,6 +459,7 @@ export const ja: Record<StringKey, string> = {
   'newPrompt.addLora': 'LoRA を追加',
   'newPrompt.loraName': 'LoRA 名',
   'newPrompt.loraWeight': 'ウェイト',
+  'newPrompt.lookingUp': '検索中…',
   'newPrompt.removeLora': 'LoRA を削除',
   'newPrompt.modelLink': 'モデルページのリンク',
   'newPrompt.linkPlaceholder': 'モデルページのリンクを貼り付け（Civitai、Hugging Face…）',

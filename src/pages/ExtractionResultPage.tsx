@@ -19,7 +19,8 @@ import { IconButton } from '../components/primitives/IconButton.js';
 import { EmptyStatePanel } from '../components/primitives/EmptyStatePanel.js';
 import { ExportCard } from '../components/ExportCard.js';
 import { ContentCredentialsPanel } from '../components/recipe/ContentCredentialsPanel.js';
-import { recipeTitle } from '../utils/recipeTitle.js';
+import { defaultEntryName } from '../utils/recipeTitle.js';
+import { lastSaveFolder, rememberSaveFolder } from '../utils/saveFolder.js';
 import { imageToDataUrl } from '../utils/images.js';
 import { itemImages } from '../utils/libraryImages.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
@@ -36,8 +37,10 @@ import {
   pastedLink,
   resolveDraftLoras,
   resolveFromLink,
+  useNameFromLink,
   type DraftLora,
 } from '../components/lora/LoraRowsEditor.js';
+import { EntryNameFolderPanel } from '../components/recipe/EntryNameFolderPanel.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
 import { PromptFormatSelector } from '../components/recipe/PromptFormatSelector.js';
 import { LoraMixerPanel } from '../components/recipe/LoraMixerPanel.js';
@@ -125,6 +128,7 @@ export const ExtractionResultPage: React.FC = () => {
     libraryItems,
     showInLibrary,
     updateLibraryItem,
+    folders,
   } = useNavigation();
   const {
     status,
@@ -158,6 +162,9 @@ export const ExtractionResultPage: React.FC = () => {
   // Lookups can take a few seconds while a model or LoRA link is identified
   const [savingEdit, setSavingEdit] = useState<'model' | 'loras' | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  // Name and folder for saving; an empty name means the default one
+  const [nameDraft, setNameDraft] = useState('');
+  const [saveFolder, setSaveFolder] = useState(() => lastSaveFolder(folders));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
 
@@ -189,6 +196,8 @@ export const ExtractionResultPage: React.FC = () => {
     setCustomLoras(null);
     setSavedItemId(null);
   }, [result, activeMetadata]);
+  // Each image starts with an empty name
+  useEffect(() => setNameDraft(''), [result]);
 
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
 
@@ -212,6 +221,31 @@ export const ExtractionResultPage: React.FC = () => {
     const updated: ExtractedMetadata = { ...base, ...updates };
     updateLibraryItem(id, { ...('model' in updates ? { model: updates.model || '' } : {}), metadata: updated });
     if (current) setActiveMetadata(updated);
+  };
+
+  // Weight changes on a saved entry are saved once the slider rests
+  const pendingLoraSave = useRef<{ timer: ReturnType<typeof setTimeout>; save: () => void } | null>(null);
+  const flushLoraSave = () => {
+    const pending = pendingLoraSave.current;
+    pendingLoraSave.current = null;
+    if (pending) {
+      clearTimeout(pending.timer);
+      pending.save();
+    }
+  };
+  // Leaving the page right after moving a slider still saves the weight
+  const flushRef = useRef(flushLoraSave);
+  flushRef.current = flushLoraSave;
+  useEffect(() => () => flushRef.current(), []);
+
+  /** Changes the LoRAs shown; a saved entry (from the library, or just saved here) keeps them */
+  const changeLoras = (list: LoraReference[], delay = 0) => {
+    setCustomLoras(list);
+    const id = libraryItemIdRef.current ?? savedItemId;
+    if (!id) return;
+    if (pendingLoraSave.current) clearTimeout(pendingLoraSave.current.timer);
+    const save = () => saveEdit(id, { loras: list });
+    pendingLoraSave.current = { timer: setTimeout(flushLoraSave, delay), save };
   };
 
   const startEditingModel = () => {
@@ -268,8 +302,15 @@ export const ExtractionResultPage: React.FC = () => {
     const list = displayedLoras.map((l) =>
       l.rawName === updatedLora.rawName ? updatedLora : l
     );
-    setCustomLoras(list);
+    changeLoras(list);
   };
+
+  // A pasted base model link fills in the model's name while the field is empty
+  const lookingUpModel = useNameFromLink(
+    isEditingModel ? [{ key: 'model', name: modelDraft, link: modelLinkDraft }] : [],
+    'checkpoint',
+    (_key, _link, found) => setModelDraft((current) => (current.trim() ? current : found.rawName))
+  ).has('model');
   const previewUrl = isViewingSavedRecipe
     ? (activePreviewUrl || selectedLibraryItem?.thumbnailUrl || (activeMetadata as any)?.image?.url || null)
     : (result?.previewUrl ?? null);
@@ -417,7 +458,7 @@ export const ExtractionResultPage: React.FC = () => {
         {/* Other images in this batch stay reachable from the error screen */}
         {sessionImages.length > 1 && (
           <div style={{ maxWidth: '380px' }}>
-            <MultiImageSessionStrip />
+            <MultiImageSessionStrip folder={saveFolder} />
           </div>
         )}
         {error?.contentCredentials ? (
@@ -514,14 +555,18 @@ export const ExtractionResultPage: React.FC = () => {
     );
   }
 
+  const sourceFileName = !isViewingSavedRecipe && result?.source.kind === 'file' ? result.source.label : undefined;
+  const defaultName = defaultEntryName(metadata, sourceFileName);
+  const shownEntry = selectedLibraryItem ?? libraryItems.find((i) => i.id === savedItemId);
+
   const handleSaveToLibrary = () => {
     // Already saved: show it instead of saving a duplicate
     if (savedItemId && libraryItems.some((i) => i.id === savedItemId)) {
       showInLibrary(savedItemId);
       return;
     }
-    // Generate clean descriptive title from prompt or model
-    const title = recipeTitle(metadata.prompt) || metadata.model || t('result.defaultTitle');
+    // The typed name, else the base model's, else the file's
+    const title = nameDraft.trim() || defaultName || t('result.defaultTitle');
 
     const sourcePlatform: 'Civitai' | 'SeaArt' | 'Local File' | 'Clipboard' | 'Web' =
       sourceLabel.toLowerCase().includes('civitai')
@@ -539,7 +584,7 @@ export const ExtractionResultPage: React.FC = () => {
 
     const saved = saveToLibrary({
       title,
-      folder: 'My Creations',
+      folder: saveFolder,
       source: sourcePlatform,
       model: metadata.model || 'Stable Diffusion',
       dimensions,
@@ -549,6 +594,7 @@ export const ExtractionResultPage: React.FC = () => {
       metadata: { ...metadata, loras: displayedLoras },
     });
 
+    rememberSaveFolder(saveFolder);
     setSavedItemId(saved.id);
     setSavePulse(true);
     setTimeout(() => setSavePulse(false), 700);
@@ -761,7 +807,7 @@ export const ExtractionResultPage: React.FC = () => {
           )}
 
           {/* Multi-Image Session Carousel & Switcher Strip */}
-          {!isFromLibraryOrFavorites && <MultiImageSessionStrip />}
+          {!isFromLibraryOrFavorites && <MultiImageSessionStrip folder={saveFolder} />}
         </div>
 
         {/* Center: Metadata Fields & Tabs */}
@@ -864,7 +910,7 @@ export const ExtractionResultPage: React.FC = () => {
                             className={styles.modelInput}
                             value={modelDraft}
                             onChange={(e) => setModelDraft(e.target.value)}
-                            placeholder={t('library.baseModelPlaceholder')}
+                            placeholder={lookingUpModel ? t('newPrompt.lookingUp') : t('library.baseModelPlaceholder')}
                             aria-label={t('param.baseModel')}
                             autoFocus
                           />
@@ -973,6 +1019,9 @@ export const ExtractionResultPage: React.FC = () => {
                             key={`${lora.rawName}-${i}`}
                             lora={lora}
                             onInspect={(l) => setInspectingLora(l)}
+                            onChangeStrength={(strength) =>
+                              changeLoras(displayedLoras.map((l, j) => (j === i ? { ...l, strength } : l)))
+                            }
                           />
                         ))}
                       </div>
@@ -985,7 +1034,7 @@ export const ExtractionResultPage: React.FC = () => {
                           const updated = displayedLoras.map((l) =>
                             l.rawName === rawName ? { ...l, strength } : l
                           );
-                          setCustomLoras(updated);
+                          changeLoras(updated, 500);
                         }}
                       />
                     </>
@@ -1067,6 +1116,19 @@ export const ExtractionResultPage: React.FC = () => {
               </div>
             </button>
           </div>
+
+          <EntryNameFolderPanel
+            entry={shownEntry}
+            name={nameDraft}
+            onNameChange={setNameDraft}
+            defaultName={defaultName || t('result.defaultTitle')}
+            folder={saveFolder}
+            onFolderChange={(folder) => {
+              if (selectedLibraryItem) return;
+              setSaveFolder(folder);
+              rememberSaveFolder(folder);
+            }}
+          />
         </div>
       </div>
 

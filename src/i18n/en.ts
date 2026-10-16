@@ -207,6 +207,7 @@ export const en = {
   'result.copyJson': 'Copy JSON metadata',
   'result.source': 'Extraction Source',
   'result.quickActions': 'Quick Actions',
+  'result.name': 'Name',
   'result.copyAllSettings': 'Copy All Settings',
   'result.extractFromUrl': 'Extract from URL',
   'result.defaultTitle': 'AI Generation Recipe',
@@ -226,6 +227,7 @@ export const en = {
   'mixer.title': 'LoRA Weight & Trigger Mixer',
   'mixer.copy': 'Copy LoRA Stack',
   'mixer.toggle': 'Click to toggle trigger tag in copied prompt',
+  'mixer.foldTitle': 'Click to show or hide',
 
   // Batch strip on the result page
   'session.title': 'Batch Previews',
@@ -292,6 +294,7 @@ export const en = {
   'lora.inspectTitle': 'Click to inspect or re-link LoRA model',
   'lora.inspectSearch': 'Inspect / Search model',
   'lora.inspect': 'Inspect',
+  'lora.changeWeight': 'Click to change the weight',
   'lora.link': 'Link',
   'lora.searchSeaart': 'Search SeaArt for "{name}"',
   'lora.redTitle': 'Model routed via Civitai Red (NSFW)',
@@ -455,6 +458,7 @@ export const en = {
   'newPrompt.addLora': 'Add LoRA',
   'newPrompt.loraName': 'LoRA name',
   'newPrompt.loraWeight': 'Weight',
+  'newPrompt.lookingUp': 'Looking up…',
   'newPrompt.removeLora': 'Remove LoRA',
   'newPrompt.modelLink': 'Model page link',
   'newPrompt.linkPlaceholder': 'Paste the model page link (Civitai, Hugging Face…)',

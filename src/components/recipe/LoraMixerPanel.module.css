@@ -12,13 +12,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panelFolded .header {
+  margin-bottom: 0;
+}
+
+.header:hover .title {
+  color: var(--color-amber-primary);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
 }
 
 .titleRow {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--color-amber-primary);
 }
 
@@ -30,6 +52,7 @@
 }
 
 .copyBtn {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -83,7 +106,32 @@
 }
 
 .sliderRow {
+  position: relative;
   margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+.ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  pointer-events: none;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.tickOn {
+  background: var(--color-amber-primary);
 }
 
 .slider {

@@ -3,7 +3,7 @@ import type { ExtractedMetadata, LoraReference, SavedPromptItem } from '../../..
 import { MAX_LIBRARY_IMAGES } from '../../../core/types.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { storeLibraryImage } from '../../utils/libraryImages.js';
-import { recipeTitle } from '../../utils/recipeTitle.js';
+import { defaultEntryName } from '../../utils/recipeTitle.js';
 import { CloseIcon, FolderIcon, PlusIcon, SparklesIcon } from '../icons/Icons.js';
 import { Dropdown } from '../primitives/Dropdown.js';
 import { GlassInput } from '../primitives/GlassInput.js';
@@ -19,6 +19,7 @@ import {
   openLinkField,
   resolveDraftLoras,
   resolveFromLink,
+  useNameFromLink,
   withTimeout,
   type DraftLora,
 } from '../lora/LoraRowsEditor.js';
@@ -122,7 +123,7 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
       steps: meta.steps !== undefined ? String(meta.steps) : '',
       cfgScale: meta.cfgScale !== undefined ? String(meta.cfgScale) : '',
       seed: meta.seed !== undefined ? String(meta.seed) : '',
-      title: recipeTitle(meta.prompt),
+      title: defaultEntryName(meta, fileName),
     };
     const filled: string[] = [];
     const next = { ...current };
@@ -181,6 +182,10 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
   const [modelLinkOpen, setModelLinkOpen] = useState(false);
   const toggleModelLink = () =>
     void openLinkField(modelLinkOpen, modelLink, setModelLinkOpen, (pasted) => setModelLink((current) => current || pasted));
+  // A pasted link fills in the model's name while the field is empty
+  const lookingUpModel = useNameFromLink([{ key: 'model', name: form.model, link: modelLink }], 'checkpoint', (_key, _link, found) =>
+    setForm((prev) => (prev.model.trim() ? prev : { ...prev, model: found.rawName }))
+  ).has('model');
 
   const handleRemove = (id: string) => {
     setImages((prev) => {
@@ -366,7 +371,12 @@ export const NewPromptModal: React.FC<NewPromptModalProps> = ({ defaultFolder, o
                 {t('newPrompt.modelCheckpoint')}
               </label>
               <div className={styles.inputWithLink}>
-                <GlassInput id="new-prompt-model" value={form.model} onChange={set('model')} placeholder={t('newPrompt.modelPlaceholder')} />
+                <GlassInput
+                  id="new-prompt-model"
+                  value={form.model}
+                  onChange={set('model')}
+                  placeholder={lookingUpModel ? t('newPrompt.lookingUp') : t('newPrompt.modelPlaceholder')}
+                />
                 <LinkButton active={Boolean(modelLink.trim())} label={t('newPrompt.modelLink')} onClick={toggleModelLink} />
               </div>
             </div>

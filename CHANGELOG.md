@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.1.9
+
+### Added
+- **Name and Folder on the result page.** Under Quick Actions there is a Name field and a Folder
+  menu (with "New folder…"). Saving puts the entry in that folder; the menu starts on the folder
+  you last saved into. On a saved entry, Rename changes its name and the Folder menu moves it.
+- **Change a LoRA's weight on an entry.** Click the weight on a LoRA card to type a new one.
+  Weights changed there or in the LoRA Weight & Trigger Mixer are saved to the library entry.
+- **Names fill in from a pasted link.** Pasting a Civitai or SeaArt model link into an empty LoRA
+  or base model row fills in the model's name straight away ("Looking up…" while it waits).
+
+### Changed
+- An entry saved without a name is named after its base model (or the image's file name),
+  instead of the first prompt tag. This also applies to batch saves.
+- The LoRA Weight & Trigger Mixer folds and unfolds with a click on its title, starts folded and
+  remembers your choice. Its sliders go up to 5 and snap to 0.8, 1, 1.5, 1.8, 2, 3, 4 and 5 while
+  dragging, with marks at those weights.
+- Batch saves ("Save as one entry", "Save each separately") go to the chosen folder too.
+
 ## v1.1.8
 
 ### Added
