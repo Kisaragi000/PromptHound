@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Scrolling fast through a big Prompt Library no longer stutters: cards out of view are skipped
+  until they scroll in.
+
 ## v1.1.6
 
 ### Added
