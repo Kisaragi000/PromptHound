@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.7
 
 ### Fixed
 - **Library images are always kept in the app's own folder.** An image opened with Select file
