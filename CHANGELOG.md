@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Add or change LoRAs on saved entries.** On a library entry's page, the LoRAs section under the
+  Base Model has "+ Add LoRA" (or Edit when it already has some): the same rows as the New Prompt
+  form, with name, weight and a model page link for each.
+- The Base Model's Edit button also takes a model page link now.
+
 ## v1.1.7
 
 ### Fixed

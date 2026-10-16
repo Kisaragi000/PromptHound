@@ -661,3 +661,51 @@
   border: 1px solid var(--color-amber-primary);
   color: #0b0e15;
 }
+
+/* Section title with its Edit button on the right */
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sectionHeaderRow .modelEditBtn {
+  margin-top: var(--space-2);
+}
+
+.modelInputRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modelInputRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.loraEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: 8px;
+  padding: var(--space-3);
+  background: rgba(18, 22, 32, 0.7);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.editError {
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 12.5px;
+}
+
+.modelSaveBtn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}

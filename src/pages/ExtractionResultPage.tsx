@@ -24,6 +24,20 @@ import { imageToDataUrl } from '../utils/images.js';
 import { itemImages } from '../utils/libraryImages.js';
 import { ModelCard } from '../components/lora/ModelCard.js';
 import { LoraCard } from '../components/lora/LoraCard.js';
+import {
+  AddLoraButton,
+  LinkButton,
+  LinkField,
+  LoraRowsEditor,
+  draftFromLora,
+  hasInvalidLink,
+  newLoraRow,
+  openLinkField,
+  pastedLink,
+  resolveDraftLoras,
+  resolveFromLink,
+  type DraftLora,
+} from '../components/lora/LoraRowsEditor.js';
 import { LoraDetailsModal } from '../components/lora/LoraDetailsModal.js';
 import { PromptFormatSelector } from '../components/recipe/PromptFormatSelector.js';
 import { LoraMixerPanel } from '../components/recipe/LoraMixerPanel.js';
@@ -137,6 +151,13 @@ export const ExtractionResultPage: React.FC = () => {
   // New Prompt form opened from the failed-extraction screen, with that image attached
   const [manualFiles, setManualFiles] = useState<File[] | null>(null);
   const [modelDraft, setModelDraft] = useState('');
+  const [modelLinkDraft, setModelLinkDraft] = useState('');
+  const [modelLinkOpen, setModelLinkOpen] = useState(false);
+  const [isEditingLoras, setIsEditingLoras] = useState(false);
+  const [loraDrafts, setLoraDrafts] = useState<DraftLora[]>([]);
+  // Lookups can take a few seconds while a model or LoRA link is identified
+  const [savingEdit, setSavingEdit] = useState<'model' | 'loras' | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
 
@@ -172,23 +193,75 @@ export const ExtractionResultPage: React.FC = () => {
   const displayedLoras = customLoras ?? metadata?.loras ?? [];
 
   const libraryItemId = selectedLibraryItem?.id;
-  useEffect(() => setIsEditingModel(false), [libraryItemId]);
+  const libraryItemIdRef = useRef(libraryItemId);
+  libraryItemIdRef.current = libraryItemId;
+  useEffect(() => {
+    setIsEditingModel(false);
+    setIsEditingLoras(false);
+  }, [libraryItemId]);
+
+  const activeMetadataRef = useRef(activeMetadata);
+  activeMetadataRef.current = activeMetadata;
+
+  /** Saves edited metadata to the library entry; the page follows only if it still shows it */
+  const saveEdit = (id: string, updates: Partial<ExtractedMetadata>) => {
+    const current = (libraryItemIdRef.current === id ? activeMetadataRef.current : null) as ExtractedMetadata | null;
+    const item = libraryItems.find((x) => x.id === id);
+    const base = current ?? (item?.metadata as ExtractedMetadata | undefined);
+    if (!base) return;
+    const updated: ExtractedMetadata = { ...base, ...updates };
+    updateLibraryItem(id, { ...('model' in updates ? { model: updates.model || '' } : {}), metadata: updated });
+    if (current) setActiveMetadata(updated);
+  };
+
+  const startEditingModel = () => {
+    if (!metadata) return;
+    setModelDraft(metadata.model || '');
+    setModelLinkDraft(pastedLink({ resolved: metadata.modelResolved }));
+    setModelLinkOpen(false);
+    setEditError(null);
+    setIsEditingModel(true);
+  };
 
   // Base model typed by hand for a library entry; it replaces the identified model,
-  // which described the old name
-  const saveModel = () => {
-    setIsEditingModel(false);
-    if (!selectedLibraryItem || !metadata) return;
-    const model = modelDraft.trim();
-    if (model === (metadata.model || '')) return;
-    const updated: ExtractedMetadata = {
-      ...metadata,
+  // which described the old name. A pasted link decides which model it is.
+  const saveModel = async () => {
+    if (!selectedLibraryItem || !metadata) return setIsEditingModel(false);
+    const typed = modelDraft.trim();
+    const link = modelLinkDraft.trim();
+    if (hasInvalidLink([link])) return setEditError(t('newPrompt.linkInvalid'));
+    const sameName = typed === (metadata.model || '');
+    if (sameName && link === pastedLink({ resolved: metadata.modelResolved })) return setIsEditingModel(false);
+    const id = selectedLibraryItem.id;
+    setSavingEdit('model');
+    const modelResolved = link ? (await resolveFromLink({ rawName: typed }, link, 'checkpoint')).resolved : undefined;
+    if (modelResolved && !modelResolved.name) modelResolved.name = typed || modelResolved.modelUrl;
+    const model = typed || modelResolved?.name || '';
+    saveEdit(id, {
       model: model || undefined,
-      modelResolved: undefined,
-      modelHash: undefined,
-    };
-    updateLibraryItem(selectedLibraryItem.id, { model, metadata: updated });
-    setActiveMetadata(updated);
+      modelResolved,
+      modelHash: sameName ? metadata.modelHash : undefined,
+    });
+    setSavingEdit(null);
+    setIsEditingModel(false);
+  };
+
+  const startEditingLoras = () => {
+    setLoraDrafts(displayedLoras.length ? displayedLoras.map(draftFromLora) : [newLoraRow()]);
+    setEditError(null);
+    setIsEditingLoras(true);
+  };
+
+  // LoRAs of a library entry, added or changed by hand like in the New Prompt form
+  const saveLoras = async () => {
+    if (!selectedLibraryItem) return setIsEditingLoras(false);
+    if (hasInvalidLink(loraDrafts.map((l) => l.link))) return setEditError(t('newPrompt.linkInvalid'));
+    const id = selectedLibraryItem.id;
+    setSavingEdit('loras');
+    const loras = await resolveDraftLoras(loraDrafts);
+    saveEdit(id, { loras });
+    setSavingEdit(null);
+    setIsEditingLoras(false);
   };
 
   const handleUpdateLora = (updatedLora: LoraReference) => {
@@ -780,26 +853,45 @@ export const ExtractionResultPage: React.FC = () => {
                         className={styles.modelEditor}
                         onSubmit={(e) => {
                           e.preventDefault();
-                          saveModel();
+                          void saveModel();
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Escape') setIsEditingModel(false);
                         }}
                       >
-                        <input
-                          className={styles.modelInput}
-                          value={modelDraft}
-                          onChange={(e) => setModelDraft(e.target.value)}
-                          placeholder={t('library.baseModelPlaceholder')}
-                          aria-label={t('param.baseModel')}
-                          autoFocus
-                        />
+                        <div className={styles.modelInputRow}>
+                          <input
+                            className={styles.modelInput}
+                            value={modelDraft}
+                            onChange={(e) => setModelDraft(e.target.value)}
+                            placeholder={t('library.baseModelPlaceholder')}
+                            aria-label={t('param.baseModel')}
+                            autoFocus
+                          />
+                          <LinkButton
+                            active={Boolean(modelLinkDraft.trim())}
+                            label={t('newPrompt.modelLink')}
+                            onClick={() =>
+                              void openLinkField(modelLinkOpen, modelLinkDraft, setModelLinkOpen, (pasted) =>
+                                setModelLinkDraft((current) => current || pasted)
+                              )
+                            }
+                          />
+                        </div>
+                        {(modelLinkOpen || modelLinkDraft) && (
+                          <LinkField
+                            value={modelLinkDraft}
+                            label={`${t('param.baseModel')}: ${t('newPrompt.modelLink')}`}
+                            onChange={setModelLinkDraft}
+                          />
+                        )}
+                        {editError && <div className={styles.editError}>{editError}</div>}
                         <div className={styles.modelEditorActions}>
                           <button type="button" className={styles.modelCancelBtn} onClick={() => setIsEditingModel(false)}>
                             {t('common.cancel')}
                           </button>
-                          <button type="submit" className={styles.modelSaveBtn}>
-                            {t('common.save')}
+                          <button type="submit" className={styles.modelSaveBtn} disabled={savingEdit === 'model'}>
+                            {savingEdit === 'model' ? t('common.saving') : t('common.save')}
                           </button>
                         </div>
                       </form>
@@ -810,14 +902,7 @@ export const ExtractionResultPage: React.FC = () => {
                         resolved={metadata.modelResolved}
                         action={
                           selectedLibraryItem && (
-                            <button
-                              type="button"
-                              className={styles.modelEditBtn}
-                              onClick={() => {
-                                setModelDraft(metadata.model || '');
-                                setIsEditingModel(true);
-                              }}
-                            >
+                            <button type="button" className={styles.modelEditBtn} onClick={startEditingModel}>
                               <EditIcon size={13} />
                               {t('result.editModel')}
                             </button>
@@ -829,40 +914,82 @@ export const ExtractionResultPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Embedded LoRAs */}
-              {displayedLoras.length > 0 && (
+              {/* LoRAs; a library entry's can be added or changed, with model links */}
+              {(displayedLoras.length > 0 || selectedLibraryItem) && (
                 <div style={{ marginTop: '8px' }}>
-                  <h3 className={styles.loraSectionTitle}>
-                    {t('param.embeddedLoras', { count: displayedLoras.length })}
-                  </h3>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px',
-                      marginTop: '8px',
-                    }}
-                  >
-                    {displayedLoras.map((lora, i) => (
-                      <LoraCard
-                        key={`${lora.rawName}-${i}`}
-                        lora={lora}
-                        onInspect={(l) => setInspectingLora(l)}
-                      />
-                    ))}
+                  <div className={styles.sectionHeaderRow}>
+                    <h3 className={styles.loraSectionTitle}>
+                      {!selectedLibraryItem
+                        ? t('param.embeddedLoras', { count: displayedLoras.length })
+                        : displayedLoras.length
+                        ? t('param.loras', { count: displayedLoras.length })
+                        : t('newPrompt.loras')}
+                    </h3>
+                    {selectedLibraryItem && displayedLoras.length > 0 && !isEditingLoras && (
+                      <button type="button" className={styles.modelEditBtn} onClick={startEditingLoras}>
+                        <EditIcon size={13} />
+                        {t('result.editModel')}
+                      </button>
+                    )}
                   </div>
+                  {isEditingLoras ? (
+                    <form
+                      className={styles.loraEditor}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void saveLoras();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setIsEditingLoras(false);
+                      }}
+                    >
+                      <LoraRowsEditor loras={loraDrafts} onChange={setLoraDrafts} />
+                      {editError && <div className={styles.editError}>{editError}</div>}
+                      <div className={styles.modelEditorActions}>
+                        <button type="button" className={styles.modelCancelBtn} onClick={() => setIsEditingLoras(false)}>
+                          {t('common.cancel')}
+                        </button>
+                        <button type="submit" className={styles.modelSaveBtn} disabled={savingEdit === 'loras'}>
+                          {savingEdit === 'loras' ? t('common.saving') : t('common.save')}
+                        </button>
+                      </div>
+                    </form>
+                  ) : displayedLoras.length === 0 ? (
+                    <div style={{ marginTop: '8px' }}>
+                      <AddLoraButton onClick={startEditingLoras} />
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          marginTop: '8px',
+                        }}
+                      >
+                        {displayedLoras.map((lora, i) => (
+                          <LoraCard
+                            key={`${lora.rawName}-${i}`}
+                            lora={lora}
+                            onInspect={(l) => setInspectingLora(l)}
+                          />
+                        ))}
+                      </div>
 
-                  {/* Interactive LoRA Weight & Trigger Mixer */}
-                  <LoraMixerPanel
-                    loras={displayedLoras}
-                    basePrompt={metadata.prompt}
-                    onUpdateLoraStrength={(rawName, strength) => {
-                      const updated = displayedLoras.map((l) =>
-                        l.rawName === rawName ? { ...l, strength } : l
-                      );
-                      setCustomLoras(updated);
-                    }}
-                  />
+                      {/* Interactive LoRA Weight & Trigger Mixer */}
+                      <LoraMixerPanel
+                        loras={displayedLoras}
+                        basePrompt={metadata.prompt}
+                        onUpdateLoraStrength={(rawName, strength) => {
+                          const updated = displayedLoras.map((l) =>
+                            l.rawName === rawName ? { ...l, strength } : l
+                          );
+                          setCustomLoras(updated);
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
               )}
             </>
