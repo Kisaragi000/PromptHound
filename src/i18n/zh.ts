@@ -209,6 +209,7 @@ export const zh: Record<StringKey, string> = {
   'result.copyJson': '复制 JSON 元数据',
   'result.source': '提取来源',
   'result.quickActions': '快捷操作',
+  'result.name': '名称',
   'result.copyAllSettings': '复制全部参数',
   'result.extractFromUrl': '从链接提取',
   'result.defaultTitle': 'AI 生成预设',
@@ -228,6 +229,7 @@ export const zh: Record<StringKey, string> = {
   'mixer.title': 'LoRA 权重与触发词混合器',
   'mixer.copy': '复制 LoRA 组合',
   'mixer.toggle': '点击在复制的提示词中加入或移除此触发词',
+  'mixer.foldTitle': '点击展开或收起',
 
   // Batch strip on the result page
   'session.title': '批量预览',
@@ -292,6 +294,7 @@ export const zh: Record<StringKey, string> = {
   'lora.inspectTitle': '点击检查或重新关联 LoRA 模型',
   'lora.inspectSearch': '检查 / 搜索模型',
   'lora.inspect': '检查',
+  'lora.changeWeight': '点击修改权重',
   'lora.link': '关联',
   'lora.searchSeaart': '在 SeaArt 搜索“{name}”',
   'lora.redTitle': '通过 Civitai Red (NSFW) 打开模型',
@@ -453,6 +456,7 @@ export const zh: Record<StringKey, string> = {
   'newPrompt.addLora': '添加 LoRA',
   'newPrompt.loraName': 'LoRA 名称',
   'newPrompt.loraWeight': '权重',
+  'newPrompt.lookingUp': '查找中…',
   'newPrompt.removeLora': '移除 LoRA',
   'newPrompt.modelLink': '模型页面链接',
   'newPrompt.linkPlaceholder': '粘贴模型页面链接（Civitai、Hugging Face…）',

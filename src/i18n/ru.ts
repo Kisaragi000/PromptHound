@@ -209,6 +209,7 @@ export const ru: Record<StringKey, string> = {
   'result.copyJson': 'Копировать метаданные в JSON',
   'result.source': 'Источник',
   'result.quickActions': 'Быстрые действия',
+  'result.name': 'Название',
   'result.copyAllSettings': 'Копировать все параметры',
   'result.extractFromUrl': 'Извлечь по ссылке',
   'result.defaultTitle': 'Рецепт ИИ-генерации',
@@ -228,6 +229,7 @@ export const ru: Record<StringKey, string> = {
   'mixer.title': 'Микшер весов LoRA и триггеров',
   'mixer.copy': 'Копировать набор LoRA',
   'mixer.toggle': 'Нажмите, чтобы добавить или убрать триггер из копируемого промпта',
+  'mixer.foldTitle': 'Нажмите, чтобы показать или скрыть',
 
   // Batch strip on the result page
   'session.title': 'Пакет изображений',
@@ -294,6 +296,7 @@ export const ru: Record<StringKey, string> = {
   'lora.inspectTitle': 'Нажмите, чтобы проверить или заново привязать LoRA',
   'lora.inspectSearch': 'Проверить / найти модель',
   'lora.inspect': 'Проверить',
+  'lora.changeWeight': 'Нажмите, чтобы изменить вес',
   'lora.link': 'Привязать',
   'lora.searchSeaart': 'Искать «{name}» на SeaArt',
   'lora.redTitle': 'Модель открывается через Civitai Red (NSFW)',
@@ -460,6 +463,7 @@ export const ru: Record<StringKey, string> = {
   'newPrompt.addLora': 'Добавить LoRA',
   'newPrompt.loraName': 'Название LoRA',
   'newPrompt.loraWeight': 'Вес',
+  'newPrompt.lookingUp': 'Поиск…',
   'newPrompt.removeLora': 'Убрать LoRA',
   'newPrompt.modelLink': 'Ссылка на модель',
   'newPrompt.linkPlaceholder': 'Вставьте ссылку на страницу модели (Civitai, Hugging Face…)',

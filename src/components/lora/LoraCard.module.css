@@ -118,6 +118,31 @@
   flex-shrink: 0;
 }
 
+/* Weight that turns into a field when clicked */
+.weightBadgeButton {
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.weightBadgeButton:hover {
+  border-color: var(--color-amber-primary);
+  color: var(--color-amber-primary);
+}
+
+.weightInput {
+  width: 64px;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-amber-primary);
+  background: rgba(0, 0, 0, 0.4);
+  color: #f3f4f6;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  outline: none;
+}
+
 .sliderRow {
   display: flex;
   align-items: center;

@@ -43,15 +43,26 @@ interface LoraCardProps {
   lora: LoraReference;
   onOpenLink?: (url: string) => void;
   onInspect?: (lora: LoraReference) => void;
+  /** Makes the weight clickable to type a new one */
+  onChangeStrength?: (strength: number) => void;
 }
 
-export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect }) => {
+export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect, onChangeStrength }) => {
   const t = useT();
   const [copiedTrigger, setCopiedTrigger] = useState<string | null>(null);
   // Offline or a removed image: show the icon instead of broken-image alt text
   const [failedCover, setFailedCover] = useState<string | null>(null);
 
   const strength = lora.strength ?? 1.0;
+  const [weightDraft, setWeightDraft] = useState<string | null>(null);
+  const weightText = strength.toFixed(2).replace(/\.?0+$/, '') || '0';
+
+  const commitWeight = () => {
+    if (weightDraft === null) return;
+    const value = Number(weightDraft.replace(',', '.'));
+    setWeightDraft(null);
+    if (weightDraft.trim() && Number.isFinite(value) && value !== strength) onChangeStrength?.(Math.round(value * 100) / 100);
+  };
   const strengthPercent = Math.min(Math.max((strength / 1.5) * 100, 5), 100);
 
   const handleCopyTrigger = (word: string, e: React.MouseEvent) => {
@@ -172,9 +183,39 @@ export const LoraCard: React.FC<LoraCardProps> = ({ lora, onOpenLink, onInspect 
                   SeaArt
                 </a>
               )}
-              <div className={styles.weightBadge}>
-                {strength !== undefined ? strength.toFixed(2).replace(/\.00$/, '') : '1'}
-              </div>
+              {weightDraft !== null ? (
+                <input
+                  className={styles.weightInput}
+                  type="number"
+                  step={0.05}
+                  value={weightDraft}
+                  onChange={(e) => setWeightDraft(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={commitWeight}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') commitWeight();
+                    if (e.key === 'Escape') setWeightDraft(null);
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  aria-label={t('newPrompt.loraWeight')}
+                  autoFocus
+                />
+              ) : onChangeStrength ? (
+                <button
+                  type="button"
+                  className={`${styles.weightBadge} ${styles.weightBadgeButton}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWeightDraft(weightText);
+                  }}
+                  title={t('lora.changeWeight')}
+                >
+                  {weightText}
+                </button>
+              ) : (
+                <div className={styles.weightBadge}>{weightText}</div>
+              )}
             </div>
           </div>
 

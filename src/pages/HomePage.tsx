@@ -23,6 +23,8 @@ import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { SavedPromptItem } from '../../core/types.js';
+import { defaultEntryName } from '../utils/recipeTitle.js';
+import { lastSaveFolder } from '../utils/saveFolder.js';
 import { useT } from '../i18n/index.js';
 import styles from './HomePage.module.css';
 
@@ -38,6 +40,7 @@ export const HomePage: React.FC = () => {
     showInLibrary,
     setActiveMetadata,
     setActivePreviewUrl,
+    folders,
   } = useNavigation();
 
   const { extractFromFile, extractMultipleFiles, extractFromFilePath, extractFromUrl } = useExtraction();
@@ -155,15 +158,14 @@ export const HomePage: React.FC = () => {
   const handleSaveAllBatchToLibrary = () => {
     setIsSavingAll(true);
     let count = 0;
+    const folder = lastSaveFolder(folders);
     batchItems.forEach((item) => {
       if (item.status === 'success' && item.metadata) {
-        const title =
-          item.metadata.prompt?.split(/,|\n/)[0]?.trim()?.slice(0, 32) ||
-          item.file.name.replace(/\.[^/.]+$/, '');
+        const title = defaultEntryName(item.metadata, item.file.name) || t('result.defaultTitle');
 
         saveToLibrary({
           title,
-          folder: 'My Creations',
+          folder,
           source: 'Local File',
           model: item.metadata.model || 'Stable Diffusion',
           dimensions:

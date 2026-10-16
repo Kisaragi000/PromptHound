@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { LoraReference } from '../../../core/types.js';
 import { isSeaArtLink } from '../../../core/seaart.js';
 import { CloseIcon, LinkIcon, PlusIcon } from '../icons/Icons.js';
@@ -109,6 +109,49 @@ export const AddLoraButton: React.FC<{ onClick: () => void }> = ({ onClick }) =>
   );
 };
 
+/**
+ * Looks up the model behind a link as soon as it is pasted, for each field whose name is still
+ * empty, and passes what was found to `fill`. Returns the keys of the fields being looked up.
+ * Each link is looked up once; a name typed meanwhile is the caller's to keep.
+ */
+export function useNameFromLink(
+  fields: { key: string; name: string; link: string }[],
+  kind: 'lora' | 'checkpoint',
+  fill: (key: string, link: string, found: LoraReference) => void
+): Set<string> {
+  const tried = useRef(new Map<string, string>());
+  const fillRef = useRef(fill);
+  fillRef.current = fill;
+  const [looking, setLooking] = useState<Record<string, string>>({});
+  const waiting = fields.filter((f) => !f.name.trim() && isWebLink(f.link.trim()) && tried.current.get(f.key) !== f.link.trim());
+  const signature = waiting.map((f) => `${f.key} ${f.link.trim()}`).join('\n');
+
+  useEffect(() => {
+    if (!waiting.length) return;
+    // A short wait, so a link typed by hand is looked up once it is complete
+    const timer = setTimeout(() => {
+      for (const { key, link: rawLink } of waiting) {
+        const link = rawLink.trim();
+        tried.current.set(key, link);
+        setLooking((prev) => ({ ...prev, [key]: link }));
+        void resolveFromLink({ rawName: '' }, link, kind).then((found) => {
+          setLooking((prev) => {
+            if (prev[key] !== link) return prev;
+            const { [key]: _done, ...rest } = prev;
+            return rest;
+          });
+          const name = found.resolved?.name?.trim();
+          if (name && name !== link) fillRef.current(key, link, { ...found, rawName: name });
+        });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [signature, kind]);
+
+  const current = new Map(fields.map((f) => [f.key, f.link.trim()]));
+  return new Set(Object.keys(looking).filter((key) => current.get(key) === looking[key]));
+}
+
 /** LoRA rows with a link button each, and "+ Add LoRA" under them */
 export const LoraRowsEditor: React.FC<{
   loras: DraftLora[];
@@ -117,6 +160,19 @@ export const LoraRowsEditor: React.FC<{
   const t = useT();
   const update = (id: string, changes: Partial<DraftLora>) =>
     onChange((prev) => prev.map((l) => (l.id === id ? { ...l, ...changes } : l)));
+  // A pasted link fills in the model's name; saving then keeps what was found
+  const lookingUp = useNameFromLink(
+    loras.map((l) => ({ key: l.id, name: l.name, link: l.link })),
+    'lora',
+    (id, link, found) =>
+      onChange((prev) =>
+        prev.map((l) =>
+          l.id === id && !l.name.trim() && l.link.trim() === link
+            ? { ...l, name: found.rawName, original: found }
+            : l
+        )
+      )
+  );
 
   return (
     <>
@@ -126,7 +182,7 @@ export const LoraRowsEditor: React.FC<{
             <GlassInput
               value={l.name}
               onChange={(e) => update(l.id, { name: e.target.value })}
-              placeholder={t('newPrompt.loraName')}
+              placeholder={lookingUp.has(l.id) ? t('newPrompt.lookingUp') : t('newPrompt.loraName')}
               aria-label={t('newPrompt.loraName')}
             />
             <LinkButton

@@ -10,12 +10,14 @@ import {
 import { useExtraction, type SessionImageItem } from '../../extraction/ExtractionContext.js';
 import { useNavigation } from '../../navigation/NavigationContext.js';
 import { useT } from '../../i18n/index.js';
-import { recipeTitle } from '../../utils/recipeTitle.js';
+import { defaultEntryName } from '../../utils/recipeTitle.js';
+import { rememberSaveFolder } from '../../utils/saveFolder.js';
 import { storeLibraryImageFromUrl } from '../../utils/libraryImages.js';
 import { MAX_LIBRARY_IMAGES, type LibraryImage } from '../../../core/types.js';
 import styles from './MultiImageSessionStrip.module.css';
 
-export const MultiImageSessionStrip: React.FC = () => {
+/** `folder`: where its saves go (the result page's Folder choice) */
+export const MultiImageSessionStrip: React.FC<{ folder: string }> = ({ folder }) => {
   const t = useT();
   const {
     sessionImages,
@@ -80,17 +82,13 @@ export const MultiImageSessionStrip: React.FC = () => {
     sessionImages.forEach((item) => {
       if (item.status === 'success' && item.result?.metadata) {
         const meta = item.result.metadata;
-        const title =
-          meta.prompt?.split(/,|\n/)[0]?.trim()?.slice(0, 36) ||
-          meta.model ||
-          item.label ||
-          t('session.defaultTitle');
+        const title = defaultEntryName(meta, item.file?.name ?? item.label) || t('session.defaultTitle');
         const dimensions =
           meta.width && meta.height ? `${meta.width} × ${meta.height}` : '1024 × 1024';
 
         saveToLibrary({
           title,
-          folder: 'Batch Imports',
+          folder,
           source: 'Local File',
           model: meta.model || 'Stable Diffusion',
           dimensions,
@@ -102,6 +100,7 @@ export const MultiImageSessionStrip: React.FC = () => {
       }
     });
 
+    if (count) rememberSaveFolder(folder);
     setSavedAllCount(count);
     setTimeout(() => setSavedAllCount(null), 3000);
   };
@@ -119,8 +118,8 @@ export const MultiImageSessionStrip: React.FC = () => {
       const images = stored.filter((img): img is LibraryImage => !!img);
       saveToLibrary({
         id,
-        title: recipeTitle(meta.prompt) || meta.model || t('session.defaultTitle'),
-        folder: 'My Creations',
+        title: defaultEntryName(meta, active.file?.name ?? active.label) || t('session.defaultTitle'),
+        folder,
         source: 'Local File',
         model: meta.model || 'Stable Diffusion',
         dimensions: meta.width && meta.height ? `${meta.width} × ${meta.height}` : '1024 × 1024',
@@ -129,6 +128,7 @@ export const MultiImageSessionStrip: React.FC = () => {
         images: images.length ? images : undefined,
         metadata: meta,
       });
+      rememberSaveFolder(folder);
       setSavedOneCount(images.length);
       setTimeout(() => setSavedOneCount(null), 3000);
     } finally {
