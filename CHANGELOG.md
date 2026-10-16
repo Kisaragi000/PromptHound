@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.6
 
 ### Added
 - **Japanese interface (日本語)**: choose it in Settings > Language.
