@@ -207,13 +207,12 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
+  // Entries waiting for the user to confirm their deletion
+  const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
+
   const handleDeleteSelected = () => {
     if (selectedForDeletion.length === 0) return;
-    selectedForDeletion.forEach((id) => {
-      deleteFromLibrary(id);
-    });
-    setCompareSelection((prev) => prev.filter((id) => !selectedForDeletion.includes(id)));
-    setSelectedForDeletion([]);
+    setPendingDelete(selectedForDeletion);
   };
 
   const moveSelectedTo = (folder: string) => {
@@ -279,14 +278,36 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
-  const handleDeleteItem = (id: string) => {
-    deleteFromLibrary(id);
-    setCompareSelection((prev) => prev.filter((i) => i !== id));
-    setSelectedForDeletion((prev) => prev.filter((i) => i !== id));
-    if (selectedItem?.id === id) {
+  const handleDeleteItem = (id: string) => setPendingDelete([id]);
+
+  const confirmDeleteItems = () => {
+    if (!pendingDelete) return;
+    const ids = pendingDelete;
+    setPendingDelete(null);
+    ids.forEach((id) => deleteFromLibrary(id));
+    setCompareSelection((prev) => prev.filter((i) => !ids.includes(i)));
+    setSelectedForDeletion((prev) => prev.filter((i) => !ids.includes(i)));
+    if (selectedItem && ids.includes(selectedItem.id)) {
       setSelectedItem(null);
     }
   };
+
+  // Enter deletes, Esc keeps them; a focused button (Delete has focus at first) handles Enter itself
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.target as HTMLElement | null)?.tagName === 'BUTTON') return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmDeleteItems();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPendingDelete(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const compareItemA = libraryItems.find((i) => i.id === compareSelection[0]);
   const compareItemB = libraryItems.find((i) => i.id === compareSelection[1]);
@@ -1065,6 +1086,32 @@ export const PromptLibraryPage: React.FC = () => {
           isOpen={isDiffModalOpen}
           onClose={() => setIsDiffModalOpen(false)}
         />
+      )}
+
+      {pendingDelete && (
+        <div className={styles.modalOverlay} onClick={() => setPendingDelete(null)}>
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-labelledby="delete-entry-title"
+          >
+            <h3 id="delete-entry-title" className={styles.modalTitle}>
+              {pendingDelete.length === 1
+                ? t('library.deleteEntryTitle', { title: libraryItems.find((i) => i.id === pendingDelete[0])?.title ?? '' })
+                : t('library.deleteEntriesTitle', { count: pendingDelete.length })}
+            </h3>
+            <p className={styles.modalText}>{t('library.deleteEntryBody')}</p>
+            <div className={styles.modalActions}>
+              <SecondaryButton type="button" onClick={() => setPendingDelete(null)}>
+                {t('common.cancel')}
+              </SecondaryButton>
+              <button type="button" className={styles.modalDangerBtn} onClick={confirmDeleteItems} autoFocus>
+                <TrashIcon size={14} /> {t('common.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* New Folder Modal */}

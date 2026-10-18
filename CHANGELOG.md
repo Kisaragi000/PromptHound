@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Deleting asks first.** In Edit Library, Delete Image and Delete Selected open a small window
+  asking to confirm. Enter (or the Delete button) deletes; Esc or Cancel keeps the entries.
+
 ## v1.1.9
 
 ### Added
