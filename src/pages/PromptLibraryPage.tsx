@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FolderIcon,
   GripIcon,
@@ -206,6 +206,20 @@ export const PromptLibraryPage: React.FC = () => {
       setSelectedForDeletion(filteredItems.map((i) => i.id));
     }
   };
+
+  // Cards not shown yet stand in at a shown card's real height, so rows don't jump into place
+  const gridAreaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const area = gridAreaRef.current;
+    const card = area?.querySelector<HTMLElement>(`.${styles.promptCard}`);
+    if (!area || !card) return;
+    const observer = new ResizeObserver(() => {
+      const height = Math.round(card.getBoundingClientRect().height);
+      if (height) area.style.setProperty('--card-height', `${height}px`);
+    });
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [filteredItems]);
 
   // Entries waiting for the user to confirm their deletion
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
@@ -569,7 +583,7 @@ export const PromptLibraryPage: React.FC = () => {
         </aside>
 
         {/* Column 2: Prompt Card Grid OR Compact Table */}
-        <div className={`${styles.gridArea} ${filteredItems.length === 0 ? styles.gridAreaEmpty : ''}`}>
+        <div ref={gridAreaRef} className={`${styles.gridArea} ${filteredItems.length === 0 ? styles.gridAreaEmpty : ''}`}>
           {(facets.models.length > 0 || facets.loras.length > 0) && (
             <div className={styles.filterBar}>
               {facets.models.length > 0 && (

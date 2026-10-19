@@ -385,12 +385,20 @@
   /* Cards out of view skip layout and painting, so fast scrolling through a big library stays
      smooth; the browser remembers each card's real height once it has been shown */
   content-visibility: auto;
-  contain-intrinsic-size: auto 380px;
+  /* Placeholder height for cards not shown yet: the real height of a shown card (set by the
+     page), so rows don't change size as they come into view */
+  contain-intrinsic-size: auto var(--card-height, 380px);
 }
 
 .promptCard:hover {
   transform: translateY(-2px);
   border-color: rgba(245, 154, 36, 0.35);
+}
+
+/* No lift while scrolling: cards passing under the mouse would bob up and down */
+:global(.is-scrolling) .promptCard:hover {
+  transform: none;
+  transition: none;
 }
 
 .selectedCard {
