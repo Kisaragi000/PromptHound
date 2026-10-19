@@ -9,7 +9,8 @@
 ### Fixed
 - Library cards no longer bob up and down while scrolling fast. The card under the mouse kept
   playing its hover lift as cards passed under it; the lift now pauses while scrolling. Cards
-  that come into view also keep their real height, so rows don't settle into place.
+  that come into view also take the exact height of the cards on screen (even after resizing the
+  window or switching Edit Library), so rows don't shift as they appear.
 
 ## v1.1.9
 

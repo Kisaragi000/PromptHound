@@ -383,11 +383,16 @@
   position: relative;
   width: 100%;
   /* Cards out of view skip layout and painting, so fast scrolling through a big library stays
-     smooth; the browser remembers each card's real height once it has been shown */
+     smooth */
   content-visibility: auto;
-  /* Placeholder height for cards not shown yet: the real height of a shown card (set by the
-     page), so rows don't change size as they come into view */
-  contain-intrinsic-size: auto var(--card-height, 380px);
+  /* Height of cards out of view: the exact height of a card in view (set by the page), so rows
+     don't change size as they come into view */
+  contain-intrinsic-size: var(--card-height, 380px);
+}
+
+/* Set for one frame by the page so every card forgets the size it had when last shown */
+.forgetSizes .promptCard {
+  content-visibility: visible;
 }
 
 .promptCard:hover {

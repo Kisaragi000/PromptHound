@@ -207,19 +207,61 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
-  // Cards not shown yet stand in at a shown card's real height, so rows don't jump into place
+  // Cards out of view stand in at the exact size of a card in view, so rows don't change
+  // size as they come into view while scrolling
   const gridAreaRef = useRef<HTMLDivElement>(null);
+  const sizedLayout = useRef<string | null>(null);
   useEffect(() => {
     const area = gridAreaRef.current;
-    const card = area?.querySelector<HTMLElement>(`.${styles.promptCard}`);
-    if (!area || !card) return;
-    const observer = new ResizeObserver(() => {
-      const height = Math.round(card.getBoundingClientRect().height);
-      if (height) area.style.setProperty('--card-height', `${height}px`);
-    });
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, [filteredItems]);
+    if (!area) return;
+    const measure = () => {
+      const box = area.getBoundingClientRect();
+      const cards = area.querySelectorAll<HTMLElement>(`.${styles.promptCard}`);
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom <= box.top) continue;
+        if (rect.top >= box.bottom) break;
+        // The stand-in size is the content height: border and padding come on top of it
+        const css = getComputedStyle(card);
+        const edges = ['borderTopWidth', 'borderBottomWidth', 'paddingTop', 'paddingBottom'] as const;
+        const height = edges.reduce((h, edge) => h - parseFloat(css[edge]), rect.height);
+        if (height > 0) area.style.setProperty('--card-height', `${height}px`);
+        return;
+      }
+    };
+    // Cards shown before keep the size they had then (after a window resize or switching edit
+    // mode, that's stale), so once things settle, every card drops it for one frame
+    let timer = 0;
+    let frame = 0;
+    const forgetOldSizes = () => {
+      timer = 0;
+      area.classList.add(styles.forgetSizes);
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => area.classList.remove(styles.forgetSizes));
+      });
+    };
+    const onChange = () => {
+      measure();
+      // Only a new width or a mode switch changes card sizes; new cards have none to forget
+      const layout = `${area.clientWidth}|${isEditMode}`;
+      if (sizedLayout.current === null) sizedLayout.current = layout;
+      if (layout === sizedLayout.current) return;
+      sizedLayout.current = layout;
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      timer = window.setTimeout(forgetOldSizes, 150);
+    };
+    const observer = new ResizeObserver(onChange);
+    observer.observe(area);
+    return () => {
+      observer.disconnect();
+      // Still waiting to forget: the next run does it
+      if (timer) sizedLayout.current = '';
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      area.classList.remove(styles.forgetSizes);
+    };
+  }, [filteredItems, isEditMode, viewMode]);
 
   // Entries waiting for the user to confirm their deletion
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
