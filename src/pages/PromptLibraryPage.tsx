@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FolderIcon,
   GripIcon,
@@ -207,13 +207,68 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
+  // Cards out of view stand in at the exact size of a card in view, so rows don't change
+  // size as they come into view while scrolling
+  const gridAreaRef = useRef<HTMLDivElement>(null);
+  const sizedLayout = useRef<string | null>(null);
+  useEffect(() => {
+    const area = gridAreaRef.current;
+    if (!area) return;
+    const measure = () => {
+      const box = area.getBoundingClientRect();
+      const cards = area.querySelectorAll<HTMLElement>(`.${styles.promptCard}`);
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom <= box.top) continue;
+        if (rect.top >= box.bottom) break;
+        // The stand-in size is the content height: border and padding come on top of it
+        const css = getComputedStyle(card);
+        const edges = ['borderTopWidth', 'borderBottomWidth', 'paddingTop', 'paddingBottom'] as const;
+        const height = edges.reduce((h, edge) => h - parseFloat(css[edge]), rect.height);
+        if (height > 0) area.style.setProperty('--card-height', `${height}px`);
+        return;
+      }
+    };
+    // Cards shown before keep the size they had then (after a window resize or switching edit
+    // mode, that's stale), so once things settle, every card drops it for one frame
+    let timer = 0;
+    let frame = 0;
+    const forgetOldSizes = () => {
+      timer = 0;
+      area.classList.add(styles.forgetSizes);
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => area.classList.remove(styles.forgetSizes));
+      });
+    };
+    const onChange = () => {
+      measure();
+      // Only a new width or a mode switch changes card sizes; new cards have none to forget
+      const layout = `${area.clientWidth}|${isEditMode}`;
+      if (sizedLayout.current === null) sizedLayout.current = layout;
+      if (layout === sizedLayout.current) return;
+      sizedLayout.current = layout;
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      timer = window.setTimeout(forgetOldSizes, 150);
+    };
+    const observer = new ResizeObserver(onChange);
+    observer.observe(area);
+    return () => {
+      observer.disconnect();
+      // Still waiting to forget: the next run does it
+      if (timer) sizedLayout.current = '';
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      area.classList.remove(styles.forgetSizes);
+    };
+  }, [filteredItems, isEditMode, viewMode]);
+
+  // Entries waiting for the user to confirm their deletion
+  const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
+
   const handleDeleteSelected = () => {
     if (selectedForDeletion.length === 0) return;
-    selectedForDeletion.forEach((id) => {
-      deleteFromLibrary(id);
-    });
-    setCompareSelection((prev) => prev.filter((id) => !selectedForDeletion.includes(id)));
-    setSelectedForDeletion([]);
+    setPendingDelete(selectedForDeletion);
   };
 
   const moveSelectedTo = (folder: string) => {
@@ -279,14 +334,36 @@ export const PromptLibraryPage: React.FC = () => {
     }
   };
 
-  const handleDeleteItem = (id: string) => {
-    deleteFromLibrary(id);
-    setCompareSelection((prev) => prev.filter((i) => i !== id));
-    setSelectedForDeletion((prev) => prev.filter((i) => i !== id));
-    if (selectedItem?.id === id) {
+  const handleDeleteItem = (id: string) => setPendingDelete([id]);
+
+  const confirmDeleteItems = () => {
+    if (!pendingDelete) return;
+    const ids = pendingDelete;
+    setPendingDelete(null);
+    ids.forEach((id) => deleteFromLibrary(id));
+    setCompareSelection((prev) => prev.filter((i) => !ids.includes(i)));
+    setSelectedForDeletion((prev) => prev.filter((i) => !ids.includes(i)));
+    if (selectedItem && ids.includes(selectedItem.id)) {
       setSelectedItem(null);
     }
   };
+
+  // Enter deletes, Esc keeps them; a focused button (Delete has focus at first) handles Enter itself
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.target as HTMLElement | null)?.tagName === 'BUTTON') return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmDeleteItems();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPendingDelete(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const compareItemA = libraryItems.find((i) => i.id === compareSelection[0]);
   const compareItemB = libraryItems.find((i) => i.id === compareSelection[1]);
@@ -548,7 +625,7 @@ export const PromptLibraryPage: React.FC = () => {
         </aside>
 
         {/* Column 2: Prompt Card Grid OR Compact Table */}
-        <div className={`${styles.gridArea} ${filteredItems.length === 0 ? styles.gridAreaEmpty : ''}`}>
+        <div ref={gridAreaRef} className={`${styles.gridArea} ${filteredItems.length === 0 ? styles.gridAreaEmpty : ''}`}>
           {(facets.models.length > 0 || facets.loras.length > 0) && (
             <div className={styles.filterBar}>
               {facets.models.length > 0 && (
@@ -1065,6 +1142,32 @@ export const PromptLibraryPage: React.FC = () => {
           isOpen={isDiffModalOpen}
           onClose={() => setIsDiffModalOpen(false)}
         />
+      )}
+
+      {pendingDelete && (
+        <div className={styles.modalOverlay} onClick={() => setPendingDelete(null)}>
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-labelledby="delete-entry-title"
+          >
+            <h3 id="delete-entry-title" className={styles.modalTitle}>
+              {pendingDelete.length === 1
+                ? t('library.deleteEntryTitle', { title: libraryItems.find((i) => i.id === pendingDelete[0])?.title ?? '' })
+                : t('library.deleteEntriesTitle', { count: pendingDelete.length })}
+            </h3>
+            <p className={styles.modalText}>{t('library.deleteEntryBody')}</p>
+            <div className={styles.modalActions}>
+              <SecondaryButton type="button" onClick={() => setPendingDelete(null)}>
+                {t('common.cancel')}
+              </SecondaryButton>
+              <button type="button" className={styles.modalDangerBtn} onClick={confirmDeleteItems} autoFocus>
+                <TrashIcon size={14} /> {t('common.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* New Folder Modal */}

@@ -24,6 +24,11 @@
     0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
+:global(.is-scrolling) .interactive:hover {
+  transform: none;
+  transition: none;
+}
+
 .dragActive {
   border-color: var(--color-amber-primary);
   border-style: dashed;
