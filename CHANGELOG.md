@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.10
 
 ### Changed
 - **Deleting asks first.** In Edit Library, Delete Image and Delete Selected open a small window
