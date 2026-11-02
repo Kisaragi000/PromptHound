@@ -28,9 +28,11 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "build:electron": "vite build && esbuild electron/main.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/preload.cjs",
+    "build:electron": "node scripts/generate-third-party-notices.mjs && vite build && esbuild electron/main.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/preload.cjs",
     "package:win": "npm run build:electron && electron-builder --win",
     "build:installer-assets": "node scripts/generate-installer-assets.mjs",
+    "notices": "node scripts/generate-third-party-notices.mjs",
+    "notices:check": "node scripts/generate-third-party-notices.mjs --check",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-electron release",
     "catalog:build": "tsx scripts/build-lora-catalog.ts build",

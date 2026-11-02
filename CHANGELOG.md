@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Legal section in About.** It says PromptHound is free MIT software provided as is, that it is
+  not affiliated with Civitai, SeaArt, ComfyUI, Automatic1111 or other services it names, and that
+  users are responsible for the images they save and for following each site's rules. An
+  "Open-source licenses" list shows the license of every library that ships inside the app
+  (THIRD-PARTY-NOTICES.txt, regenerated on each build and checked in CI).
+
 ## v1.1.10
 
 ### Changed

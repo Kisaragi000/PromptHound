@@ -576,6 +576,12 @@ export const zh: Record<StringKey, string> = {
   'about.repo': '代码仓库：',
   'about.updatesSection': '更新',
   'about.softwareSection': '关于本软件',
+  'about.legalSection': '法律信息',
+  'about.license': '本软件为免费软件，采用 MIT 许可证，按“原样”提供，不作任何担保。',
+  'about.notAffiliated': '本软件与 Civitai、SeaArt、ComfyUI、Automatic1111 及应用中提及的其他服务无关联，也未获其认可。相关名称归各自所有者所有。',
+  'about.userContent': '您需对保存的图片负责，并遵守所用网站的规则。',
+  'about.licenses': '开源许可证',
+  'about.licensesLoading': '加载中…',
   'about.body':
     'PromptHound 面向需要精确追踪元数据的数字艺术家、提示词工程师和 AI 创作者。它读取 PNG/WebP 数据块中的元数据（Automatic1111 tEXt 数据块、ComfyUI 节点图、Fooocus、InvokeAI、NovelAI），提取原始参数，并查询模型目录，将 LoRA 和 Checkpoint 识别为易读的名称。',
 

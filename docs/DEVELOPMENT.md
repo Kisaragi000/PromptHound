@@ -57,9 +57,12 @@ npm run dev              # web preview at http://localhost:3000 (no file access,
 npm run lint   # typecheck the UI, core and Electron main process
 npm test       # extraction, library search, backup and link tests (offline)
 npm run build  # build the renderer
+npm run notices:check  # THIRD-PARTY-NOTICES.txt matches the installed packages
 ```
 
-CI runs all three on every push to `main` and on every pull request.
+CI runs all four on every push to `main` and on every pull request. After adding, removing or
+upgrading a package, run `npm run notices` and commit the new `THIRD-PARTY-NOTICES.txt` (the list
+in `scripts/generate-third-party-notices.mjs` names the packages that ship in the app).
 
 ## Where data lives
 

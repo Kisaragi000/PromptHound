@@ -581,6 +581,12 @@ export const ja: Record<StringKey, string> = {
   'about.repo': 'リポジトリ：',
   'about.updatesSection': '更新',
   'about.softwareSection': 'このソフトウェアについて',
+  'about.legalSection': '法的情報',
+  'about.license': 'MIT ライセンスの無料ソフトウェアです。現状のまま提供され、いかなる保証もありません。',
+  'about.notAffiliated': 'Civitai、SeaArt、ComfyUI、Automatic1111 など、アプリ内で名前が出てくるサービスとは無関係で、承認も受けていません。各名称はそれぞれの所有者に帰属します。',
+  'about.userContent': '保存した画像と、利用するサイトの規約を守ることは、ご自身の責任となります。',
+  'about.licenses': 'オープンソースライセンス',
+  'about.licensesLoading': '読み込み中…',
   'about.body':
     'PromptHound は、メタデータを正確に管理したいデジタルアーティスト、プロンプトエンジニア、AI クリエイターのためのツールです。PNG/WebP のチャンクに含まれるメタデータ（Automatic1111 の tEXt チャンク、ComfyUI のノードグラフ、Fooocus、InvokeAI、NovelAI）を読み取り、未加工のパラメーターを抽出します。さらに、モデルのインデックスを照会し、LoRA の識別情報やチェックポイントをわかりやすい名前で表示します。',
 

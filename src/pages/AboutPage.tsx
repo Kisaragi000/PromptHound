@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PromptHoundLogo, ExternalLinkIcon } from '../components/icons/Icons.js';
 import { SecondaryButton } from '../components/primitives/SecondaryButton.js';
 import {
@@ -14,6 +14,15 @@ export const AboutPage: React.FC = () => {
   const version = __APP_VERSION__;
   const updateStatus = useUpdateStatus();
   const canCheck = canCheckForUpdates(updateStatus);
+  const [notices, setNotices] = useState<string | null>(null);
+
+  // The notices file is large, so it loads only when the list is opened.
+  const loadNotices = (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+    if (!event.currentTarget.open || notices !== null) return;
+    import('../../THIRD-PARTY-NOTICES.txt?raw')
+      .then((mod) => setNotices(mod.default))
+      .catch(() => setNotices(''));
+  };
 
   return (
     <div className={styles.page}>
@@ -102,6 +111,33 @@ export const AboutPage: React.FC = () => {
         <p style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>
           {t('about.body')}
         </p>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>{t('about.legalSection')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>
+          <p style={{ margin: 0 }}>{t('about.license')}</p>
+          <p style={{ margin: 0 }}>{t('about.notAffiliated')}</p>
+          <p style={{ margin: 0 }}>{t('about.userContent')}</p>
+          <details onToggle={loadNotices}>
+            <summary style={{ cursor: 'pointer', color: 'var(--color-link-accent)' }}>{t('about.licenses')}</summary>
+            <pre
+              style={{
+                marginTop: '8px',
+                maxHeight: '320px',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere',
+                fontSize: '12px',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              {notices ?? t('about.licensesLoading')}
+            </pre>
+          </details>
+        </div>
       </div>
     </div>
   );
