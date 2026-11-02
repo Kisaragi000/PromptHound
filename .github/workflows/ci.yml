@@ -24,6 +24,9 @@ jobs:
       - name: Typecheck (renderer, core and Electron main)
         run: npm run lint
 
+      - name: Third-party license notices are up to date
+        run: npm run notices:check
+
       - name: Extraction and library tests
         run: npm test
 

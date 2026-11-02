@@ -582,6 +582,12 @@ export const en = {
   'about.repo': 'Repository:',
   'about.updatesSection': 'UPDATES',
   'about.softwareSection': 'ABOUT THIS SOFTWARE',
+  'about.legalSection': 'LEGAL',
+  'about.license': 'Free software under the MIT License, provided as is, without warranty.',
+  'about.notAffiliated': 'Not affiliated with or endorsed by Civitai, SeaArt, ComfyUI, Automatic1111 or other services named in the app. Their names belong to their owners.',
+  'about.userContent': 'You are responsible for the images you save and for following the rules of the sites you use.',
+  'about.licenses': 'Open-source licenses',
+  'about.licensesLoading': 'Loading…',
   'about.body':
     'PromptHound is designed for digital artists, prompt engineers, and AI creators who require precision metadata tracking. It inspects PNG/WebP chunk metadata (Automatic1111 tEXt chunks, ComfyUI node graphs, Fooocus, InvokeAI, NovelAI), extracts raw parameters, and queries model indices to resolve human-readable LoRA identifiers and model checkpoints.',
 

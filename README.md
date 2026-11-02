@@ -99,4 +99,13 @@ Build, test and release instructions are in **[docs/DEVELOPMENT.md](docs/DEVELOP
 
 ## License
 
-[MIT](LICENSE). Made for the AI art community.
+[MIT](LICENSE). Made for the AI art community. PromptHound is provided as is, without warranty.
+The open-source libraries it ships with are listed, with their licenses, in
+[THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) and in the app under About.
+
+You are responsible for the images you save and for following the rules of the sites you use.
+
+PromptHound is an independent project. It is not affiliated with, endorsed by or sponsored by
+Civitai, SeaArt, ComfyUI, Automatic1111, OpenAI, Google, Adobe or any other service it reads data
+from. Their names and trademarks belong to their owners and are used only to say which formats
+the app understands.
