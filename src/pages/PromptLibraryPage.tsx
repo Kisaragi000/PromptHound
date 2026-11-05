@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   FolderIcon,
   GripIcon,
@@ -37,6 +37,23 @@ import { Dropdown } from '../components/primitives/Dropdown.js';
 import { itemImages } from '../utils/libraryImages.js';
 import { filterLibraryItems, libraryFacets } from '../utils/librarySearch.js';
 
+/**
+ * Where the library was left (folder, filters, layout, selected entry, scroll), so opening an
+ * entry and coming back lands in the same spot. Kept for the app session only.
+ */
+const lastView = {
+  folder: 'All Prompts',
+  search: '',
+  model: '',
+  lora: '',
+  viewMode: 'grid' as 'grid' | 'table',
+  selectedId: null as string | null,
+  scrollTop: 0,
+  cardHeight: '',
+  /** The "show this entry" request already handled; a new one starts a fresh view */
+  focusId: null as string | null,
+};
+
 export const PromptLibraryPage: React.FC = () => {
   const t = useT();
   const {
@@ -55,13 +72,22 @@ export const PromptLibraryPage: React.FC = () => {
     libraryFocusId,
   } = useNavigation();
 
-  const [selectedFolder, setSelectedFolder] = useState('All Prompts');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [modelFilter, setModelFilter] = useState('');
-  const [loraFilter, setLoraFilter] = useState('');
-  // Opened via "Saved to Library": start with that item selected
+  // Opened via "Saved to Library": start fresh with that item selected; otherwise pick up
+  // where the library was left
+  useState(() => {
+    if (libraryFocusId !== null && libraryFocusId !== lastView.focusId) {
+      Object.assign(lastView, { folder: 'All Prompts', search: '', model: '', lora: '', scrollTop: 0, selectedId: libraryFocusId });
+    }
+    lastView.focusId = libraryFocusId;
+  });
+  const [selectedFolder, setSelectedFolder] = useState(() =>
+    lastView.folder === 'All Prompts' || folders.includes(lastView.folder) ? lastView.folder : 'All Prompts'
+  );
+  const [searchQuery, setSearchQuery] = useState(lastView.search);
+  const [modelFilter, setModelFilter] = useState(lastView.model);
+  const [loraFilter, setLoraFilter] = useState(lastView.lora);
   const [selectedItem, setSelectedItem] = useState<SavedPromptItem | null>(
-    () => libraryItems.find((i) => i.id === libraryFocusId) ?? null
+    () => libraryItems.find((i) => i.id === lastView.selectedId) ?? null
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -86,7 +112,7 @@ export const PromptLibraryPage: React.FC = () => {
   };
 
   // View Layout mode: 'grid' or 'table'
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(lastView.viewMode);
 
   // Compare diff selection
   const [compareSelection, setCompareSelection] = useState<string[]>([]);
@@ -211,6 +237,34 @@ export const PromptLibraryPage: React.FC = () => {
   // size as they come into view while scrolling
   const gridAreaRef = useRef<HTMLDivElement>(null);
   const sizedLayout = useRef<string | null>(null);
+
+  // Back from an entry: scroll to where the list was. Cards out of view get last time's card
+  // height first, so the list is as tall as before and the same cards come into view
+  useLayoutEffect(() => {
+    const area = gridAreaRef.current;
+    if (!area) return;
+    if (lastView.cardHeight) area.style.setProperty('--card-height', lastView.cardHeight);
+    area.scrollTop = lastView.scrollTop;
+    const remember = () => {
+      lastView.scrollTop = area.scrollTop;
+    };
+    area.addEventListener('scroll', remember, { passive: true });
+    return () => {
+      area.removeEventListener('scroll', remember);
+      lastView.cardHeight = area.style.getPropertyValue('--card-height');
+    };
+  }, []);
+
+  useEffect(() => {
+    Object.assign(lastView, {
+      folder: selectedFolder,
+      search: searchQuery,
+      model: modelFilter,
+      lora: loraFilter,
+      viewMode,
+      selectedId: selectedItem?.id ?? null,
+    });
+  }, [selectedFolder, searchQuery, modelFilter, loraFilter, viewMode, selectedItem]);
   useEffect(() => {
     const area = gridAreaRef.current;
     if (!area) return;

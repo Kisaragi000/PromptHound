@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.2.1
+
+### Changed
+- **The library stays where you left it.** After opening an entry and going back, the Prompt
+  Library is at the same scroll position, with the same folder, search, filters, Grid/Table view
+  and selected entry (until the app is closed).
+
 ## v1.2.0
 
 ### Added
