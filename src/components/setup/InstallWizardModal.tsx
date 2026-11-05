@@ -18,6 +18,7 @@ import {
   type CivitaiDomainPreference,
 } from '../../../core/lora-resolution.js';
 import { useT } from '../../i18n/index.js';
+import { isWindowsApp } from '../../utils/platform.js';
 import styles from './InstallWizardModal.module.css';
 
 interface InstallWizardModalProps {
@@ -102,6 +103,9 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
     }
   };
 
+  // The last step sets up the Windows Explorer menu, so other systems finish after step 3
+  const lastStep = isWindowsApp() ? 4 : 3;
+
   const handleFinishSetup = () => {
     localStorage.setItem('prompthound_setup_completed', 'true');
     localStorage.setItem('prompthound_workflow_profile', workflowProfile);
@@ -133,7 +137,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
             <PromptHoundLogo size={32} />
             <div>
               <h2 className={styles.title}>{t('wizard.title')}</h2>
-              <p className={styles.subtitle}>{t('wizard.subtitle')}</p>
+              <p className={styles.subtitle}>{t('wizard.subtitle', { count: lastStep })}</p>
             </div>
           </div>
 
@@ -143,7 +147,9 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
               { num: 2, label: t('wizard.stepFolders') },
               { num: 3, label: t('wizard.stepCivitai') },
               { num: 4, label: t('wizard.stepIntegration') },
-            ].map((s) => (
+            ]
+              .filter((s) => s.num <= lastStep)
+              .map((s) => (
               <div
                 key={s.num}
                 className={`${styles.stepItem} ${step === s.num ? styles.stepActive : step > s.num ? styles.stepCompleted : ''}`}
@@ -317,7 +323,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
           )}
 
           {/* STEP 4: Windows Explorer integration */}
-          {step === 4 && (
+          {step === 4 && lastStep === 4 && (
             <div className={styles.stepContent}>
               <div className={styles.sectionHeading}>
                 <LightningIcon size={20} />
@@ -361,7 +367,7 @@ export const InstallWizardModal: React.FC<InstallWizardModalProps> = ({
           )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            {step < 4 ? (
+            {step < lastStep ? (
               <PrimaryButton onClick={() => setStep((step + 1) as any)}>
                 {t('common.continue')}
               </PrimaryButton>

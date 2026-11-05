@@ -1,7 +1,8 @@
 {
   "name": "prompthound",
   "productName": "PromptHound",
-  "version": "1.1.11",
+  "desktopName": "prompthound.desktop",
+  "version": "1.2.0",
   "license": "MIT",
   "description": "AI prompt and metadata extractor for AI-generated images",
   "author": "Kisaragi",
@@ -30,6 +31,7 @@
     "build": "vite build",
     "build:electron": "vite build && esbuild electron/main.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/preload.cjs",
     "package:win": "npm run build:electron && electron-builder --win",
+    "package:linux": "npm run build:electron && electron-builder --linux",
     "build:installer-assets": "node scripts/generate-installer-assets.mjs",
     "notices": "node scripts/generate-third-party-notices.mjs",
     "notices:check": "node scripts/generate-third-party-notices.mjs --check",
@@ -82,6 +84,30 @@
       "installerSidebar": "build/installerSidebar.bmp",
       "uninstallerSidebar": "build/installerSidebar.bmp",
       "include": "build/installer.nsh"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics",
+      "executableName": "prompthound",
+      "synopsis": "Read prompts and settings from AI-generated images",
+      "maintainer": "Kisaragi <329467637+Kisaragi000@users.noreply.github.com>",
+      "mimeTypes": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/avif"
+      ],
+      "syncDesktopName": true
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "deb": {
+      "artifactName": "${productName}-${version}-amd64.${ext}"
     }
   },
   "dependencies": {

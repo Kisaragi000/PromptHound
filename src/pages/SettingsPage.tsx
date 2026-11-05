@@ -12,10 +12,12 @@ import {
 import { Dropdown } from '../components/primitives/Dropdown.js';
 import { LibraryBackupControls } from '../components/library/LibraryBackupControls.js';
 import { useT, useLanguage, setLanguage, LANGUAGES, type Language } from '../i18n/index.js';
+import { isWindowsApp } from '../utils/platform.js';
 import styles from './StaticPage.module.css';
 
 export const SettingsPage: React.FC = () => {
   const t = useT();
+  const showWindowsSection = isWindowsApp();
   const language = useLanguage();
   const [civitaiDomain, setCivitaiDomain] = useState<CivitaiDomainPreference>(() => {
     return getPreferredCivitaiDomain();
@@ -111,7 +113,7 @@ export const SettingsPage: React.FC = () => {
     <div className={styles.page}>
       <div>
         <h1 className={styles.headerTitle}>{t('settings.title')}</h1>
-        <p className={styles.headerSubtitle}>{t('settings.subtitle')}</p>
+        <p className={styles.headerSubtitle}>{t(showWindowsSection ? 'settings.subtitle' : 'settings.subtitleNoWindows')}</p>
       </div>
 
       <div className={styles.section}>
@@ -133,29 +135,31 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>{t('settings.windowsSection')}</div>
-        <div className={styles.settingRow}>
-          <div className={styles.settingInfo}>
-            <div className={styles.settingLabel}>{t('settings.explorerMenu')}</div>
-            <div className={styles.settingDesc}>
-              {explorerMenu.supported
-                ? t('settings.explorerMenuDesc')
-                : t('settings.explorerMenuInstalled')}
-              {explorerMenu.error && <div style={{ marginTop: '4px', color: '#f87171' }}>{explorerMenu.error}</div>}
+      {showWindowsSection && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>{t('settings.windowsSection')}</div>
+          <div className={styles.settingRow}>
+            <div className={styles.settingInfo}>
+              <div className={styles.settingLabel}>{t('settings.explorerMenu')}</div>
+              <div className={styles.settingDesc}>
+                {explorerMenu.supported
+                  ? t('settings.explorerMenuDesc')
+                  : t('settings.explorerMenuInstalled')}
+                {explorerMenu.error && <div style={{ marginTop: '4px', color: '#f87171' }}>{explorerMenu.error}</div>}
+              </div>
             </div>
+            <label className={styles.toggleSwitch}>
+              <input
+                type="checkbox"
+                checked={explorerMenu.enabled}
+                disabled={!explorerMenu.supported || explorerMenu.busy}
+                onChange={(e) => void handleExplorerMenuChange(e.target.checked)}
+              />
+              <span className={styles.toggleSlider} />
+            </label>
           </div>
-          <label className={styles.toggleSwitch}>
-            <input
-              type="checkbox"
-              checked={explorerMenu.enabled}
-              disabled={!explorerMenu.supported || explorerMenu.busy}
-              onChange={(e) => void handleExplorerMenuChange(e.target.checked)}
-            />
-            <span className={styles.toggleSlider} />
-          </label>
         </div>
-      </div>
+      )}
 
       <div className={styles.section}>
         <div className={styles.sectionTitle}>{t('settings.apiSection')}</div>

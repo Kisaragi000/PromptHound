@@ -65,7 +65,7 @@ export const AboutPage: React.FC = () => {
             <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.theme')}</strong> {t('about.themeValue')}
           </div>
           <div>
-            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.os')}</strong> Windows 10 / 11 (x64)
+            <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.os')}</strong> Windows 10 / 11, Linux (x64)
           </div>
           <div>
             <strong style={{ color: 'var(--color-text-secondary)' }}>{t('about.repo')}</strong>{' '}

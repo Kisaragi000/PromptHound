@@ -102,6 +102,7 @@ export const ru: Record<StringKey, string> = {
   'update.desc.checking': 'Проверка обновлений…',
   'update.desc.upToDate': 'У вас последняя версия.',
   'update.desc.available': 'Найдена версия {version}, загрузка…',
+  'update.desc.manual': 'Доступна версия {version}. Скачайте её со страницы релизов.',
   'update.desc.downloading': 'Загрузка обновления{version}: {percent}%',
   'update.desc.downloaded': 'Версия {version} готова. Перезапустите PromptHound, чтобы установить её.',
   'update.desc.unsupported': 'Портативная версия не обновляется сама. Скачайте новую со страницы релизов.',
@@ -113,6 +114,7 @@ export const ru: Record<StringKey, string> = {
   'update.short.checking': 'Проверка…',
   'update.short.upToDate': 'Последняя версия',
   'update.short.available': 'Найдена v{version}',
+  'update.short.manual': 'Доступна v{version}',
   'update.short.downloading': 'Загрузка {percent}%',
   'update.short.downloaded': 'v{version} готова к установке',
   'update.short.unsupported': 'Портативная: обновлять вручную',
@@ -125,6 +127,7 @@ export const ru: Record<StringKey, string> = {
   'update.home.readyBody': 'перезапустите, чтобы обновить сейчас, или обновление установится при следующем закрытии программы.',
   'update.home.availableTitle': 'Доступна новая версия{version}:',
   'update.home.availableBody': 'загружается в фоне{percent}…',
+  'update.home.manualBody': 'скачайте её со страницы релизов.',
 
   // Home
   'home.setupDone': 'Настройка завершена. Изменить выбор можно в любой момент в настройках.',
@@ -521,6 +524,7 @@ export const ru: Record<StringKey, string> = {
   // Settings
   'settings.title': 'Параметры и настройки',
   'settings.subtitle': 'Язык, интеграция с Windows, доступ к Civitai, резервные копии библиотеки и кэш моделей.',
+  'settings.subtitleNoWindows': 'Язык, доступ к Civitai, резервные копии библиотеки и кэш моделей.',
   'settings.languageSection': 'ЯЗЫК',
   'settings.language': 'Язык интерфейса',
   'settings.languageDesc': 'Меняет все меню и надписи сразу. Промпты и названия моделей остаются как есть.',
@@ -575,7 +579,7 @@ export const ru: Record<StringKey, string> = {
   'backup.import': 'Импорт…',
 
   // About
-  'about.tagline': 'Универсальная программа для извлечения ИИ-промптов и метаданных для Windows',
+  'about.tagline': 'Универсальная программа для извлечения ИИ-промптов и метаданных для Windows и Linux',
   'about.specSection': 'ХАРАКТЕРИСТИКИ',
   'about.phase': 'Этап:',
   'about.phaseValue': 'Этап 1 (извлечение метаданных и настольное приложение)',
@@ -603,7 +607,7 @@ export const ru: Record<StringKey, string> = {
   'wizard.httpError': 'Civitai вернул HTTP {status}: проверьте свой API-токен.',
   'wizard.networkError': 'Не удалось подключиться к API Civitai. Проверьте подключение к сети.',
   'wizard.title': 'Добро пожаловать в настройку PromptHound',
-  'wizard.subtitle': 'Настройте рабочий процесс генерации за 4 коротких шага',
+  'wizard.subtitle': 'Настройте рабочий процесс генерации за {count} коротких шага',
   'wizard.stepWorkflow': 'Процесс',
   'wizard.stepFolders': 'Папки',
   'wizard.stepCivitai': 'Civitai',

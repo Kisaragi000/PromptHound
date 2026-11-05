@@ -47,7 +47,7 @@ export const Sidebar: React.FC = () => {
     if (updateStatus?.state === 'downloaded') {
       return { label: t('update.restart'), onClick: () => window.promptHound?.updates?.install(), disabled: false };
     }
-    if (updateStatus?.state === 'unsupported') {
+    if (updateStatus?.state === 'unsupported' || updateStatus?.state === 'manual') {
       return { label: t('update.openReleases'), onClick: () => window.promptHound?.openExternal?.(RELEASES_URL), disabled: false };
     }
     return {

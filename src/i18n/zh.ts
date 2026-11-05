@@ -103,6 +103,7 @@ export const zh: Record<StringKey, string> = {
   'update.desc.checking': '正在检查更新…',
   'update.desc.upToDate': '已是最新版本。',
   'update.desc.available': '发现新版本 {version}，正在下载…',
+  'update.desc.manual': '新版本 {version} 已发布。请从发布页面下载。',
   'update.desc.downloading': '正在下载更新{version}：{percent}%',
   'update.desc.downloaded': '版本 {version} 已就绪。重启 PromptHound 即可安装。',
   'update.desc.unsupported': '便携版无法自动更新。请从发布页面下载最新版本。',
@@ -113,6 +114,7 @@ export const zh: Record<StringKey, string> = {
   'update.short.checking': '正在检查…',
   'update.short.upToDate': '已是最新',
   'update.short.available': '发现 v{version}',
+  'update.short.manual': '有新版本 v{version}',
   'update.short.downloading': '正在下载 {percent}%',
   'update.short.downloaded': 'v{version} 可安装',
   'update.short.unsupported': '便携版：请手动更新',
@@ -125,6 +127,7 @@ export const zh: Record<StringKey, string> = {
   'update.home.readyBody': '立即重启以更新，或在下次关闭应用时自动安装。',
   'update.home.availableTitle': '发现新版本{version}：',
   'update.home.availableBody': '正在后台下载{percent}…',
+  'update.home.manualBody': '请从发布页面下载。',
 
   // Home
   'home.setupDone': '设置完成。你可以随时在设置中修改这些选项。',
@@ -513,6 +516,7 @@ export const zh: Record<StringKey, string> = {
   // Settings
   'settings.title': '偏好设置',
   'settings.subtitle': '语言、Windows 集成、Civitai 访问、提示词库备份和模型缓存。',
+  'settings.subtitleNoWindows': '语言、Civitai 访问、提示词库备份和模型缓存。',
   'settings.languageSection': '语言',
   'settings.language': '界面语言',
   'settings.languageDesc': '立即切换所有菜单和文字。提示词和模型名称保持不变。',
@@ -563,7 +567,7 @@ export const zh: Record<StringKey, string> = {
   'backup.import': '导入…',
 
   // About
-  'about.tagline': '适用于 Windows 桌面的通用 AI 提示词与元数据提取工具',
+  'about.tagline': '适用于 Windows 和 Linux 的通用 AI 提示词与元数据提取工具',
   'about.specSection': '系统规格',
   'about.phase': '阶段：',
   'about.phaseValue': '第 1 阶段（元数据提取与桌面应用）',
@@ -591,7 +595,7 @@ export const zh: Record<StringKey, string> = {
   'wizard.httpError': 'Civitai 返回 HTTP {status}：请检查你的 API 令牌。',
   'wizard.networkError': '无法连接 Civitai API。请检查网络连接。',
   'wizard.title': '欢迎使用 PromptHound 设置向导',
-  'wizard.subtitle': '只需 4 步，配置你的生成工作流',
+  'wizard.subtitle': '只需 {count} 步，配置你的生成工作流',
   'wizard.stepWorkflow': '工作流',
   'wizard.stepFolders': '文件夹',
   'wizard.stepCivitai': 'Civitai',
