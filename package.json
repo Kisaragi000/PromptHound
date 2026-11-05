@@ -2,7 +2,7 @@
   "name": "prompthound",
   "productName": "PromptHound",
   "desktopName": "prompthound.desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "description": "AI prompt and metadata extractor for AI-generated images",
   "author": "Kisaragi",

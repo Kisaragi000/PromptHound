@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.1
 
 ### Changed
 - **The library stays where you left it.** After opening an entry and going back, the Prompt
