@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0
+
+### Added
+- **PromptHound runs on Linux.** Every release now also has two Linux downloads: an AppImage
+  (one file for almost any Linux, updates itself like the Windows installer) and a .deb for
+  Ubuntu, Linux Mint and Debian (normal install with a menu entry, and PromptHound in the file
+  manager's "Open With" menu for images). The .deb shows a notice with a link to the Releases
+  page when a new version is out.
+
+### Changed
+- On Linux, the Windows-only Explorer menu option is hidden in Settings and in the setup wizard
+  (which has 3 steps there instead of 4). About now says Windows and Linux.
+
 ## v1.1.11
 
 ### Added

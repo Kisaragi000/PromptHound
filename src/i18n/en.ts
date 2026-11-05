@@ -100,6 +100,7 @@ export const en = {
   'update.desc.checking': 'Checking for updates…',
   'update.desc.upToDate': 'You have the latest version.',
   'update.desc.available': 'Version {version} found, downloading…',
+  'update.desc.manual': 'Version {version} is available. Download it from the Releases page.',
   'update.desc.downloading': 'Downloading update{version}: {percent}%',
   'update.desc.downloaded': 'Version {version} is ready. Restart PromptHound to install it.',
   'update.desc.unsupported': 'The portable version cannot update itself. Download the newest one from the Releases page.',
@@ -111,6 +112,7 @@ export const en = {
   'update.short.checking': 'Checking…',
   'update.short.upToDate': 'Up to date',
   'update.short.available': 'v{version} found',
+  'update.short.manual': 'v{version} available',
   'update.short.downloading': 'Downloading {percent}%',
   'update.short.downloaded': 'v{version} ready to install',
   'update.short.unsupported': 'Portable: update by hand',
@@ -123,6 +125,7 @@ export const en = {
   'update.home.readyBody': 'restart to update now, or it installs next time you close the app.',
   'update.home.availableTitle': 'New version{version} available:',
   'update.home.availableBody': 'downloading in the background{percent}…',
+  'update.home.manualBody': 'download it from the Releases page.',
 
   // Home
   'home.setupDone': 'Setup complete. Change these choices any time in Settings.',
@@ -516,6 +519,7 @@ export const en = {
   // Settings
   'settings.title': 'Preferences & Settings',
   'settings.subtitle': 'Language, Windows integration, Civitai access, library backups and the model cache.',
+  'settings.subtitleNoWindows': 'Language, Civitai access, library backups and the model cache.',
   'settings.languageSection': 'LANGUAGE',
   'settings.language': 'Interface Language',
   'settings.languageDesc': 'Changes all menus and labels at once. Prompts and model names stay as they are.',
@@ -569,7 +573,7 @@ export const en = {
   'backup.import': 'Import…',
 
   // About
-  'about.tagline': 'Universal AI Prompt & Metadata Extraction Utility for Windows Desktop',
+  'about.tagline': 'Universal AI Prompt & Metadata Extraction Utility for Windows and Linux',
   'about.specSection': 'SYSTEM SPECIFICATION',
   'about.phase': 'Phase:',
   'about.phaseValue': 'Phase 1 (Metadata Extraction & Desktop Shell)',
@@ -597,7 +601,7 @@ export const en = {
   'wizard.httpError': 'Civitai returned HTTP {status}: Check your API token.',
   'wizard.networkError': 'Could not connect to Civitai API. Check your network connection.',
   'wizard.title': 'Welcome to PromptHound Setup',
-  'wizard.subtitle': 'Configure your generation workflow in 4 quick steps',
+  'wizard.subtitle': 'Configure your generation workflow in {count} quick steps',
   'wizard.stepWorkflow': 'Workflow',
   'wizard.stepFolders': 'Folders',
   'wizard.stepCivitai': 'Civitai',

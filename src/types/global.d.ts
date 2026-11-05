@@ -3,6 +3,8 @@ import type { ExtractionResult, ExtractionError } from '../../core/types.js';
 export type UpdateStatus =
   | { state: 'idle' | 'checking' | 'up-to-date' | 'unsupported' }
   | { state: 'available' | 'downloaded'; version: string }
+  /** A newer version exists but this copy cannot install it itself (Linux .deb) */
+  | { state: 'manual'; version: string }
   | { state: 'downloading'; version?: string; percent: number }
   | { state: 'error'; message: string };
 
@@ -10,6 +12,8 @@ export interface PromptHoundAPI {
   appInfo: {
     name?: string;
     version: string;
+    /** Node's process.platform, e.g. 'win32' or 'linux' */
+    platform?: string;
   };
   windowControls: {
     minimize: () => Promise<void> | void;

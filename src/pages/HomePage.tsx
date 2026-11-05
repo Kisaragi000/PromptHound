@@ -19,7 +19,7 @@ import { InstallWizardModal } from '../components/setup/InstallWizardModal.js';
 import { NewPromptModal } from '../components/library/NewPromptModal.js';
 import { BatchExtractionQueue, type BatchItem } from '../components/home/BatchExtractionQueue.js';
 import { RecentExtractionsStrip } from '../components/home/RecentExtractionsStrip.js';
-import { useUpdateStatus } from '../components/shell/useUpdateStatus.js';
+import { useUpdateStatus, RELEASES_URL } from '../components/shell/useUpdateStatus.js';
 import { useNavigation } from '../navigation/NavigationContext.js';
 import { useExtraction } from '../extraction/ExtractionContext.js';
 import type { SavedPromptItem } from '../../core/types.js';
@@ -69,7 +69,10 @@ export const HomePage: React.FC = () => {
   const [dismissedUpdate, setDismissedUpdate] = useState<string | null>(null);
   const pendingUpdate =
     updateStatus &&
-    (updateStatus.state === 'available' || updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') &&
+    (updateStatus.state === 'available' ||
+      updateStatus.state === 'downloading' ||
+      updateStatus.state === 'downloaded' ||
+      updateStatus.state === 'manual') &&
     updateStatus.version !== dismissedUpdate
       ? updateStatus
       : null;
@@ -208,6 +211,11 @@ export const HomePage: React.FC = () => {
                   <strong>{t('update.home.readyTitle', { version: pendingUpdate.version })}</strong>{' '}
                   {t('update.home.readyBody')}
                 </>
+              ) : pendingUpdate.state === 'manual' ? (
+                <>
+                  <strong>{t('update.home.availableTitle', { version: ` v${pendingUpdate.version}` })}</strong>{' '}
+                  {t('update.home.manualBody')}
+                </>
               ) : (
                 <>
                   <strong>
@@ -227,6 +235,16 @@ export const HomePage: React.FC = () => {
               </button>
               <button className={styles.wizardBannerBtn} onClick={() => window.promptHound?.updates?.install()}>
                 {t('update.restart')}
+              </button>
+            </div>
+          )}
+          {pendingUpdate.state === 'manual' && (
+            <div className={styles.wizardBannerLeft}>
+              <button className={styles.wizardBannerLater} onClick={() => setDismissedUpdate(pendingUpdate.version)}>
+                {t('common.later')}
+              </button>
+              <button className={styles.wizardBannerBtn} onClick={() => window.promptHound?.openExternal?.(RELEASES_URL)}>
+                {t('update.openReleases')}
               </button>
             </div>
           )}

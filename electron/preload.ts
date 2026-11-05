@@ -33,6 +33,7 @@ const windowControls = {
 const appInfo = {
   name: 'PromptHound',
   version: readAppVersion(),
+  platform: process.platform,
 };
 
 const extraction = {

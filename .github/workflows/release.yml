@@ -1,4 +1,4 @@
-name: Build & Release Windows Desktop App
+name: Build & Release Desktop App
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
         description: 'Release version, must match package.json (e.g. 1.0.8)'
         required: true
       publish:
-        description: 'Publish a GitHub release (off: build only, installer kept as a run artifact)'
+        description: 'Publish a GitHub release (off: build only, installers kept as run artifacts)'
         type: boolean
         default: true
   push:
@@ -18,8 +18,27 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    name: Check release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $requested = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.version }}" } else { "${{ github.ref_name }}".TrimStart("v") }
+          if ($requested -ne $pkg) { throw "Release version $requested does not match package.json version $pkg" }
+          "version=$pkg" >> $env:GITHUB_OUTPUT
+
   build-windows:
-    name: Build & Release Windows Installer (.exe)
+    name: Build Windows Installer (.exe)
+    needs: version
     runs-on: windows-latest
 
     steps:
@@ -30,15 +49,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Resolve release version
-        id: version
-        shell: pwsh
-        run: |
-          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $requested = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.version }}" } else { "${{ github.ref_name }}".TrimStart("v") }
-          if ($requested -ne $pkg) { throw "Release version $requested does not match package.json version $pkg" }
-          "version=$pkg" >> $env:GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -60,26 +70,76 @@ jobs:
             }
           }
 
-      # Build only: the release is created in one place below. Letting electron-builder
-      # publish as well produced a second, draft release for every version.
+      # Build only: the release is created once, in the release job below. Letting
+      # electron-builder publish as well produced a second, draft release for every version.
       - name: Package Windows .exe (Installer & Portable)
         run: npx electron-builder --win --publish never
 
-      # Test builds: the installer is downloadable from the run page, nothing is released
-      - name: Upload test build
-        if: github.event_name == 'workflow_dispatch' && !inputs.publish
+      - name: Keep the Windows files for the release
         uses: actions/upload-artifact@v4
         with:
-          name: PromptHound-${{ steps.version.outputs.version }}-test-${{ github.sha }}
+          name: PromptHound-${{ needs.version.outputs.version }}-windows-${{ github.sha }}
           path: |
             release/*.exe
+            release/*.blockmap
+            release/latest.yml
           retention-days: 14
 
+  build-linux:
+    name: Build Linux AppImage & .deb
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web Renderer & Electron Main
+        run: npm run build:electron
+
+      - name: Package Linux AppImage & .deb
+        run: npx electron-builder --linux --publish never
+
+      - name: Keep the Linux files for the release
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromptHound-${{ needs.version.outputs.version }}-linux-${{ github.sha }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/latest-linux.yml
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: [version, build-windows, build-linux]
+    # Test builds (publish off) stop here: the files stay downloadable from the run page
+    if: github.event_name != 'workflow_dispatch' || inputs.publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download the Windows and Linux files
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
       - name: Extract release notes from CHANGELOG.md
-        if: github.event_name != 'workflow_dispatch' || inputs.publish
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
+          $version = "${{ needs.version.outputs.version }}"
           $notes = ""
           if (Test-Path CHANGELOG.md) {
             $text = Get-Content CHANGELOG.md -Raw
@@ -91,16 +151,19 @@ jobs:
 
       # Tag pushes release that tag; manual runs create tag v<version> on the built commit
       - name: Publish GitHub Release
-        if: github.event_name != 'workflow_dispatch' || inputs.publish
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.version.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: PromptHound v${{ steps.version.outputs.version }}
+          name: PromptHound v${{ needs.version.outputs.version }}
           body_path: release-notes.md
+          fail_on_unmatched_files: true
           files: |
             release/*.exe
             release/*.blockmap
             release/latest.yml
+            release/*.AppImage
+            release/*.deb
+            release/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

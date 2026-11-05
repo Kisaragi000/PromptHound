@@ -12,12 +12,12 @@
 <p align="center">
   <a href="https://github.com/Kisaragi000/PromptHound/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Kisaragi000/PromptHound?color=F59A22&label=release"></a>
   <a href="https://github.com/Kisaragi000/PromptHound/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Kisaragi000/PromptHound/ci.yml?branch=main&label=checks"></a>
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-3b82f6">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20%7C%20Linux-3b82f6">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kisaragi000/PromptHound/releases/latest"><b>⬇ Download for Windows</b></a>
+  <a href="https://github.com/Kisaragi000/PromptHound/releases/latest"><b>⬇ Download for Windows or Linux</b></a>
 </p>
 
 <p align="center">
@@ -38,7 +38,9 @@
 
 ## Install
 
-Get the latest files from the **[Releases page](https://github.com/Kisaragi000/PromptHound/releases/latest)** (Windows 10 or 11, 64-bit):
+Get the latest files from the **[Releases page](https://github.com/Kisaragi000/PromptHound/releases/latest)**.
+
+### Windows (10 or 11, 64-bit)
 
 | File | Use it when |
 | --- | --- |
@@ -48,6 +50,15 @@ Get the latest files from the **[Releases page](https://github.com/Kisaragi000/P
 **Windows says "Windows protected your PC"?** PromptHound is not code-signed yet (a signing certificate costs money), so Windows SmartScreen warns about every new download. Choose **More info**, then **Run anyway**. The installers are built by GitHub Actions from the source in this repository (`.github/workflows/release.yml`).
 
 **Updates:** the installed version checks GitHub for a newer release when it starts and every few hours, downloads it in the background and shows **Restart to update**. If you ignore it, it is installed the next time you close the app.
+
+### Linux (64-bit)
+
+| File | Use it when |
+| --- | --- |
+| `PromptHound-<version>.AppImage` | You want one file that runs on almost any Linux. Make it executable (right-click > Properties > "Allow executing", or `chmod +x PromptHound-*.AppImage`), then double-click it. It **updates itself** like the Windows installer. |
+| `PromptHound-<version>-amd64.deb` | You use Ubuntu, Linux Mint, Debian or Pop!_OS and want a normal install with a menu entry. Install it with `sudo apt install ./PromptHound-<version>-amd64.deb`. PromptHound then appears under **Open With** when you right-click an image. When a new version is out, the app says so and links to the Releases page. |
+
+**The AppImage does not start?** AppImages need FUSE 2, which newer Ubuntu versions leave out. Install it once: `sudo apt install libfuse2t64` (Ubuntu 24.04 and newer) or `sudo apt install libfuse2` (Ubuntu 22.04). The .deb does not need it.
 
 ## Supported images
 
@@ -59,13 +70,13 @@ Get the latest files from the **[Releases page](https://github.com/Kisaragi000/P
 | Civitai images and links | Generation data from the post, or from the original file when you paste it |
 | ChatGPT, Gemini, Firefly and others | A **"Confirmed AI-generated"** label with the service and date. These services do not store the prompt in the file, so there is none to show |
 
-PNG, JPEG and WebP files work, whether you drop them, paste them with `Ctrl+V`, paste an image link, or right-click them in Windows Explorer and choose **Extract with PromptHound** (turn it on in Settings > Windows Integration).
+PNG, JPEG and WebP files work, whether you drop them, paste them with `Ctrl+V`, paste an image link, or right-click them in Windows Explorer and choose **Extract with PromptHound** (turn it on in Settings > Windows Integration). On Linux, the .deb adds PromptHound to the file manager's **Open With** menu for images.
 
 ## Privacy
 
-- Your images and library stay on your PC (`%APPDATA%\PromptHound`). There is no account, no analytics and no telemetry.
+- Your images and library stay on your PC (`%APPDATA%\PromptHound` on Windows, `~/.config/PromptHound` on Linux). There is no account, no analytics and no telemetry.
 - The app goes online only to: look up models on **Civitai** (hashes, ids and names, never your images), show their preview pictures, fetch the links you paste, and check **GitHub** for updates.
-- A **Civitai API key is optional**. If you add one it is encrypted by Windows on your PC and is only ever sent to Civitai.
+- A **Civitai API key is optional**. If you add one it is encrypted on your PC (by Windows, or by the system keyring on Linux) and is only ever sent to Civitai.
 
 ## Questions
 

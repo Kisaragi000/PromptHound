@@ -48,6 +48,8 @@ export function describeUpdateStatus(status: UpdateStatus | null): string {
       return t('update.desc.downloading', { version: status.version ? ` v${status.version}` : '', percent: status.percent });
     case 'downloaded':
       return t('update.desc.downloaded', { version: status.version });
+    case 'manual':
+      return t('update.desc.manual', { version: status.version });
     case 'unsupported':
       return t('update.desc.unsupported');
     case 'error':
@@ -71,6 +73,8 @@ export function shortUpdateLabel(status: UpdateStatus | null): string {
       return t('update.short.downloading', { percent: status.percent });
     case 'downloaded':
       return t('update.short.downloaded', { version: status.version });
+    case 'manual':
+      return t('update.short.manual', { version: status.version });
     case 'unsupported':
       return t('update.short.unsupported');
     case 'error':

@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Windows Explorer integration: an "Extract with PromptHound" entry on the right-click
@@ -51,16 +52,30 @@ export async function unregisterContextMenu(): Promise<void> {
   }
 }
 
-/** Image files named on a command line (Explorer passes one path per launch) */
+/**
+ * Image files named on a command line. Explorer passes one path per launch; Linux file
+ * managers ("Open With PromptHound") may pass file:// links instead of paths.
+ */
 export function imagePathsFromArgv(argv: string[]): string[] {
-  return argv.slice(1).filter((arg) => {
-    if (arg.startsWith('-') || !OPENABLE_EXTENSIONS.includes(path.extname(arg).toLowerCase())) return false;
-    try {
-      return fs.statSync(arg).isFile();
-    } catch {
-      return false;
+  const paths: string[] = [];
+  for (const arg of argv.slice(1)) {
+    if (arg.startsWith('-')) continue;
+    let filePath = arg;
+    if (arg.startsWith('file://')) {
+      try {
+        filePath = fileURLToPath(arg);
+      } catch {
+        continue;
+      }
     }
-  });
+    if (!OPENABLE_EXTENSIONS.includes(path.extname(filePath).toLowerCase())) continue;
+    try {
+      if (fs.statSync(filePath).isFile()) paths.push(filePath);
+    } catch {
+      // Not a file on this machine
+    }
+  }
+  return paths;
 }
 
 export interface OpenedFile {

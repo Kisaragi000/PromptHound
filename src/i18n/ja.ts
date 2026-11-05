@@ -103,6 +103,7 @@ export const ja: Record<StringKey, string> = {
   'update.desc.checking': '更新を確認中…',
   'update.desc.upToDate': '最新バージョンです。',
   'update.desc.available': 'バージョン {version} が見つかりました。ダウンロード中…',
+  'update.desc.manual': 'バージョン {version} が公開されています。リリースページからダウンロードしてください。',
   'update.desc.downloading': '更新{version}をダウンロード中：{percent}%',
   'update.desc.downloaded': 'バージョン {version} の準備ができました。PromptHound を再起動するとインストールされます。',
   'update.desc.unsupported': 'ポータブル版は自動更新できません。リリースページから最新版をダウンロードしてください。',
@@ -114,6 +115,7 @@ export const ja: Record<StringKey, string> = {
   'update.short.checking': '確認中…',
   'update.short.upToDate': '最新です',
   'update.short.available': 'v{version} が利用可能',
+  'update.short.manual': 'v{version} が利用可能',
   'update.short.downloading': 'ダウンロード中 {percent}%',
   'update.short.downloaded': 'v{version} をインストール可能',
   'update.short.unsupported': 'ポータブル版：手動で更新',
@@ -126,6 +128,7 @@ export const ja: Record<StringKey, string> = {
   'update.home.readyBody': '今すぐ再起動すると更新されます。再起動しない場合は、次回アプリを閉じたときにインストールされます。',
   'update.home.availableTitle': '新しいバージョン{version}があります：',
   'update.home.availableBody': 'バックグラウンドでダウンロード中{percent}…',
+  'update.home.manualBody': 'リリースページからダウンロードしてください。',
 
   // Home
   'home.setupDone': 'セットアップが完了しました。設定はいつでも変更できます。',
@@ -517,6 +520,7 @@ export const ja: Record<StringKey, string> = {
   // Settings
   'settings.title': '設定',
   'settings.subtitle': '言語、Windows 連携、Civitai へのアクセス、ライブラリのバックアップ、モデルキャッシュを管理します。',
+  'settings.subtitleNoWindows': '言語、Civitai へのアクセス、ライブラリのバックアップ、モデルキャッシュを管理します。',
   'settings.languageSection': '言語',
   'settings.language': '表示言語',
   'settings.languageDesc': 'すべてのメニューとラベルの表示言語をすぐに切り替えます。プロンプトとモデル名は変更されません。',
@@ -568,7 +572,7 @@ export const ja: Record<StringKey, string> = {
   'backup.import': 'インポート…',
 
   // About
-  'about.tagline': 'Windows デスクトップ向け AI プロンプト＆メタデータ抽出ツール',
+  'about.tagline': 'Windows・Linux 向け AI プロンプト＆メタデータ抽出ツール',
   'about.specSection': 'システム仕様',
   'about.phase': 'フェーズ：',
   'about.phaseValue': 'フェーズ 1（メタデータ抽出とデスクトップアプリ）',
@@ -596,7 +600,7 @@ export const ja: Record<StringKey, string> = {
   'wizard.httpError': 'Civitai が HTTP {status} を返しました：API トークンを確認してください。',
   'wizard.networkError': 'Civitai API に接続できませんでした。ネットワーク接続を確認してください。',
   'wizard.title': 'PromptHound セットアップへようこそ',
-  'wizard.subtitle': '4 つのステップで生成ワークフローを設定',
+  'wizard.subtitle': '{count} つのステップで生成ワークフローを設定',
   'wizard.stepWorkflow': 'ワークフロー',
   'wizard.stepFolders': 'フォルダー',
   'wizard.stepCivitai': 'Civitai',

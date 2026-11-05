@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, clipboard, dialog, shell, safeStorage, protocol, net, screen } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import {
   extractFromImageBuffer,
@@ -598,7 +599,8 @@ const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
-  const iconPath = path.join(__dirname, '../build/icon.ico');
+  // Linux window managers take a PNG; Windows uses the multi-size .ico
+  const iconPath = path.join(__dirname, process.platform === 'win32' ? '../build/icon.ico' : '../build/icon.png');
   const preloadPath = path.join(__dirname, 'preload.cjs');
 
   // Preferred size, shrunk to fit the screen. Windows otherwise stretches an oversized window
@@ -809,7 +811,7 @@ function registerExtractionHandlers(): void {
  */
 type UpdateStatus =
   | { state: 'idle' | 'checking' | 'up-to-date' | 'unsupported' }
-  | { state: 'available' | 'downloaded'; version: string }
+  | { state: 'available' | 'downloaded' | 'manual'; version: string }
   | { state: 'downloading'; version?: string; percent: number }
   | { state: 'error'; message: string };
 
@@ -821,8 +823,38 @@ function sendUpdateStatus(status: UpdateStatus): void {
   mainWindow?.webContents.send('update:status', status);
 }
 
+/**
+ * How this copy gets new versions:
+ * - auto: downloads in the background and installs on restart (Windows installer, Linux AppImage)
+ * - notify: only says a new version exists; the user downloads it (Linux .deb, which needs an
+ *   admin password to install, so it is not done behind the user's back)
+ * - none: development runs and the Windows portable exe
+ */
+type UpdateMode = 'auto' | 'notify' | 'none';
+
+function isDebInstall(): boolean {
+  try {
+    // electron-builder writes this file into the .deb's resources folder
+    return fsSync.readFileSync(path.join(process.resourcesPath, 'package-type'), 'utf8').trim() === 'deb';
+  } catch {
+    return false;
+  }
+}
+
+function getUpdateMode(): UpdateMode {
+  if (!app.isPackaged) return 'none';
+  if (process.platform === 'win32') return process.env.PORTABLE_EXECUTABLE_DIR ? 'none' : 'auto';
+  if (process.platform === 'linux') {
+    if (process.env.APPIMAGE) return 'auto';
+    if (isDebInstall()) return 'notify';
+  }
+  return 'none';
+}
+
+const updateMode = getUpdateMode();
+
 function canAutoUpdate(): boolean {
-  return app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR;
+  return updateMode !== 'none';
 }
 
 function registerUpdateHandlers(): void {
@@ -846,12 +878,13 @@ function registerUpdateHandlers(): void {
     return;
   }
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  const downloads = updateMode === 'auto';
+  autoUpdater.autoDownload = downloads;
+  autoUpdater.autoInstallOnAppQuit = downloads;
   autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
   autoUpdater.on('update-available', (info) => {
     availableVersion = info.version;
-    sendUpdateStatus({ state: 'available', version: info.version });
+    sendUpdateStatus({ state: downloads ? 'available' : 'manual', version: info.version });
   });
   autoUpdater.on('update-not-available', () => sendUpdateStatus({ state: 'up-to-date' }));
   autoUpdater.on('download-progress', (progress) =>
